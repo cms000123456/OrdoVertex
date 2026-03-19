@@ -80,6 +80,10 @@ services:
       # File watch security
       ALLOWED_WATCH_DIRECTORIES: ${ALLOWED_WATCH_DIRECTORIES:-/data}
       
+      # Initial admin user (only used on first startup if no admin exists)
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      
       PORT: 3001
     # Remove volume mount in production (use built image)
     # volumes:

@@ -1,41 +1,60 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient, UserRole } from '@prisma/client';
+import { hashPassword } from '../src/utils/auth';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Check if admin user already exists
-  const existingAdmin = await prisma.user.findUnique({
-    where: { email: 'admin@ordovertex.local' }
-  });
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
 
-  if (existingAdmin) {
-    console.log('Admin user already exists');
+  if (!adminEmail || !adminPassword) {
+    console.log('ℹ️  ADMIN_EMAIL and ADMIN_PASSWORD not set, skipping admin seed');
     return;
   }
 
-  // Create admin user with default password
-  const hashedPassword = await bcrypt.hash('admin123', 10);
+  // Check if any admin already exists
+  const existingAdmin = await prisma.user.findFirst({
+    where: { role: UserRole.admin }
+  });
+
+  if (existingAdmin) {
+    console.log('ℹ️  Admin user already exists, skipping seed');
+    return;
+  }
+
+  // Check if user with this email exists
+  const existingUser = await prisma.user.findUnique({
+    where: { email: adminEmail }
+  });
+
+  if (existingUser) {
+    // Promote to admin
+    await prisma.user.update({
+      where: { email: adminEmail },
+      data: { role: UserRole.admin }
+    });
+    console.log(`✅ Existing user ${adminEmail} promoted to admin`);
+    return;
+  }
+
+  // Create new admin user
+  const hashedPassword = await hashPassword(adminPassword);
   
   const admin = await prisma.user.create({
     data: {
-      email: 'admin@ordovertex.local',
+      email: adminEmail,
       password: hashedPassword,
-      name: 'Administrator',
-      role: 'admin',
-      provider: 'local'
+      name: 'Admin',
+      role: UserRole.admin
     }
   });
 
-  console.log('✅ Admin user created successfully:');
-  console.log(`   Email: admin@ordovertex.local`);
-  console.log(`   Password: admin123`);
-  console.log(`   Role: ${admin.role}`);
+  console.log(`✅ Admin user created: ${admin.email}`);
 }
 
 main()
   .catch((e) => {
-    console.error('Error creating admin user:', e);
+    console.error('❌ Seed failed:', e);
     process.exit(1);
   })
   .finally(async () => {

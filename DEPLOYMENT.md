@@ -33,6 +33,17 @@ nano .env
 | `DB_PASSWORD` | PostgreSQL password | `YourStrongDBPass` |
 | `CORS_ORIGIN` | Your frontend domain | `https://ordovertex.yourcompany.com` |
 
+### Initial Admin User (Optional but Recommended)
+
+The first time you start the application, you can automatically create an admin user by setting these environment variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `ADMIN_EMAIL` | Admin user email | `admin@yourcompany.com` |
+| `ADMIN_PASSWORD` | Admin user password | `StrongAdminPass123!` |
+
+**Note:** These variables are only used if no admin user exists. Once an admin is created, these variables are ignored. You can also create the first admin manually via the API or promote an existing user through the database.
+
 ---
 
 ## Step 2: Deploy Application
@@ -123,7 +134,44 @@ openssl s_client -connect ordovertex.yourcompany.com:443 -servername ordovertex.
 
 ---
 
-## Step 5: Configure Backups (Optional but Recommended)
+## Step 5: Create Admin User (If Not Done Automatically)
+
+If you didn't set `ADMIN_EMAIL` and `ADMIN_PASSWORD` before starting the application, you can create the first admin user manually:
+
+### Option 1: Using Prisma Studio (Recommended for First Setup)
+
+```bash
+# Access the database UI
+docker-compose -f docker-compose.prod.yml exec api npx prisma studio
+
+# Then open http://localhost:5555 in your browser
+# 1. Click on "User" table
+# 2. Create a new user or edit existing one
+# 3. Set role to "admin"
+```
+
+### Option 2: Using SQL
+
+```bash
+# Connect to database
+docker-compose -f docker-compose.prod.yml exec postgres psql -U ordovertex -d ordovertex
+
+# Promote existing user to admin
+UPDATE "User" SET role = 'admin' WHERE email = 'your@email.com';
+
+# Or create new admin (password must be bcrypt hashed)
+# First, generate a bcrypt hash using the API or a tool
+```
+
+### Option 3: API (After Registering a Regular User)
+
+1. Register a regular user at `/api/auth/register`
+2. Use Prisma Studio to change their role to `admin`
+3. Subsequent users can be created/promoted via Admin UI
+
+---
+
+## Step 6: Configure Backups (Optional but Recommended)
 
 ```bash
 # Create backup script

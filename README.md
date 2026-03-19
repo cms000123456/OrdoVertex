@@ -85,6 +85,10 @@ docker-compose up -d
 # Access the application
 # Frontend: http://localhost:3000
 # API: http://localhost:3001
+
+# Create initial admin user (optional - first user becomes admin)
+# Set environment variables before starting:
+# ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=yourpassword docker-compose up -d
 ```
 
 ### Manual Setup
