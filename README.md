@@ -106,6 +106,10 @@ npm install
 npm start
 ```
 
+### Production Deployment
+
+For production deployment with HTTPS, environment configuration, and security hardening, see the **[Deployment Guide](DEPLOYMENT.md)**.
+
 ## 📦 Available Nodes
 
 ### Triggers (5)
