@@ -277,7 +277,6 @@ Please read our [Contributing Guide](CONTRIBUTING.md) for details.
 
 - 🐛 [GitHub Issues](https://github.com/cms000123456/OrdoVertex/issues) - Bug reports
 - 💡 [GitHub Discussions](https://github.com/cms000123456/OrdoVertex/discussions) - Feature requests & community
-- 📧 Email: support@ordovertex.dev
 
 ---
 
