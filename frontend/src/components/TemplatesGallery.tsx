@@ -105,11 +105,21 @@ export function TemplatesGallery() {
       const response = await templatesApi.createFromTemplate(selectedTemplate.id, {
         name: newWorkflowName || selectedTemplate.name
       });
+      
+      // Check if response has expected structure
+      if (!response.data?.success || !response.data?.data?.id) {
+        console.error('Invalid response:', response.data);
+        toast.error('Invalid response from server');
+        return;
+      }
+      
       toast.success('Workflow created from template');
       setShowCreateModal(false);
       navigate(`/workflows/${response.data.data.id}`);
-    } catch (error) {
-      toast.error('Failed to create workflow');
+    } catch (error: any) {
+      console.error('Create from template error:', error);
+      const message = error.response?.data?.error || 'Failed to create workflow';
+      toast.error(message);
     }
   };
 
