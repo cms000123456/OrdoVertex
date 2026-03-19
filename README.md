@@ -273,11 +273,3 @@ Please read our [Contributing Guide](CONTRIBUTING.md) for details.
 - [BullMQ](https://bullmq.io/) - Job queue processing
 - [Prisma](https://prisma.io/) - Database ORM
 
-## 💬 Support
-
-- 🐛 [GitHub Issues](https://github.com/cms000123456/OrdoVertex/issues) - Bug reports
-- 💡 [GitHub Discussions](https://github.com/cms000123456/OrdoVertex/discussions) - Feature requests & community
-
----
-
-**Made with ❤️ by the OrdoVertex community**
