@@ -1,0 +1,332 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum AuthProvider {
+  local
+  saml
+  oauth
+}
+
+enum CredentialType {
+  database
+  http
+  oauth2
+  apiKey
+  ssh
+  generic
+  hashicorpVault
+  openai
+  anthropic
+  gemini
+  kimi
+  smtp
+  sftp
+  aws
+}
+
+enum ExecutionStatus {
+  running
+  success
+  failed
+  waiting
+  canceled
+}
+
+enum LogLevel {
+  debug
+  info
+  warn
+  error
+}
+
+enum WorkspaceRole {
+  owner
+  admin
+  editor
+  viewer
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String?
+  name      String?
+  role      UserRole @default(user)
+  provider  AuthProvider @default(local)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // MFA fields
+  mfaEnabled     Boolean @default(false)
+  mfaSecret      String? // Encrypted TOTP secret
+  mfaBackupCodes String? // Encrypted backup codes
+
+  workflows      Workflow[]
+  apiKeys        ApiKey[]
+  credentials    Credential[]
+  workspaceMembers WorkspaceMember[]
+  ownedWorkspaces  Workspace[]
+  alerts         Alert[]
+  samlConfig     SAMLConfig?
+  mfaSettings    MFASettings?
+}
+
+// SAML Configuration for SSO
+model SAMLConfig {
+  id                    String   @id @default(uuid())
+  provider              String   // e.g., "okta", "azure", "google"
+  entityId              String   // SP Entity ID
+  entryPoint            String   // IdP SSO URL
+  cert                  String   // IdP Certificate
+  privateKey            String?  // SP Private Key (for signed requests)
+  callbackUrl           String   // ACS URL
+  logoutUrl             String?  // SLO URL
+  nameIdFormat          String   @default("urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress")
+  wantAssertionsSigned  Boolean  @default(true)
+  wantResponseSigned    Boolean  @default(true)
+  signatureAlgorithm    String   @default("sha256")
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relation to user (optional - can be org-wide or user-specific)
+  userId                String?  @unique
+  user                  User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([provider])
+  @@index([isActive])
+}
+
+// MFA Settings per user
+model MFASettings {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // TOTP settings
+  totpEnabled       Boolean  @default(false)
+  totpSecret        String?  // Encrypted secret
+  totpVerified      Boolean  @default(false)
+  
+  // Backup codes (encrypted, comma-separated)
+  backupCodes       String?
+  backupCodesUsed   Int      @default(0)
+  
+  // WebAuthn/FIDO2 (for future use)
+  webauthnEnabled   Boolean  @default(false)
+  
+  // Recovery settings
+  recoveryEmail     String?
+  lastVerifiedAt    DateTime?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  slug        String   @unique
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members    WorkspaceMember[]
+  workflows  Workflow[]
+  credentials Credential[]
+  alerts     Alert[]
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        WorkspaceRole @default(viewer)
+  joinedAt    DateTime      @default(now())
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  name      String
+  key       String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  lastUsed  DateTime?
+}
+
+model Workflow {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  active      Boolean  @default(false)
+  nodes       Json     // Array of NodeDefinition
+  connections Json     // Array of ConnectionDefinition
+  settings    Json?    // Workflow settings
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  executions WorkflowExecution[]
+  triggers   Trigger[]
+  alerts     Alert[]
+
+  @@index([workspaceId])
+  @@index([userId])
+}
+
+model WorkflowExecution {
+  id            String            @id @default(uuid())
+  workflowId    String
+  workflow      Workflow          @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  status        ExecutionStatus   @default(running)
+  startedAt     DateTime          @default(now())
+  finishedAt    DateTime?
+  data          Json?             // Input data
+  result        Json?             // Output result
+  error         String?
+  nodeExecutions NodeExecution[]
+  executionLogs ExecutionLog[]
+  alertHistories AlertHistory[]
+  mode          String            @default("manual") // manual, webhook, schedule
+  triggerName   String?           // Name of trigger that started this
+  duration      Int?              // Execution duration in ms
+
+  @@index([workflowId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model NodeExecution {
+  id          String    @id @default(uuid())
+  executionId String
+  execution   WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  nodeId      String
+  nodeName    String
+  nodeType    String
+  status      ExecutionStatus @default(running)
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  input       Json?
+  output      Json?
+  error       String?
+  retries     Int       @default(0)
+  duration    Int?      // Node execution duration in ms
+
+  @@index([executionId])
+}
+
+model ExecutionLog {
+  id          String    @id @default(uuid())
+  executionId String
+  execution   WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  timestamp   DateTime  @default(now())
+  level       LogLevel  @default(info)
+  nodeId      String?   // Which node generated this log (if any)
+  nodeName    String?
+  message     String
+  details     Json?     // Additional structured data
+  metadata    Json?     // Execution context (memory, cpu, etc)
+
+  @@index([executionId])
+  @@index([timestamp])
+  @@index([level])
+}
+
+model Trigger {
+  id         String   @id @default(uuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  type       String   // webhook, schedule, manual
+  enabled    Boolean  @default(true)
+  config     Json     // Trigger-specific configuration
+  lastTriggered DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([workflowId])
+}
+
+model Credential {
+  id          String         @id @default(uuid())
+  name        String
+  type        CredentialType
+  data        String         // Encrypted JSON string containing sensitive data
+  iv          String         // Initialization vector for decryption
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String?
+  workspace   Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  lastUsed    DateTime?
+  
+  @@index([userId])
+  @@index([type])
+  @@index([workspaceId])
+}
+
+model Alert {
+  id              String   @id @default(uuid())
+  name            String
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workflowId      String?
+  workflow        Workflow? @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workspaceId     String?
+  workspace       Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  condition       String   // JSON string with alert conditions
+  conditionType   String   // execution_failed, execution_slow, execution_success, etc
+  notifyChannels  String[] // email, webhook, slack, etc
+  emailRecipients String[]
+  webhookUrl      String?
+  slackWebhook    String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastTriggered   DateTime?
+  
+  history         AlertHistory[]
+  
+  @@index([userId])
+  @@index([workflowId])
+  @@index([workspaceId])
+  @@index([isActive])
+}
+
+model AlertHistory {
+  id          String   @id @default(uuid())
+  alertId     String
+  alert       Alert    @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  triggeredAt DateTime @default(now())
+  executionId String?
+  execution   WorkflowExecution? @relation(fields: [executionId], references: [id])
+  status      String   // triggered, acknowledged, resolved
+  message     String?
+  sentTo      String[] // channels that were notified
+  
+  @@index([alertId])
+  @@index([triggeredAt])
+}

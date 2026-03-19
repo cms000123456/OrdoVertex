@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ordovertex-db
+    environment:
+      POSTGRES_USER: ordovertex
+      POSTGRES_PASSWORD: ordovertex_secret
+      POSTGRES_DB: ordovertex
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ordovertex"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ordovertex-redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ordovertex-api
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://ordovertex:ordovertex_secret@postgres:5432/ordovertex
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      PORT: 3001
+    volumes:
+      - ./backend:/app
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: sh -c "npm install && npx prisma@5 db push && npm run dev"
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ordovertex-worker
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://ordovertex:ordovertex_secret@postgres:5432/ordovertex
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: npm run worker
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ordovertex-frontend
+    
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    command: sh -c "npm install --legacy-peer-deps && npm start"
+
+volumes:
+  postgres_data:
+  redis_data:

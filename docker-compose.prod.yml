@@ -1,0 +1,158 @@
+version: '3.8'
+
+# Production Docker Compose for OrdoVertex
+# 
+# BEFORE DEPLOYMENT:
+# 1. Change ALL default passwords and secrets
+# 2. Set strong JWT_SECRET (min 32 chars random)
+# 3. Set strong ENCRYPTION_KEY (min 32 chars random)
+# 4. Configure CORS_ORIGIN for your domain
+# 5. Review and adjust rate limits if needed
+#
+# Run: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ordovertex-db
+    restart: always
+    environment:
+      # CHANGE THESE IN PRODUCTION!
+      POSTGRES_USER: ${DB_USER:-ordovertex}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-CHANGE_THIS_STRONG_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-ordovertex}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Optional: Mount backup directory
+      # - ./backups:/backups
+    # Remove port exposure in production (use internal network only)
+    # ports:
+    #   - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ordovertex}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ordovertex-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ordovertex-redis
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    # Remove port exposure in production
+    # ports:
+    #   - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ordovertex-network
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ordovertex-api
+    restart: always
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USER:-ordovertex}:${DB_PASSWORD:-CHANGE_THIS}@postgres:5432/${DB_NAME:-ordovertex}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
+      
+      # REQUIRED: Generate strong secrets with:
+      # openssl rand -base64 32
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      
+      # Token lifetime (default: 24h)
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      
+      # CORS: Set to your frontend domain
+      # Example: https://app.ordovertex.com
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      
+      # File watch security
+      ALLOWED_WATCH_DIRECTORIES: ${ALLOWED_WATCH_DIRECTORIES:-/data}
+      
+      PORT: 3001
+    # Remove volume mount in production (use built image)
+    # volumes:
+    #   - ./backend:/app
+    ports:
+      - "127.0.0.1:3001:3001"  # Bind to localhost only, use reverse proxy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ordovertex-network
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ordovertex-worker
+    restart: always
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USER:-ordovertex}:${DB_PASSWORD:-CHANGE_THIS}@postgres:5432/${DB_NAME:-ordovertex}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    # Remove volume mount in production
+    # volumes:
+    #   - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ordovertex-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Build-time environment variables
+        REACT_APP_API_URL: ${API_URL:-/api}
+    container_name: ordovertex-frontend
+    restart: always
+    ports:
+      - "127.0.0.1:3000:80"  # Bind to localhost, use reverse proxy
+    depends_on:
+      - api
+    networks:
+      - ordovertex-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  ordovertex-network:
+    driver: bridge

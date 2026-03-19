@@ -1,0 +1,126 @@
+.tooltip-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tooltip-icon {
+  color: #94a3b8;
+  cursor: help;
+  transition: color 0.15s;
+}
+
+.tooltip-icon:hover {
+  color: #6366f1;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 1000;
+  padding: 8px 12px;
+  background: #1e293b;
+  color: white;
+  font-size: 13px;
+  line-height: 1.5;
+  border-radius: 6px;
+  white-space: nowrap;
+  max-width: 300px;
+  white-space: normal;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: tooltipFadeIn 0.15s ease;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tooltip::before {
+  content: '';
+  position: absolute;
+  border: 6px solid transparent;
+}
+
+/* Top position */
+.tooltip-top {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+}
+
+.tooltip-top::before {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: #1e293b;
+}
+
+/* Bottom position */
+.tooltip-bottom {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 8px;
+}
+
+.tooltip-bottom::before {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: #1e293b;
+}
+
+/* Left position */
+.tooltip-left {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 8px;
+}
+
+.tooltip-left::before {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left-color: #1e293b;
+}
+
+/* Right position */
+.tooltip-right {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 8px;
+}
+
+.tooltip-right::before {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: #1e293b;
+}
+
+/* Help Text Container */
+.help-text-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.help-text-icon {
+  color: #94a3b8;
+  cursor: help;
+  transition: color 0.15s;
+}
+
+.help-text-icon:hover {
+  color: #6366f1;
+}
