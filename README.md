@@ -76,7 +76,7 @@ The intuitive drag-and-drop interface for building automation workflows:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ordovertex.git
+git clone https://github.com/cms000123456/OrdoVertex.git
 cd ordovertex
 
 # Start all services
@@ -113,7 +113,7 @@ npm start
 | File Watch | Monitor file system changes |
 | S3 Trigger | React to S3 bucket events |
 
-### Actions (25+)
+### Actions (24)
 | Category | Nodes |
 |----------|-------|
 | **Core** | HTTP Request, Code, Set, IF, Wait, Split, Aggregate |
@@ -275,8 +275,8 @@ Please read our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## 💬 Support
 
-- 🐛 [GitHub Issues](https://github.com/yourusername/ordovertex/issues) - Bug reports
-- 💡 [GitHub Discussions](https://github.com/yourusername/ordovertex/discussions) - Feature requests & community
+- 🐛 [GitHub Issues](https://github.com/cms000123456/OrdoVertex/issues) - Bug reports
+- 💡 [GitHub Discussions](https://github.com/cms000123456/OrdoVertex/discussions) - Feature requests & community
 - 📧 Email: support@ordovertex.dev
 
 ---
