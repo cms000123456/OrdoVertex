@@ -19,6 +19,31 @@
 - **Export/Import**: Share workflows as JSON files
 - **Docker Ready**: Complete Docker Compose stack for easy deployment
 
+## 📸 Screenshots
+
+### Workflow Editor
+The intuitive drag-and-drop interface for building automation workflows:
+
+![Workflow Editor](.screenshots/workflow_window.png)
+
+### Available Nodes
+
+**Triggers** - Start your workflows based on various events:
+
+![Triggers](.screenshots/triggers.png)
+
+**Actions** - Core operations to build your automation:
+
+![Actions](.screenshots/actions.png)
+
+**Transform** - Data manipulation and processing nodes:
+
+![Transform](.screenshots/transform.png)
+
+**AI** - AI-powered nodes for intelligent automation:
+
+![AI Nodes](.screenshots/ai.png)
+
 ## 🏗️ Architecture
 
 ```

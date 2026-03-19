@@ -86,6 +86,10 @@ services:
     #   - ./backend:/app
     ports:
       - "127.0.0.1:3001:3001"  # Bind to localhost only, use reverse proxy
+    command: >
+      sh -c "npx prisma migrate deploy &&
+             npx prisma db seed || true &&
+             npm start"
     depends_on:
       postgres:
         condition: service_healthy

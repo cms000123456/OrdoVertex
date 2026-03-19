@@ -57,3 +57,6 @@ deploy_key
 deploy_key.pub
 *.pem
 *.key
+
+# Screenshots - These are committed for documentation
+# .screenshots/
