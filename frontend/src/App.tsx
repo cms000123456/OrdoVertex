@@ -26,6 +26,30 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAuthSession } from './hooks/useAuthSession';
 import './App.css';
 
+// Session Expired Banner
+function SessionExpiredBanner() {
+  const sessionExpired = useAuthStore((state) => state.sessionExpired);
+  
+  if (!sessionExpired) return null;
+  
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      background: '#ef4444',
+      color: 'white',
+      padding: '12px',
+      textAlign: 'center',
+      zIndex: 9999,
+      fontWeight: 500
+    }}>
+      ⚠️ Your session has expired. Please <a href="/login" style={{ color: 'white', textDecoration: 'underline' }}>log in again</a>.
+    </div>
+  );
+}
+
 // Protected route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -125,6 +149,8 @@ function App() {
           }
         }}
       />
+      
+      <SessionExpiredBanner />
       
       <Routes>
         <Route

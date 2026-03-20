@@ -11,6 +11,25 @@ const api = axios.create({
   }
 });
 
+// Event emitter for auth state changes (used for session expiration)
+export const authEvents = {
+  _listeners: new Set<() => void>(),
+  subscribe(callback: () => void) {
+    this._listeners.add(callback);
+    return () => this._listeners.delete(callback);
+  },
+  emit() {
+    this._listeners.forEach(cb => cb());
+  }
+};
+
+// Track if we've already triggered a session expiration to avoid multiple alerts
+let sessionExpiredHandled = false;
+
+export function resetSessionExpiredFlag() {
+  sessionExpiredHandled = false;
+}
+
 // Add auth token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
@@ -24,23 +43,29 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !sessionExpiredHandled) {
+      sessionExpiredHandled = true;
+      
       // Check if it's a "User not found" error (DB reset scenario)
       const errorMessage = error.response.data?.error?.message || error.response.data?.error || '';
       
-      // Clear auth data
+      // Clear auth data from localStorage
       localStorage.removeItem('token');
       localStorage.removeItem('auth-storage');
       
-      // Show alert to user
-      if (errorMessage.includes('User not found')) {
-        alert('Your session has expired. Please log in again.');
-      } else {
-        alert('Your session has expired or you have been logged out. Please log in again.');
-      }
+      // Emit event to notify auth store and UI
+      authEvents.emit();
       
-      // Redirect to login
-      window.location.href = '/login';
+      // Show alert to user (small delay to let UI update first)
+      setTimeout(() => {
+        if (errorMessage.includes('User not found')) {
+          alert('Your session has expired. Please log in again.');
+        } else {
+          alert('Your session has expired or you have been logged out. Please log in again.');
+        }
+        // Redirect to login
+        window.location.href = '/login';
+      }, 100);
     }
     return Promise.reject(error);
   }

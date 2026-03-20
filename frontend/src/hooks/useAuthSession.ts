@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { authEvents } from '../services/api';
 
 // JWT token decoder
 function parseJwt(token: string): { exp?: number; iat?: number } | null {
@@ -44,7 +45,7 @@ function getTokenStatus(token: string | null): { valid: boolean; expiresIn?: num
 
 export function useAuthSession() {
   const navigate = useNavigate();
-  const { token, logout } = useAuthStore();
+  const { token, logout, sessionExpired, clearSessionExpired } = useAuthStore();
 
   const checkSession = useCallback(() => {
     const status = getTokenStatus(token);
@@ -82,6 +83,24 @@ export function useAuthSession() {
 
     return () => clearInterval(interval);
   }, [token, checkSession]);
+
+  // Handle session expiration from API interceptor
+  useEffect(() => {
+    if (sessionExpired) {
+      console.log('[AuthSession] Session expired flag set, redirecting to login');
+      clearSessionExpired();
+      navigate('/login');
+    }
+  }, [sessionExpired, navigate, clearSessionExpired]);
+
+  // Listen for auth events from API interceptor
+  useEffect(() => {
+    const unsubscribe = authEvents.subscribe(() => {
+      console.log('[AuthSession] Received auth event, redirecting to login');
+      navigate('/login');
+    });
+    return unsubscribe;
+  }, [navigate]);
 
   return { checkSession };
 }
