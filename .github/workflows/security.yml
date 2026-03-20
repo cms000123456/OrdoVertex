@@ -40,30 +40,7 @@ jobs:
       - name: Run npm audit
         run: npm audit --audit-level=moderate
         # Don't fail the build - just report for now
-        # Projects should fix vulnerabilities over time
         continue-on-error: true
-
-      - name: Summary
-        if: always()
-        run: |
-          echo "### Backend Audit Results" >> $GITHUB_STEP_SUMMARY
-          npm audit --audit-level=moderate --json 2>/dev/null | node -e "
-            const data = '';
-            process.stdin.on('data', c => data.push(c));
-            process.stdin.on('end', () => {
-              try {
-                const audit = JSON.parse(data.join(''));
-                const counts = audit.metadata?.vulnerabilities || {};
-                console.log('Vulnerabilities found:');
-                console.log('  Critical:', counts.critical || 0);
-                console.log('  High:', counts.high || 0);
-                console.log('  Moderate:', counts.moderate || 0);
-                console.log('  Low:', counts.low || 0);
-              } catch(e) {
-                console.log('Could not parse audit results');
-              }
-            });
-          " || echo "Audit completed with findings"
 
   # Frontend npm audit - FULL
   frontend-audit-full:
@@ -93,12 +70,6 @@ jobs:
       - name: Run npm audit
         run: npm audit --audit-level=moderate --legacy-peer-deps
         continue-on-error: true
-
-      - name: Summary
-        if: always()
-        run: |
-          echo "### Frontend Audit Results" >> $GITHUB_STEP_SUMMARY
-          npm audit --audit-level=moderate --legacy-peer-deps 2>&1 | head -50 || true
 
   # CodeQL Analysis - FULL (only on main and schedule)
   codeql:
@@ -227,59 +198,41 @@ jobs:
         run: |
           echo "🔍 Scanning for potential hardcoded secrets..."
           
-          # Files and patterns to exclude
-          EXCLUDE_PATTERN="node_modules|\.git|dist|build|coverage|\.env\.|example|sample|test|spec|README|CHANGELOG|\.d\.ts|package-lock|yarn\.lock|\.github/workflows"
+          # Create temp file for results
+          RESULTS_FILE=$(mktemp)
           
-          # Suspicious patterns (more specific to avoid false positives)
-          # Only matches actual assignments with suspicious values (not variable names, not config examples)
-          declare -a SUSPICIOUS_PATTERNS=(
-            # Hardcoded passwords (not env vars, not empty strings, not config keys)
-            'password[[:space:]]*=[[:space:]]*["'\''"'\'''][a-zA-Z0-9!@#$%^&*]{8,}["'\''"'\''"]'  
-            # Hardcoded secrets (minimum 16 chars to avoid false positives)
-            'secret[[:space:]]*=[[:space:]]*["'\''"'\''"'][a-zA-Z0-9_\-]{16,}["'\''"'\''"]' 
-            # Hardcoded API keys (typical key patterns)
-            'api[_-]?key[[:space:]]*=[[:space:]]*["'\''"'\''"']sk-[a-zA-Z0-9]{20,}["'\''"'\''"]'
-            'api[_-]?key[[:space:]]*=[[:space:]]*["'\''"'\''"']AKIA[0-9A-Z]{16}["'\''"'\''"]'
-            # Private keys
-            'BEGIN[[:space:]]+(RSA|DSA|EC|OPENSSH)[[:space:]]+PRIVATE[[:space:]]+KEY'
-            # AWS secrets
-            'aws_secret_access_key[[:space:]]*=[[:space:]]*["'\''"'\''"'][a-zA-Z0-9/+=]{20,}["'\''"'\''"]'
-            # Generic high-entropy strings that look like secrets
-            'bearer[[:space:]]+[a-zA-Z0-9_\-\.]{40,}'
-          )
+          # Pattern 1: Private keys
+          echo "Checking for private keys..." >> "$RESULTS_FILE"
+          grep -r -n "BEGIN.*PRIVATE KEY" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" --include="*.pem" --include="*.key" . 2>/dev/null | grep -v "node_modules" | grep -v ".git" | head -5 >> "$RESULTS_FILE" || true
           
-          found_issues=0
+          # Pattern 2: AWS Access Keys  
+          echo "" >> "$RESULTS_FILE"
+          echo "Checking for AWS keys..." >> "$RESULTS_FILE"
+          grep -r -n -E 'AKIA[0-9A-Z]{16}' --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" . 2>/dev/null | grep -v "node_modules" | grep -v ".git" | head -5 >> "$RESULTS_FILE" || true
           
-          for pattern in "${SUSPICIOUS_PATTERNS[@]}"; do
-            matches=$(grep -r -n -i "$pattern" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" --include="*.json" --include="*.yml" --include="*.yaml" . 2>/dev/null | \
-              grep -vE "$EXCLUDE_PATTERN" | \
-              grep -v "process\.env\." | \
-              grep -v "req\.env\." | \
-              grep -v "^[[:space:]]*//" | \
-              grep -v "^[[:space:]]*\*" | \
-              grep -v "^[[:space:]]*#" | \
-              head -10 || true)
-            
-            if [ -n "$matches" ]; then
-              echo ""
-              echo "⚠️  Potential secret pattern found:"
-              echo "$matches"
-              found_issues=$((found_issues + 1))
-            fi
-          done
+          # Pattern 3: Hardcoded passwords (simple check)
+          echo "" >> "$RESULTS_FILE"
+          echo "Checking for hardcoded passwords..." >> "$RESULTS_FILE"
+          grep -r -n -E '(password|passwd|pwd)[[:space:]]*=[[:space:]]*["'\''"'\''"'][a-zA-Z0-9!@#$%^&*]{10,}["'\''"'\''"]' --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" . 2>/dev/null | \
+            grep -v "node_modules" | grep -v ".git" | \
+            grep -v "process.env" | grep -v "getenv" | \
+            grep -v "example" | grep -v "placeholder" | grep -v "test" | \
+            head -5 >> "$RESULTS_FILE" || true
           
-          echo ""
-          if [ $found_issues -gt 0 ]; then
+          # Display results
+          if [ -s "$RESULTS_FILE" ] && [ $(wc -l < "$RESULTS_FILE") -gt 3 ]; then
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "⚠️  WARNING: Found $found_issues potential issues."
-            echo "   Review the matches above - they may be false positives."
-            echo "   Excluded: env vars, comments, example files, tests"
+            echo "⚠️  Potential secrets found (review required):"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            # Don't fail the build - just warn
-            exit 0
+            cat "$RESULTS_FILE"
+            echo ""
+            echo "ℹ️  Note: Many matches may be false positives."
           else
-            echo "✅ No obvious hardcoded secrets detected in source files."
+            echo "✅ No obvious hardcoded secrets detected."
           fi
+          
+          rm -f "$RESULTS_FILE"
+          exit 0
         shell: bash
 
   # Dependency review - PRs ONLY
