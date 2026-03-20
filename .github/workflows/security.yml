@@ -295,7 +295,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Dependency Review
-        uses: actions/dependency-review-action@v3
+        uses: actions/dependency-review-action@v4
         with:
           # Only fail on high/critical for new dependencies in PRs
           fail-on-severity: high
