@@ -10,10 +10,15 @@ on:
     - cron: '0 9 * * 1'
 
 jobs:
-  # Backend npm audit
-  backend-audit:
+  # ========================================================================
+  # FULL SCANS - Run on main branch, PRs to main, and schedule
+  # ========================================================================
+
+  # Backend npm audit - FULL
+  backend-audit-full:
     name: Backend Security Audit
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event_name == 'schedule'
     defaults:
       run:
         working-directory: ./backend
@@ -41,10 +46,11 @@ jobs:
           echo "Checking for auto-fixable vulnerabilities..."
           npm audit fix --dry-run 2>&1 || true
 
-  # Frontend npm audit
-  frontend-audit:
+  # Frontend npm audit - FULL
+  frontend-audit-full:
     name: Frontend Security Audit
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event_name == 'schedule'
     defaults:
       run:
         working-directory: ./frontend
@@ -72,10 +78,11 @@ jobs:
           echo "Checking for auto-fixable vulnerabilities..."
           npm audit fix --dry-run 2>&1 || true
 
-  # CodeQL Analysis for JavaScript/TypeScript
+  # CodeQL Analysis - FULL (only on main and schedule)
   codeql:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event_name == 'schedule'
     permissions:
       actions: read
       contents: read
@@ -94,7 +101,6 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          # Run extended queries including security-extended
           queries: security-extended,security-and-quality
 
       - name: Autobuild
@@ -105,55 +111,11 @@ jobs:
         with:
           category: "/language:${{matrix.language}}"
 
-  # Secret scanning with GitHub's built-in secret scanning
-  secret-scan:
-    name: Secret Scanning
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Check for hardcoded secrets (basic grep)
-        run: |
-          echo "Scanning for potential hardcoded secrets..."
-          # Check for common secret patterns (this is a basic check)
-          # GitHub's secret scanning does the heavy lifting
-          
-          # List of patterns to check (informational only)
-          patterns=(
-            'password[[:space:]]*=[[:space:]]*["'\'''][^"'\''"]+["'\''']'
-            'secret[[:space:]]*=[[:space:]]*["'\'''][^"'\''"]+["'\''']'
-            'api_key[[:space:]]*=[[:space:]]*["'\'''][^"'\''"]+["'\''']'
-            'apikey[[:space:]]*=[[:space:]]*["'\'''][^"'\''"]+["'\''']'
-          )
-          
-          found_issues=0
-          for pattern in "${patterns[@]}"; do
-            # Exclude test files, config examples, and node_modules
-            matches=$(grep -r -i "$pattern" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.json" . 2>/dev/null | grep -v node_modules | grep -v ".test." | grep -v ".spec." | grep -v "example" | grep -v "README" | grep -v "CHANGELOG" || true)
-            
-            if [ -n "$matches" ]; then
-              echo "⚠️  Potential hardcoded value found (review recommended):"
-              echo "$matches" | head -5
-              found_issues=$((found_issues + 1))
-            fi
-          done
-          
-          if [ $found_issues -gt 0 ]; then
-            echo ""
-            echo "ℹ️  Found $found_issues potential issues. These may be false positives."
-            echo "   Review manually if these are actual secrets or just configuration values."
-          else
-            echo "✅ No obvious hardcoded secrets detected in code files."
-          fi
-        shell: bash
-
-  # Trivy vulnerability scanner for Docker images
+  # Trivy vulnerability scanner - FULL (only on main and schedule)
   trivy-scan:
     name: Docker Image Scan
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event_name == 'schedule'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -166,7 +128,7 @@ jobs:
           format: 'sarif'
           output: 'trivy-backend-results.sarif'
           severity: 'CRITICAL,HIGH'
-          exit-code: '0'  # Don't fail the build, just report
+          exit-code: '0'
 
       - name: Run Trivy vulnerability scanner - Frontend
         uses: aquasecurity/trivy-action@master
@@ -176,7 +138,7 @@ jobs:
           format: 'sarif'
           output: 'trivy-frontend-results.sarif'
           severity: 'CRITICAL,HIGH'
-          exit-code: '0'  # Don't fail the build, just report
+          exit-code: '0'
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -192,7 +154,82 @@ jobs:
           sarif_file: 'trivy-frontend-results.sarif'
           category: 'trivy-frontend'
 
-  # Dependency review for PRs
+  # ========================================================================
+  # LIGHTWEIGHT SCANS - Run on dev branch only
+  # ========================================================================
+
+  # Quick audit - LIGHTWEIGHT (dev branch only)
+  quick-audit-dev:
+    name: Quick Security Check (Dev)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Quick Backend Audit (Critical only)
+        working-directory: ./backend
+        run: |
+          npm ci --quiet
+          npm audit --audit-level=critical || true
+
+      - name: Quick Frontend Audit (Critical only)
+        working-directory: ./frontend
+        run: |
+          npm ci --quiet
+          npm audit --audit-level=critical || true
+
+  # ========================================================================
+  # SHARED SCANS - Run on all branches and PRs
+  # ========================================================================
+
+  # Secret scanning - ALL branches
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "Scanning for potential hardcoded secrets..."
+          
+          patterns=(
+            'password[[:space:]]*=[[:space:]]*["'\'''][^"'\''"]+["'\''']'
+            'secret[[:space:]]*=[[:space:]]*["'\'''][^"'\''"]+["'\''']'
+            'api_key[[:space:]]*=[[:space:]]*["'\'''][^"'\''"]+["'\''']'
+            'apikey[[:space:]]*=[[:space:]]*["'\'''][^"'\''"]+["'\''']'
+          )
+          
+          found_issues=0
+          for pattern in "${patterns[@]}"; do
+            matches=$(grep -r -i "$pattern" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.json" . 2>/dev/null | grep -v node_modules | grep -v ".test." | grep -v ".spec." | grep -v "example" | grep -v "README" | grep -v "CHANGELOG" || true)
+            
+            if [ -n "$matches" ]; then
+              echo "⚠️  Potential hardcoded value found:"
+              echo "$matches" | head -5
+              found_issues=$((found_issues + 1))
+            fi
+          done
+          
+          if [ $found_issues -gt 0 ]; then
+            echo ""
+            echo "ℹ️  Found $found_issues potential issues. Review if these are actual secrets."
+          else
+            echo "✅ No obvious hardcoded secrets detected."
+          fi
+        shell: bash
+
+  # Dependency review - PRs ONLY
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest
@@ -207,7 +244,5 @@ jobs:
       - name: Dependency Review
         uses: actions/dependency-review-action@v3
         with:
-          # Fail on moderate or higher vulnerabilities in new dependencies
           fail-on-severity: moderate
-          # Don't allow dependencies with known vulnerabilities
           allow-ghsas: false
