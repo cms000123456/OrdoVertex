@@ -99,7 +99,7 @@ export function useAuthSession() {
       console.log('[AuthSession] Received auth event, redirecting to login');
       navigate('/login');
     });
-    return unsubscribe;
+    return () => { unsubscribe(); };
   }, [navigate]);
 
   return { checkSession };
