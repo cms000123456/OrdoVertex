@@ -10,6 +10,15 @@ import { scheduler } from '../engine/scheduler';
 const router = Router();
 const prisma = new PrismaClient();
 
+// Helper to verify user exists (handles case where DB was reset but token is still valid)
+async function verifyUserExists(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true }
+  });
+  return user !== null;
+}
+
 // All routes require authentication
 router.use(authMiddleware);
 
@@ -92,6 +101,11 @@ router.post(
       }
 
       const { name, description, nodes, connections, settings } = req.body;
+
+      // Verify user exists before creating workflow
+      if (!(await verifyUserExists(req.user!.id))) {
+        return errorResponse(res, 'User not found. Please log out and log in again.', 401);
+      }
 
       const workflow = await prisma.workflow.create({
         data: {
@@ -350,6 +364,11 @@ router.post('/import', async (req: AuthRequest, res) => {
     // Validate required fields
     if (!Array.isArray(workflowData.nodes)) {
       return errorResponse(res, 'Invalid nodes format', 400);
+    }
+
+    // Verify user exists before importing workflow
+    if (!(await verifyUserExists(req.user!.id))) {
+      return errorResponse(res, 'User not found. Please log out and log in again.', 401);
     }
 
     // Create new workflow from imported data

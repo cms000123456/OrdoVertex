@@ -408,6 +408,19 @@ router.post('/:id/create', authMiddleware, async (req, res) => {
       targetHandle: conn.targetHandle || null
     }));
 
+    // Verify user exists before creating workflow
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: { id: true }
+    });
+
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'User not found. Please log out and log in again.' 
+      });
+    }
+
     const workflow = await prisma.workflow.create({
       data: {
         name: name || template.name,
@@ -421,6 +434,7 @@ router.post('/:id/create', authMiddleware, async (req, res) => {
 
     res.json({ success: true, data: workflow });
   } catch (error: any) {
+    console.error('Template creation error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

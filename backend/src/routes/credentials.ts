@@ -9,6 +9,15 @@ import { getVaultSecret, validateVaultConnection, VaultConfig } from '../utils/v
 const router = Router();
 const prisma = new PrismaClient();
 
+// Helper to verify user exists (handles case where DB was reset but token is still valid)
+async function verifyUserExists(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true }
+  });
+  return user !== null;
+}
+
 // Success response helper
 const successResponse = (res: any, data: any, status = 200) => {
   res.status(status).json({ success: true, data });
@@ -155,6 +164,11 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
 
     if (!name || !type || !data) {
       return errorResponse(res, 'Name, type, and data are required');
+    }
+
+    // Verify user exists before creating credential
+    if (!(await verifyUserExists(userId))) {
+      return errorResponse(res, 'User not found. Please log out and log in again.', 401);
     }
 
     // Validate credential type
