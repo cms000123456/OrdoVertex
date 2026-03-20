@@ -44,6 +44,19 @@ The first time you start the application, you can automatically create an admin 
 
 **Note:** These variables are only used if no admin user exists. Once an admin is created, these variables are ignored. You can also create the first admin manually via the API or promote an existing user through the database.
 
+### Rate Limiting (Optional)
+
+Configure authentication rate limiting to prevent brute force attacks:
+
+| Variable | Description | Default (Dev) | Default (Prod) |
+|----------|-------------|---------------|----------------|
+| `AUTH_RATE_LIMIT_MAX` | Max login attempts per window | 100 | 5 |
+| `AUTH_RATE_LIMIT_WINDOW_MS` | Time window in milliseconds | 60000 (1 min) | 900000 (15 min) |
+
+**Production Recommendation:** Leave unset to use strict defaults (5 attempts per 15 minutes).
+
+**Development:** Defaults are more permissive (100 attempts per minute). Override if needed.
+
 ---
 
 ## Step 2: Deploy Application

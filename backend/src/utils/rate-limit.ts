@@ -60,10 +60,21 @@ export function rateLimit(options: RateLimitOptions = {}) {
 }
 
 // Stricter rate limiting for auth endpoints
+// Configurable via environment variables for development
 export function authRateLimit(options: RateLimitOptions = {}) {
+  // Development: 100 attempts per minute
+  // Production: 5 attempts per 15 minutes
+  const isDev = process.env.NODE_ENV !== 'production';
+  const defaultMax = isDev ? 100 : 5;
+  const defaultWindowMs = isDev ? 60 * 1000 : 15 * 60 * 1000; // 1 min in dev, 15 min in prod
+  
+  // Allow override via env vars
+  const max = parseInt(process.env.AUTH_RATE_LIMIT_MAX || String(defaultMax), 10);
+  const windowMs = parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS || String(defaultWindowMs), 10);
+  
   return rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 attempts per 15 minutes
+    windowMs,
+    max,
     message: 'Too many authentication attempts, please try again later.',
     ...options
   });
@@ -71,9 +82,12 @@ export function authRateLimit(options: RateLimitOptions = {}) {
 
 // API key rate limiting (more permissive)
 export function apiRateLimit(options: RateLimitOptions = {}) {
+  const max = parseInt(process.env.API_RATE_LIMIT_MAX || '60', 10);
+  const windowMs = parseInt(process.env.API_RATE_LIMIT_WINDOW_MS || '60000', 10);
+  
   return rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 60, // 60 requests per minute
+    windowMs,
+    max,
     message: 'API rate limit exceeded.',
     ...options
   });

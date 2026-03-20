@@ -83,6 +83,9 @@ services:
       # Initial admin user (only used on first startup if no admin exists)
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # Rate limiting (production values - strict)
+      # AUTH_RATE_LIMIT_MAX: 5
+      # AUTH_RATE_LIMIT_WINDOW_MS: 900000
       
       PORT: 3001
     # Remove volume mount in production (use built image)
