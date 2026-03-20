@@ -19,7 +19,7 @@ Security vulnerabilities should **NOT** be reported through public GitHub issues
 
 ### 2. Report Privately
 
-Please report security vulnerabilities by emailing: **security@ordovertex.dev** (or create a private security advisory on GitHub if enabled)
+Please report security vulnerabilities by creating a **private security advisory on GitHub** (recommended) or contacting the maintainers privately.
 
 Include the following information:
 - **Description**: Clear description of the vulnerability

@@ -39,7 +39,7 @@ The first time you start the application, you can automatically create an admin 
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `ADMIN_EMAIL` | Admin user email | `admin@yourcompany.com` |
+| `ADMIN_EMAIL` | Admin user email | `admin@example.com` |
 | `ADMIN_PASSWORD` | Admin user password | `StrongAdminPass123!` |
 
 **Note:** These variables are only used if no admin user exists. Once an admin is created, these variables are ignored. You can also create the first admin manually via the API or promote an existing user through the database.
@@ -170,7 +170,7 @@ docker-compose -f docker-compose.prod.yml exec api npx prisma studio
 docker-compose -f docker-compose.prod.yml exec postgres psql -U ordovertex -d ordovertex
 
 # Promote existing user to admin
-UPDATE "User" SET role = 'admin' WHERE email = 'your@email.com';
+UPDATE "User" SET role = 'admin' WHERE email = 'user@example.com';
 
 # Or create new admin (password must be bcrypt hashed)
 # First, generate a bcrypt hash using the API or a tool

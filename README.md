@@ -88,7 +88,7 @@ docker-compose up -d
 
 # Create initial admin user (optional - first user becomes admin)
 # Set environment variables before starting:
-# ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=yourpassword docker-compose up -d
+# Set ADMIN_EMAIL and ADMIN_PASSWORD env vars before starting
 ```
 
 ### Manual Setup
