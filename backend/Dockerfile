@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:25-alpine
 
 RUN apk add --no-cache openssl python3 py3-pip
 
