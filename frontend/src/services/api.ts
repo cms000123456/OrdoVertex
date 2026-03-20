@@ -20,6 +20,32 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Handle auth errors (401 Unauthorized) - auto logout
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Check if it's a "User not found" error (DB reset scenario)
+      const errorMessage = error.response.data?.error?.message || error.response.data?.error || '';
+      
+      // Clear auth data
+      localStorage.removeItem('token');
+      localStorage.removeItem('auth-storage');
+      
+      // Show alert to user
+      if (errorMessage.includes('User not found')) {
+        alert('Your session has expired. Please log in again.');
+      } else {
+        alert('Your session has expired or you have been logged out. Please log in again.');
+      }
+      
+      // Redirect to login
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth API
 export const authApi = {
   login: (email: string, password: string, mfaToken?: string) =>

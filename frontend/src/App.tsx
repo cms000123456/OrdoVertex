@@ -23,6 +23,7 @@ import { MFASetup } from './components/MFASetup';
 import { SAMLConfig } from './components/SAMLConfig';
 import { ExecutionLogs } from './components/ExecutionLogs';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useAuthSession } from './hooks/useAuthSession';
 import './App.css';
 
 // Protected route component
@@ -99,6 +100,7 @@ function App() {
   return (
     <BrowserRouter>
       <KeyboardShortcutsWrapper />
+      <AuthSessionWrapper />
       <Toaster
         position="top-right"
         toastOptions={{
@@ -160,6 +162,12 @@ function App() {
 // Wrapper component for keyboard shortcuts
 function KeyboardShortcutsWrapper() {
   useKeyboardShortcuts();
+  return null;
+}
+
+// Wrapper component for auth session monitoring
+function AuthSessionWrapper() {
+  useAuthSession();
   return null;
 }
 
