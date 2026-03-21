@@ -9,7 +9,7 @@ interface NodePanelProps {
 export function NodePanel({ nodeTypes }: NodePanelProps) {
   const [search, setSearch] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(['Triggers', 'Actions', 'Core'])
+    new Set() // All categories collapsed by default
   );
 
   // Group nodes by category
