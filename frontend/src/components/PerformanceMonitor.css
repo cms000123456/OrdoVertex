@@ -252,7 +252,7 @@
 .info-value {
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary, #1e293b);
+  color: #0f172a;
   font-family: monospace;
 }
 
