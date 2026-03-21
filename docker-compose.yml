@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: ordovertex_secret
       POSTGRES_DB: ordovertex
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./.data/postgres:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
@@ -22,7 +22,7 @@ services:
     image: redis:7-alpine
     container_name: ordovertex-redis
     volumes:
-      - redis_data:/data
+      - ./.data/redis:/data
     ports:
       - "6379:6379"
     healthcheck:
@@ -91,7 +91,3 @@ services:
     depends_on:
       - api
     command: sh -c "npm install --legacy-peer-deps && npm start"
-
-volumes:
-  postgres_data:
-  redis_data:

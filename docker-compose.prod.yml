@@ -22,7 +22,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-CHANGE_THIS_STRONG_PASSWORD}
       POSTGRES_DB: ${DB_NAME:-ordovertex}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./.data/postgres:/var/lib/postgresql/data
       # Optional: Mount backup directory
       # - ./backups:/backups
     # Remove port exposure in production (use internal network only)
@@ -42,7 +42,7 @@ services:
     restart: always
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
     volumes:
-      - redis_data:/data
+      - ./.data/redis:/data
     # Remove port exposure in production
     # ports:
     #   - "6379:6379"
@@ -157,12 +157,6 @@ services:
       - api
     networks:
       - ordovertex-network
-
-volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
 
 networks:
   ordovertex-network:

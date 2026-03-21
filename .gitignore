@@ -40,7 +40,8 @@ yarn-error.log*
 *.sqlite
 *.sqlite3
 
-# Docker volumes
+# Docker volumes (persistent data stored in project directory)
+.data/
 postgres_data/
 redis_data/
 
