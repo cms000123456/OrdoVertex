@@ -76,8 +76,16 @@ app.use('/api/templates', templateRoutes);
 app.use('/webhook', webhookRoutes);
 
 // Admin/System Routes
-app.get('/api/admin/system-stats', async (req, res) => {
+import { authMiddleware } from './utils/auth';
+const authenticateToken = authMiddleware;
+
+app.get('/api/admin/system-stats', authenticateToken, async (req, res) => {
   try {
+    // Check if user is admin
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Admin access required' });
+    }
+    
     const os = await import('os');
     
     // Get memory stats
