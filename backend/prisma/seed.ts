@@ -36,6 +36,9 @@ async function main() {
     return;
   }
 
+  // Check if using default credentials
+  const isUsingDefaultCredentials = adminEmail === DEFAULT_ADMIN_EMAIL && adminPassword === DEFAULT_ADMIN_PASSWORD;
+  
   // Create new admin user
   const hashedPassword = await hashPassword(adminPassword);
   
@@ -44,13 +47,14 @@ async function main() {
       email: adminEmail,
       password: hashedPassword,
       name: 'Admin',
-      role: UserRole.admin
+      role: UserRole.admin,
+      onboardingCompleted: !isUsingDefaultCredentials  // Force onboarding if using defaults
     }
   });
 
   console.log(`✅ Admin user created: ${admin.email}`);
-  if (adminEmail === DEFAULT_ADMIN_EMAIL) {
-    console.log(`   ⚠️  Using default credentials. Change password after first login!`);
+  if (isUsingDefaultCredentials) {
+    console.log(`   ⚠️  Using default credentials. You will be required to change email/password on first login!`);
     console.log(`   Email: ${DEFAULT_ADMIN_EMAIL}`);
     console.log(`   Password: ${DEFAULT_ADMIN_PASSWORD}`);
   }

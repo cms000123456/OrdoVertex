@@ -80,7 +80,9 @@ export const authApi = {
   me: () => api.get('/api/auth/me'),
   updateProfile: (data: any) => api.patch('/api/auth/profile', data),
   changePassword: (currentPassword: string, newPassword: string) =>
-    api.post('/api/auth/change-password', { currentPassword, newPassword })
+    api.post('/api/auth/change-password', { currentPassword, newPassword }),
+  completeOnboarding: (email: string, password: string) =>
+    api.post('/api/auth/onboarding', { email, password })
 };
 
 // Workflow API

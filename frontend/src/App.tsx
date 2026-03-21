@@ -22,6 +22,7 @@ import { TemplatesGallery } from './components/TemplatesGallery';
 import { MFASetup } from './components/MFASetup';
 import { SAMLConfig } from './components/SAMLConfig';
 import { ExecutionLogs } from './components/ExecutionLogs';
+import { Onboarding } from './components/Onboarding';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAuthSession } from './hooks/useAuthSession';
 import './App.css';
@@ -54,6 +55,23 @@ function SessionExpiredBanner() {
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+}
+
+// Onboarding guard - redirects to onboarding if not completed
+function OnboardingGuard({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  // If onboarding is not completed, redirect to onboarding
+  if (user?.onboardingCompleted === false) {
+    return <Navigate to="/onboarding" />;
+  }
+  
+  return <>{children}</>;
 }
 
 // Public route component (redirects if authenticated)
@@ -161,7 +179,15 @@ function App() {
             </PublicRoute>
           }
         />
-        <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <Onboarding />
+            </ProtectedRoute>
+          }
+        />
+        <Route element={<OnboardingGuard><MainLayout /></OnboardingGuard>}>
           <Route path="/workflows" element={<WorkflowsList />} />
           <Route path="/workflows/new" element={<TemplatesGallery />} />
           <Route path="/workflows/:id" element={<WorkflowEditorWithData />} />

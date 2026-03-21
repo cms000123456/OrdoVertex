@@ -73,6 +73,9 @@ model User {
   mfaSecret      String? // Encrypted TOTP secret
   mfaBackupCodes String? // Encrypted backup codes
 
+  // Onboarding - force password change on first login with default credentials
+  onboardingCompleted Boolean @default(true)
+
   workflows      Workflow[]
   apiKeys        ApiKey[]
   credentials    Credential[]

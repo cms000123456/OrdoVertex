@@ -143,13 +143,74 @@ router.post(
           email: user.email,
           name: user.name,
           role: user.role,
-          mfaEnabled: user.mfaEnabled
+          mfaEnabled: user.mfaEnabled,
+          onboardingCompleted: user.onboardingCompleted
         },
         token
       });
     } catch (error: any) {
       console.error('Login error:', error);
       return errorResponse(res, 'Login failed', 500);
+    }
+  }
+);
+
+// Complete onboarding (change default credentials)
+router.post(
+  '/onboarding',
+  authMiddleware,
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('password').isLength({ min: 6 })
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return errorResponse(res, 'Validation failed', 400, errors.array());
+      }
+
+      const { email, password } = req.body;
+      const userId = req.user!.id;
+
+      // Check if email is already taken by another user
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (existingUser && existingUser.id !== userId) {
+        return errorResponse(res, 'Email is already in use', 409);
+      }
+
+      // Update user with new credentials and mark onboarding as complete
+      const hashedPassword = await hashPassword(password);
+      
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          email,
+          password: hashedPassword,
+          onboardingCompleted: true
+        }
+      });
+
+      // Generate new token with updated email
+      const token = generateToken(user.id, user.email, user.role);
+
+      return successResponse(res, {
+        message: 'Onboarding completed successfully',
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          onboardingCompleted: true
+        },
+        token
+      });
+    } catch (error: any) {
+      console.error('Onboarding error:', error);
+      return errorResponse(res, 'Failed to complete onboarding', 500);
     }
   }
 );
