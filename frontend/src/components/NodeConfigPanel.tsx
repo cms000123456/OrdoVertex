@@ -18,12 +18,16 @@ const isImageUrl = (url: string): boolean => {
 
 // Render JSON data with image support
 const RenderJsonData: React.FC<{ data: any }> = ({ data }) => {
+  console.log('RenderJsonData raw:', typeof data, data);
+  
   // Parse if data is a string (JSON string from API)
   let parsedData = data;
   if (typeof data === 'string') {
     try {
       parsedData = JSON.parse(data);
-    } catch {
+      console.log('Parsed string data:', parsedData);
+    } catch (e) {
+      console.log('Failed to parse, rendering as text');
       return <pre className="data-json">{data}</pre>;
     }
   }
@@ -32,10 +36,14 @@ const RenderJsonData: React.FC<{ data: any }> = ({ data }) => {
   let displayData = parsedData;
   if (Array.isArray(parsedData) && parsedData.length > 0) {
     displayData = parsedData[0]?.json || parsedData[0];
+    console.log('Unwrapped array data:', displayData);
   }
+  
+  console.log('Checking _display:', displayData?._display);
   
   // Check for _display hint (from Image Display node)
   if (displayData?._display?.type === 'image' && displayData._display.url) {
+    console.log('Rendering image:', displayData._display.url);
     return (
       <div className="image-display">
         <img 
