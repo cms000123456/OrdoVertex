@@ -162,7 +162,10 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
     const userId = req.user!.id;
     const { name, type, data } = req.body;
 
+    console.log('Creating credential:', { name, type, dataKeys: Object.keys(data || {}) });
+
     if (!name || !type || !data) {
+      console.log('Validation failed:', { name: !!name, type: !!type, data: !!data });
       return errorResponse(res, 'Name, type, and data are required');
     }
 
@@ -178,7 +181,16 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     // Encrypt the sensitive data
-    const { encrypted, iv } = encryptJSON(data);
+    let encrypted, iv;
+    try {
+      const encryptionResult = encryptJSON(data);
+      encrypted = encryptionResult.encrypted;
+      iv = encryptionResult.iv;
+      console.log('Encryption successful');
+    } catch (encryptError: any) {
+      console.error('Encryption failed:', encryptError);
+      return errorResponse(res, `Encryption failed: ${encryptError.message}`, 500);
+    }
 
     const { workspaceId } = req.body;
     
@@ -198,6 +210,8 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       }
     }
 
+    console.log('Creating credential in DB:', { name, type, userId, workspaceId: workspaceId || null });
+    
     const credential = await prisma.credential.create({
       data: {
         name,
@@ -209,6 +223,8 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       }
     });
 
+    console.log('Credential created:', credential.id);
+
     return successResponse(res, {
       credential: {
         id: credential.id,
@@ -219,7 +235,8 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
     }, 201);
   } catch (error: any) {
     console.error('Error creating credential:', error);
-    return errorResponse(res, 'Failed to create credential', 500);
+    console.error('Error details:', error.message, error.stack);
+    return errorResponse(res, `Failed to create credential: ${error.message}`, 500);
   }
 });
 
