@@ -543,26 +543,30 @@ return [{ json: {
           code: `const response = items[0]?.json || {};
 const xmlText = response.body || response.data || '';
 
-// Simple RSS XML parser
+// Better RSS XML parser
 function parseRSS(xml) {
   const items = [];
-  const itemRegex = /<item>([\\s\\S]*?)<\\/item>/g;
+  
+  // Handle both <item> and <entry> formats (RSS vs Atom)
+  const itemRegex = /<(item|entry)>([\\s\\S]*?)<\\/(item|entry)>/g;
   let match;
   
   while ((match = itemRegex.exec(xml)) !== null) {
-    const itemXml = match[1];
+    const itemXml = match[2];
     
-    const title = extractTag(itemXml, 'title');
-    const link = extractTag(itemXml, 'link');
-    const description = extractTag(itemXml, 'description');
-    const pubDate = extractTag(itemXml, 'pubDate');
+    const title = extractContent(itemXml, 'title');
+    const link = extractLink(itemXml);
+    const description = extractContent(itemXml, 'description') || extractContent(itemXml, 'summary') || extractContent(itemXml, 'content');
+    const pubDate = extractContent(itemXml, 'pubDate') || extractContent(itemXml, 'published') || extractContent(itemXml, 'updated');
+    const category = extractContent(itemXml, 'category');
     
     if (title) {
       items.push({
-        title: cleanHtml(title),
-        link: cleanHtml(link),
-        description: cleanHtml(description).substring(0, 200) + '...',
-        pubDate: pubDate
+        title: decodeEntities(title),
+        link: link,
+        description: decodeEntities(description).substring(0, 250),
+        pubDate: pubDate,
+        category: category
       });
     }
   }
@@ -570,38 +574,69 @@ function parseRSS(xml) {
   return items;
 }
 
-function extractTag(xml, tag) {
-  const regex = new RegExp('<' + tag + '>([\\s\\S]*?)<\\/' + tag + '>');
-  const match = xml.match(regex);
-  return match ? match[1] : '';
+function extractContent(xml, tag) {
+  // Match content with or without CDATA
+  const cdataRegex = new RegExp('<' + tag + '[^>]*>\\s*<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>\\s*<\\/' + tag + '>', 'i');
+  const normalRegex = new RegExp('<' + tag + '[^>]*>([\\s\\S]*?)<\\/' + tag + '>', 'i');
+  
+  let match = xml.match(cdataRegex);
+  if (match) return match[1].trim();
+  
+  match = xml.match(normalRegex);
+  if (match) return match[1].trim();
+  
+  return '';
 }
 
-function cleanHtml(text) {
+function extractLink(xml) {
+  // Try to get link from <link> tag
+  let match = xml.match(/<link>([^<]+)<\\/link>/);
+  if (match) return match[1].trim();
+  
+  // Try to get from <link href="..."> attribute
+  match = xml.match(/<link[^>]+href="([^"]+)"/);
+  if (match) return match[1].trim();
+  
+  // Try to get guid
+  match = xml.match(/<guid[^>]*>([^<]+)<\\/guid>/);
+  if (match) return match[1].trim();
+  
+  return '';
+}
+
+function decodeEntities(text) {
+  if (!text) return '';
   return text
-    .replace(/<![CDATA[|]]>/g, '')
-    .replace(/<[^>]+>/g, '')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/')
+    .replace(/&#\d+;/g, (match) => String.fromCharCode(parseInt(match.slice(2, -1), 10)))
+    .replace(/<[^>]+>/g, '') // Remove any remaining HTML tags
     .trim();
 }
 
-// Security keywords to filter for
+// Security keywords (expanded list)
 const securityKeywords = [
-  'vulnerability', 'exploit', 'malware', 'ransomware', 'breach', 'hack',
-  'cve', 'patch', 'security', 'cyberattack', 'phishing', 'zero-day',
-  'backdoor', 'trojan', 'spyware', 'botnet', 'ddos', 'data leak',
-  'encryption', 'firewall', 'antivirus', 'penetration', 'threat'
+  'vulnerability', 'vulnerabilities', 'exploit', 'exploited', 'malware', 'ransomware', 
+  'breach', 'breached', 'hacker', 'hackers', 'hacking', 'hacked',
+  'cve', 'patch', 'patches', 'security', 'cyberattack', 'cyber attack', 'phishing',
+  'zero-day', 'zeroday', 'backdoor', 'trojan', 'spyware', 'botnet', 'ddos', 
+  'data leak', 'data breach', 'encryption', 'firewall', 'antivirus', 'penetration',
+  'threat', 'threats', 'attack', 'attacks', 'compromised', 'malicious', 'suspicious',
+  'rootkit', 'keylogger', 'worm', 'virus', 'cryptojacking', 'sql injection',
+  'xss', 'csrf', 'mitm', 'ransom', 'bitcoin', 'cryptocurrency', 'dark web'
 ];
 
 const allItems = parseRSS(xmlText);
 
 // Filter for security-related items
 const securityItems = allItems.filter(item => {
-  const text = (item.title + ' ' + item.description).toLowerCase();
-  return securityKeywords.some(keyword => text.includes(keyword));
+  const text = (item.title + ' ' + item.description + ' ' + item.category).toLowerCase();
+  return securityKeywords.some(keyword => text.includes(keyword.toLowerCase()));
 });
 
 return [{ json: {
@@ -610,6 +645,7 @@ return [{ json: {
   articles: securityItems.slice(0, 10),
   keywords: securityKeywords,
   feedSource: 'The Hacker News',
+  parsed: allItems.length > 0,
   fetchedAt: new Date().toISOString()
 } }];`
         }

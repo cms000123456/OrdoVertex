@@ -41,6 +41,7 @@ import { aiEmbeddingNode } from './actions/ai-embedding';
 import { aiVectorStoreNode } from './actions/ai-vector-store';
 import { textSplitterNode } from './actions/text-splitter';
 import { imageDisplayNode } from './actions/image-display';
+import { textParserNode } from './actions/text-parser';
 
 // Register all nodes
 export function registerAllNodes() {
@@ -85,6 +86,7 @@ export function registerAllNodes() {
   nodeRegistry.register(aiVectorStoreNode);
   nodeRegistry.register(textSplitterNode);
   nodeRegistry.register(imageDisplayNode);
+  nodeRegistry.register(textParserNode);
 
   console.log(`✅ Registered ${nodeRegistry.getAll().length} nodes`);
 }
