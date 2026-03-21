@@ -88,10 +88,11 @@ return [{ json: result }];`
       description: 'Formats the final output',
       position: { x: 1000, y: 200 },
       parameters: {
-        values: {
-          summary: 'Tutorial workflow completed successfully',
-          timestamp: '{{ $now }}'
-        }
+        mode: 'manual',
+        values: [
+          { name: 'summary', value: 'Tutorial workflow completed successfully' },
+          { name: 'timestamp', value: '{{ $now }}' }
+        ]
       }
     }
   ],
