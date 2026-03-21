@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ExternalLink } from 'lucide-react';
+import { X, ExternalLink, Database, PlayCircle, Settings, Lightbulb, XCircle } from 'lucide-react';
 import { useWorkflowStore } from '../store/workflowStore';
-import { credentialApi } from '../services/api';
+import { credentialApi, executionsApi } from '../services/api';
 import { Credential } from '../types';
 import { AITips } from './AITips';
 
@@ -10,12 +10,42 @@ interface NodeConfigPanelProps {
   onParameterChange: (key: string, value: any) => void;
 }
 
+interface NodeExecutionData {
+  id: string;
+  nodeId: string;
+  nodeName: string;
+  status: string;
+  input: any;
+  output: any;
+  error: string | null;
+  startedAt: string;
+  finishedAt: string;
+  duration: number | null;
+}
+
 export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelProps) {
   const node = useWorkflowStore((state) => state.getNodeById(nodeId));
   const nodeType = useWorkflowStore((state) => state.getNodeType(node?.type || ''));
   const setSelectedNode = useWorkflowStore((state) => state.setSelectedNode);
+  const currentWorkflow = useWorkflowStore((state) => state.currentWorkflow);
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [credentialsLoading, setCredentialsLoading] = useState(false);
+  
+  // Execution data state
+  const [activeTab, setActiveTab] = useState<'config' | 'input' | 'output'>('config');
+  const [executionData, setExecutionData] = useState<NodeExecutionData | null>(null);
+  const [executionLoading, setExecutionLoading] = useState(false);
+  const [executionError, setExecutionError] = useState<string | null>(null);
+  
+  // Help tip state (show initially)
+  const [showTip, setShowTip] = useState(() => {
+    return !localStorage.getItem('nodeInspectorTipDismissed');
+  });
+  
+  const dismissTip = () => {
+    localStorage.setItem('nodeInspectorTipDismissed', 'true');
+    setShowTip(false);
+  };
 
   // Load credentials when needed
   const loadCredentials = useCallback(async (type?: string) => {
@@ -29,6 +59,50 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
       setCredentialsLoading(false);
     }
   }, []);
+
+  // Load execution data when tab changes or node selected
+  useEffect(() => {
+    const loadExecutionData = async () => {
+      if (!currentWorkflow || !node) return;
+      
+      try {
+        setExecutionLoading(true);
+        setExecutionError(null);
+        
+        // First get recent executions
+        const executionsRes = await executionsApi.getAll();
+        const executions = executionsRes.data.executions;
+        
+        // Find the most recent completed execution for this workflow
+        const recentExecution = executions.find((e: any) => 
+          e.workflowId === currentWorkflow.id && 
+          (e.status === 'success' || e.status === 'failed')
+        );
+        
+        if (!recentExecution) {
+          setExecutionData(null);
+          return;
+        }
+        
+        // Get node execution data
+        const nodeExecRes = await executionsApi.getNodeExecution(recentExecution.id, node.id);
+        setExecutionData(nodeExecRes.data.nodeExecution);
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          setExecutionData(null);
+        } else {
+          console.error('Failed to load execution data:', err);
+          setExecutionError('Failed to load execution data');
+        }
+      } finally {
+        setExecutionLoading(false);
+      }
+    };
+    
+    if (activeTab === 'input' || activeTab === 'output') {
+      loadExecutionData();
+    }
+  }, [currentWorkflow, node, activeTab]);
 
   useEffect(() => {
     // Check if any property needs credentials
@@ -125,7 +199,6 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
                 type="button"
                 className="btn btn-sm btn-secondary"
                 onClick={() => {
-                  // Open credentials manager in new tab or trigger event
                   window.dispatchEvent(new CustomEvent('openCredentialsManager'));
                 }}
                 title="Manage Credentials"
@@ -178,10 +251,64 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
     }
   };
 
+  const renderDataView = (data: any, title: string) => {
+    if (executionLoading) {
+      return (
+        <div className="data-loading">
+          <div className="spinner-small"></div>
+          <span>Loading execution data...</span>
+        </div>
+      );
+    }
+    
+    if (executionError) {
+      return (
+        <div className="data-error">
+          <p>{executionError}</p>
+        </div>
+      );
+    }
+    
+    if (!executionData) {
+      return (
+        <div className="data-empty">
+          <p>No execution data available.</p>
+          <p className="data-hint">Run the workflow first to see {title.toLowerCase()} data.</p>
+        </div>
+      );
+    }
+    
+    const displayData = title === 'Input' ? executionData.input : executionData.output;
+    
+    if (!displayData || (Array.isArray(displayData) && displayData.length === 0)) {
+      return (
+        <div className="data-empty">
+          <p>No {title.toLowerCase()} data for this execution.</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="data-content">
+        <div className="data-header">
+          <span className="data-status" data-status={executionData.status}>
+            {executionData.status}
+          </span>
+          {executionData.duration && (
+            <span className="data-duration">{executionData.duration}ms</span>
+          )}
+        </div>
+        <pre className="data-json">
+          {JSON.stringify(displayData, null, 2)}
+        </pre>
+      </div>
+    );
+  };
+
   return (
     <div className="config-panel">
       <div className="config-header">
-        <h3>Configuration</h3>
+        <h3>Node Inspector</h3>
         <button
           className="close-btn"
           onClick={() => setSelectedNode(null)}
@@ -190,48 +317,116 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
         </button>
       </div>
 
+      {/* Tabs */}
+      <div className="inspector-tabs">
+        <button
+          className={`tab ${activeTab === 'config' ? 'active' : ''}`}
+          onClick={() => setActiveTab('config')}
+        >
+          <Settings size={14} />
+          <span>Config</span>
+        </button>
+        <button
+          className={`tab ${activeTab === 'input' ? 'active' : ''}`}
+          onClick={() => setActiveTab('input')}
+        >
+          <PlayCircle size={14} />
+          <span>Input</span>
+        </button>
+        <button
+          className={`tab ${activeTab === 'output' ? 'active' : ''}`}
+          onClick={() => setActiveTab('output')}
+        >
+          <Database size={14} />
+          <span>Output</span>
+        </button>
+      </div>
+
       <div className="config-content">
-        <div className="node-info-header">
-          <h4>{node.name}</h4>
-          <span className="node-type-badge">{node.type}</span>
-        </div>
-
-        {/* Node Description */}
-        <div className="property-row node-description-row">
-          <label className="property-label">Description</label>
-          <textarea
-            value={node.description || ''}
-            onChange={(e) => onParameterChange('__description', e.target.value)}
-            placeholder="Add a description for this node (shown on canvas)..."
-            className="form-textarea node-description-input"
-            rows={2}
-          />
-        </div>
-
-        {/* AI Tips for AI nodes */}
-        {node.type === 'aiAgent' && <AITips context="agent" />}
-        {node.type === 'aiEmbedding' && <AITips context="embedding" />}
-        {node.type === 'aiVectorStore' && <AITips context="vector-store" />}
-        {node.type === 'textSplitter' && <AITips context="text-splitter" />}
-
-        <div className="properties-list">
-          {nodeType.properties?.map((property) => {
-            if (!shouldShowProperty(property)) return null;
-
-            return (
-              <div key={property.name} className="property-row">
-                <label className="property-label">
-                  {property.displayName}
-                  {property.required && <span className="required">*</span>}
-                </label>
-                {renderPropertyInput(property)}
-                {property.description && (
-                  <p className="property-description">{property.description}</p>
-                )}
+        {/* Config Tab */}
+        {activeTab === 'config' && (
+          <>
+            {showTip && (
+              <div className="inspector-tip">
+                <Lightbulb size={16} className="tip-icon" />
+                <div className="tip-content">
+                  <strong>New to OrdoVertex?</strong>
+                  <p>
+                    Use the <strong>Input</strong> and <strong>Output</strong> tabs to see how data flows between nodes. 
+                    Run a workflow first, then click on any node to inspect its data!
+                  </p>
+                </div>
+                <button className="tip-close" onClick={dismissTip} title="Dismiss tip">
+                  <XCircle size={16} />
+                </button>
               </div>
-            );
-          })}
-        </div>
+            )}
+            
+            <div className="node-info-header">
+              <h4>{node.name}</h4>
+              <span className="node-type-badge">{node.type}</span>
+            </div>
+
+            {/* Node Description */}
+            <div className="property-row node-description-row">
+              <label className="property-label">Description</label>
+              <textarea
+                value={node.description || ''}
+                onChange={(e) => onParameterChange('__description', e.target.value)}
+                placeholder="Add a description for this node (shown on canvas)..."
+                className="form-textarea node-description-input"
+                rows={2}
+              />
+            </div>
+
+            {/* AI Tips for AI nodes */}
+            {node.type === 'aiAgent' && <AITips context="agent" />}
+            {node.type === 'aiEmbedding' && <AITips context="embedding" />}
+            {node.type === 'aiVectorStore' && <AITips context="vector-store" />}
+            {node.type === 'textSplitter' && <AITips context="text-splitter" />}
+
+            <div className="properties-list">
+              {nodeType.properties?.map((property) => {
+                if (!shouldShowProperty(property)) return null;
+
+                return (
+                  <div key={property.name} className="property-row">
+                    <label className="property-label">
+                      {property.displayName}
+                      {property.required && <span className="required">*</span>}
+                    </label>
+                    {renderPropertyInput(property)}
+                    {property.description && (
+                      <p className="property-description">{property.description}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+        
+        {/* Input Tab */}
+        {activeTab === 'input' && (
+          <div className="data-tab">
+            <h4>Input Data</h4>
+            <p className="tab-description">
+              Data that flowed into this node from the previous node during the last execution.
+            </p>
+            {renderDataView(executionData?.input, 'Input')}
+          </div>
+        )}
+        
+        {/* Output Tab */}
+        {activeTab === 'output' && (
+          <div className="data-tab">
+            <h4>Output Data</h4>
+            <p className="tab-description">
+              Data that flowed out of this node to the next node during the last execution.
+            </p>
+            {renderDataView(executionData?.output, 'Output')}
+          </div>
+        )}
       </div>
 
       <style>{`
@@ -249,7 +444,215 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
           padding: 6px 8px;
           flex-shrink: 0;
         }
+        
+        .inspector-tabs {
+          display: flex;
+          border-bottom: 1px solid var(--border-color, #e2e8f0);
+          background: var(--bg-secondary, #f8fafc);
+        }
+        
+        .tab {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 12px;
+          border: none;
+          background: transparent;
+          color: var(--text-secondary, #64748b);
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          border-bottom: 2px solid transparent;
+        }
+        
+        .tab:hover {
+          color: var(--text-primary, #1e293b);
+          background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .tab.active {
+          color: var(--primary, #6366f1);
+          border-bottom-color: var(--primary, #6366f1);
+          background: white;
+        }
+        
+        .data-tab {
+          padding: 16px;
+        }
+        
+        .data-tab h4 {
+          margin: 0 0 8px 0;
+          font-size: 14px;
+          color: var(--text-primary, #1e293b);
+        }
+        
+        .tab-description {
+          margin: 0 0 16px 0;
+          font-size: 12px;
+          color: var(--text-secondary, #64748b);
+        }
+        
+        .data-loading {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          padding: 40px;
+          color: var(--text-secondary, #64748b);
+        }
+        
+        .spinner-small {
+          width: 20px;
+          height: 20px;
+          border: 2px solid #e2e8f0;
+          border-top-color: #6366f1;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        
+        .data-error {
+          padding: 24px;
+          text-align: center;
+          color: #ef4444;
+          background: #fef2f2;
+          border-radius: 8px;
+        }
+        
+        .data-empty {
+          padding: 40px 24px;
+          text-align: center;
+          color: var(--text-secondary, #64748b);
+        }
+        
+        .data-empty p {
+          margin: 0 0 8px 0;
+        }
+        
+        .data-hint {
+          font-size: 12px;
+          opacity: 0.8;
+        }
+        
+        .data-content {
+          background: var(--bg-secondary, #f8fafc);
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        
+        .data-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 16px;
+          background: var(--bg-tertiary, #f1f5f9);
+          border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+        
+        .data-status {
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          padding: 4px 8px;
+          border-radius: 4px;
+        }
+        
+        .data-status[data-status="success"] {
+          background: #dcfce7;
+          color: #166534;
+        }
+        
+        .data-status[data-status="failed"] {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+        
+        .data-status[data-status="running"] {
+          background: #dbeafe;
+          color: #1e40af;
+        }
+        
+        .data-duration {
+          font-size: 12px;
+          color: var(--text-secondary, #64748b);
+          font-family: monospace;
+        }
+        
+        .data-json {
+          margin: 0;
+          padding: 16px;
+          font-size: 12px;
+          font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+          line-height: 1.5;
+          color: var(--text-primary, #1e293b);
+          overflow-x: auto;
+          white-space: pre-wrap;
+          word-break: break-word;
+          max-height: 400px;
+          overflow-y: auto;
+        }
+        
+        .inspector-tip {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 12px 14px;
+          margin: 12px 16px;
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border: 1px solid #fbbf24;
+          border-radius: 10px;
+          font-size: 12px;
+          color: #92400e;
+        }
+        
+        .tip-icon {
+          flex-shrink: 0;
+          color: #f59e0b;
+          margin-top: 1px;
+        }
+        
+        .tip-content {
+          flex: 1;
+        }
+        
+        .tip-content strong {
+          display: block;
+          margin-bottom: 4px;
+          color: #78350f;
+        }
+        
+        .tip-content p {
+          margin: 0;
+          line-height: 1.5;
+        }
+        
+        .tip-close {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2px;
+          border: none;
+          background: transparent;
+          color: #92400e;
+          cursor: pointer;
+          border-radius: 4px;
+          opacity: 0.7;
+          transition: all 0.2s;
+        }
+        
+        .tip-close:hover {
+          opacity: 1;
+          background: rgba(146, 64, 14, 0.1);
+        }
       `}</style>
     </div>
   );
 }
+
+export default NodeConfigPanel;

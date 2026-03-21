@@ -109,7 +109,9 @@ export const nodesApi = {
 export const executionsApi = {
   getAll: () => api.get('/api/executions'),
   getById: (id: string) => api.get(`/api/executions/${id}`),
-  cancel: (id: string) => api.post(`/api/executions/${id}/cancel`)
+  cancel: (id: string) => api.post(`/api/executions/${id}/cancel`),
+  getNodeExecution: (executionId: string, nodeId: string) => 
+    api.get(`/api/executions/${executionId}/nodes/${nodeId}`)
 };
 
 // Execution Logs API

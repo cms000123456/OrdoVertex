@@ -135,4 +135,58 @@ router.delete('/:id', async (req: AuthRequest, res) => {
   }
 });
 
+// Get node execution data for a specific node in an execution
+router.get('/:executionId/nodes/:nodeId', async (req: AuthRequest, res) => {
+  try {
+    const { executionId, nodeId } = req.params;
+
+    // Verify execution ownership
+    const execution = await prisma.workflowExecution.findFirst({
+      where: {
+        id: executionId,
+        workflow: {
+          userId: req.user!.id
+        }
+      }
+    });
+
+    if (!execution) {
+      return errorResponse(res, 'Execution not found', 404);
+    }
+
+    // Get node execution
+    const nodeExecution = await prisma.nodeExecution.findFirst({
+      where: {
+        executionId,
+        nodeId
+      },
+      orderBy: { startedAt: 'desc' } // Get most recent if multiple
+    });
+
+    if (!nodeExecution) {
+      return errorResponse(res, 'Node execution not found', 404);
+    }
+
+    return successResponse(res, {
+      nodeExecution: {
+        id: nodeExecution.id,
+        nodeId: nodeExecution.nodeId,
+        nodeName: nodeExecution.nodeName,
+        status: nodeExecution.status,
+        input: nodeExecution.input,
+        output: nodeExecution.output,
+        error: nodeExecution.error,
+        startedAt: nodeExecution.startedAt,
+        finishedAt: nodeExecution.finishedAt,
+        duration: nodeExecution.finishedAt && nodeExecution.startedAt
+          ? new Date(nodeExecution.finishedAt).getTime() - new Date(nodeExecution.startedAt).getTime()
+          : null
+      }
+    });
+  } catch (error: any) {
+    console.error('Get node execution error:', error);
+    return errorResponse(res, 'Failed to get node execution data', 500);
+  }
+});
+
 export default router;

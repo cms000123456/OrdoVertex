@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Play, Settings, Trash2, Clock, Activity, MoreVertical, LayoutGrid, Upload, Download, Terminal } from 'lucide-react';
+import { Plus, Play, Settings, Trash2, Clock, Activity, MoreVertical, LayoutGrid, Upload, Download, Terminal, GraduationCap, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { workflowsApi } from '../services/api';
 import { Workflow } from '../types';
@@ -207,13 +207,24 @@ export function WorkflowsList() {
         </div>
       ) : (
         <div className="workflows-grid">
-          {workflows.map((workflow) => (
-            <div key={workflow.id} className="workflow-card">
+          {workflows.map((workflow) => {
+            const isTutorial = workflow.name.toLowerCase().includes('tutorial') || 
+                              workflow.name.includes('📚');
+            return (
+            <div key={workflow.id} className={`workflow-card ${isTutorial ? 'tutorial-card' : ''}`}>
               <div className="card-header">
                 <h3 onClick={() => navigate(`/workflows/${workflow.id}`)}>
                   {workflow.name}
                 </h3>
-                {getStatusIcon(workflow.active)}
+                <div className="header-badges">
+                  {isTutorial && (
+                    <span className="tutorial-badge" title="Tutorial workflow - learn by example!">
+                      <GraduationCap size={14} />
+                      Tutorial
+                    </span>
+                  )}
+                  {getStatusIcon(workflow.active)}
+                </div>
               </div>
               
               <p className="workflow-description">
@@ -262,7 +273,7 @@ export function WorkflowsList() {
                 </button>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
 
