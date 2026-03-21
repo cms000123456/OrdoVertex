@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ExternalLink, Database, PlayCircle, Settings, Lightbulb, XCircle } from 'lucide-react';
+import { X, ExternalLink, Database, PlayCircle, Settings, Lightbulb, XCircle, RefreshCw } from 'lucide-react';
 import { useWorkflowStore } from '../store/workflowStore';
 import { credentialApi, executionsApi } from '../services/api';
 import { Credential } from '../types';
@@ -60,49 +60,55 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
     }
   }, []);
 
+  // Load execution data
+  const loadExecutionData = useCallback(async () => {
+    if (!currentWorkflow || !node) return;
+    
+    try {
+      setExecutionLoading(true);
+      setExecutionError(null);
+      
+      // First get recent executions
+      const executionsRes = await executionsApi.getAll();
+      const executions = executionsRes.data.executions;
+      
+      // Find the most recent completed execution for this workflow
+      const recentExecution = executions.find((e: any) => 
+        e.workflowId === currentWorkflow.id && 
+        (e.status === 'success' || e.status === 'failed')
+      );
+      
+      if (!recentExecution) {
+        console.log('No recent execution found for workflow', currentWorkflow.id);
+        setExecutionData(null);
+        return;
+      }
+      
+      console.log('Found execution:', recentExecution.id, 'Looking for node:', node.id);
+      
+      // Get node execution data
+      const nodeExecRes = await executionsApi.getNodeExecution(recentExecution.id, node.id);
+      console.log('Node execution data:', nodeExecRes.data);
+      setExecutionData(nodeExecRes.data.nodeExecution);
+    } catch (err: any) {
+      console.error('Error loading execution data:', err);
+      if (err.response?.status === 404) {
+        console.log('Node execution not found for node:', node.id);
+        setExecutionData(null);
+      } else {
+        setExecutionError('Failed to load execution data: ' + (err.message || 'Unknown error'));
+      }
+    } finally {
+      setExecutionLoading(false);
+    }
+  }, [currentWorkflow, node]);
+  
   // Load execution data when tab changes or node selected
   useEffect(() => {
-    const loadExecutionData = async () => {
-      if (!currentWorkflow || !node) return;
-      
-      try {
-        setExecutionLoading(true);
-        setExecutionError(null);
-        
-        // First get recent executions
-        const executionsRes = await executionsApi.getAll();
-        const executions = executionsRes.data.executions;
-        
-        // Find the most recent completed execution for this workflow
-        const recentExecution = executions.find((e: any) => 
-          e.workflowId === currentWorkflow.id && 
-          (e.status === 'success' || e.status === 'failed')
-        );
-        
-        if (!recentExecution) {
-          setExecutionData(null);
-          return;
-        }
-        
-        // Get node execution data
-        const nodeExecRes = await executionsApi.getNodeExecution(recentExecution.id, node.id);
-        setExecutionData(nodeExecRes.data.nodeExecution);
-      } catch (err: any) {
-        if (err.response?.status === 404) {
-          setExecutionData(null);
-        } else {
-          console.error('Failed to load execution data:', err);
-          setExecutionError('Failed to load execution data');
-        }
-      } finally {
-        setExecutionLoading(false);
-      }
-    };
-    
     if (activeTab === 'input' || activeTab === 'output') {
       loadExecutionData();
     }
-  }, [currentWorkflow, node, activeTab]);
+  }, [activeTab, loadExecutionData]);
 
   useEffect(() => {
     // Check if any property needs credentials
@@ -272,8 +278,12 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
     if (!executionData) {
       return (
         <div className="data-empty">
-          <p>No execution data available.</p>
-          <p className="data-hint">Run the workflow first to see {title.toLowerCase()} data.</p>
+          <p>No execution data available for this node.</p>
+          <p className="data-hint">
+            Run the workflow first, then check back here.
+            <br />
+            Make sure you're viewing the most recent execution.
+          </p>
         </div>
       );
     }
@@ -409,10 +419,22 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
         {/* Input Tab */}
         {activeTab === 'input' && (
           <div className="data-tab">
-            <h4>Input Data</h4>
-            <p className="tab-description">
-              Data that flowed into this node from the previous node during the last execution.
-            </p>
+            <div className="tab-header">
+              <div>
+                <h4>Input Data</h4>
+                <p className="tab-description">
+                  Data that flowed into this node from the previous node.
+                </p>
+              </div>
+              <button 
+                className="refresh-btn" 
+                onClick={loadExecutionData}
+                disabled={executionLoading}
+                title="Refresh data"
+              >
+                <RefreshCw size={16} className={executionLoading ? 'spinning' : ''} />
+              </button>
+            </div>
             {renderDataView(executionData?.input, 'Input')}
           </div>
         )}
@@ -420,10 +442,22 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
         {/* Output Tab */}
         {activeTab === 'output' && (
           <div className="data-tab">
-            <h4>Output Data</h4>
-            <p className="tab-description">
-              Data that flowed out of this node to the next node during the last execution.
-            </p>
+            <div className="tab-header">
+              <div>
+                <h4>Output Data</h4>
+                <p className="tab-description">
+                  Data that flowed out of this node to the next node.
+                </p>
+              </div>
+              <button 
+                className="refresh-btn" 
+                onClick={loadExecutionData}
+                disabled={executionLoading}
+                title="Refresh data"
+              >
+                <RefreshCw size={16} className={executionLoading ? 'spinning' : ''} />
+              </button>
+            </div>
             {renderDataView(executionData?.output, 'Output')}
           </div>
         )}
@@ -596,6 +630,42 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
           word-break: break-word;
           max-height: 400px;
           overflow-y: auto;
+        }
+        
+        .tab-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
+        }
+        
+        .refresh-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 6px;
+          background: white;
+          color: var(--text-secondary, #64748b);
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .refresh-btn:hover:not(:disabled) {
+          background: var(--bg-secondary, #f8fafc);
+          color: var(--primary, #6366f1);
+          border-color: var(--primary, #6366f1);
+        }
+        
+        .refresh-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        
+        .spinning {
+          animation: spin 1s linear infinite;
         }
         
         .inspector-tip {
