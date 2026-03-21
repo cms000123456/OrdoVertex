@@ -166,6 +166,7 @@ export const workspacesApi = {
 
 // Groups API
 export const groupsApi = {
+  getAll: () => api.get('/api/groups'),
   getByWorkspace: (workspaceId: string) => api.get(`/api/groups/workspace/${workspaceId}`),
   create: (data: any) => api.post('/api/groups', data),
   update: (id: string, data: any) => api.patch(`/api/groups/${id}`, data),
@@ -175,7 +176,13 @@ export const groupsApi = {
   addMember: (groupId: string, userId: string) =>
     api.post(`/api/groups/${groupId}/members`, { userId }),
   removeMember: (groupId: string, memberId: string) =>
-    api.delete(`/api/groups/${groupId}/members/${memberId}`)
+    api.delete(`/api/groups/${groupId}/members/${memberId}`),
+  
+  // Workspace Access
+  addWorkspaceAccess: (groupId: string, workspaceId: string, role?: string) =>
+    api.post(`/api/groups/${groupId}/workspaces`, { workspaceId, role }),
+  removeWorkspaceAccess: (groupId: string, accessId: string) =>
+    api.delete(`/api/groups/${groupId}/workspaces/${accessId}`)
 };
 
 // User API

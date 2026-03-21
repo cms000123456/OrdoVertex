@@ -78,6 +78,8 @@ export function GroupsTeamsManager() {
   useEffect(() => {
     if (selectedWorkspace) {
       loadGroups(selectedWorkspace);
+    } else {
+      setLoading(false);
     }
   }, [selectedWorkspace]);
 
