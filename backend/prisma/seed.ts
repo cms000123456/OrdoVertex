@@ -14,15 +14,11 @@ const TUTORIAL_WORKFLOW = {
   nodes: [
     {
       id: 'trigger-1',
-      name: 'When called via Webhook',
-      type: 'webhook',
-      description: 'Triggers when webhook URL is called',
+      name: 'Manual Trigger',
+      type: 'manualTrigger',
+      description: 'Click Execute to run this workflow',
       position: { x: 100, y: 200 },
-      parameters: {
-        path: 'tutorial-demo',
-        method: 'POST',
-        responseMode: 'responseNode'
-      }
+      parameters: {}
     },
     {
       id: 'code-1',
@@ -87,14 +83,16 @@ return [{ json: result }];`
       }
     },
     {
-      id: 'respond-1',
-      name: 'Return Response',
-      type: 'respondToWebhook',
-      description: 'Sends the final result back to the caller',
+      id: 'set-1',
+      name: 'Final Result',
+      type: 'set',
+      description: 'Formats the final output',
       position: { x: 1000, y: 200 },
       parameters: {
-        statusCode: 200,
-        respondWith: 'allIncomingItems'
+        values: {
+          summary: 'Tutorial workflow completed successfully',
+          timestamp: '{{ $now }}'
+        }
       }
     }
   ],
@@ -114,7 +112,7 @@ return [{ json: result }];`
     {
       source: 'code-2',
       sourceHandle: 'default',
-      target: 'respond-1',
+      target: 'set-1',
       targetHandle: 'input'
     }
   ],
@@ -202,7 +200,7 @@ async function main() {
 
     console.log(`✅ Tutorial workflow created: ${tutorialWorkflow.name}`);
     console.log(`   📋 Workflow ID: ${tutorialWorkflow.id}`);
-    console.log(`   🔗 Webhook URL: POST http://localhost:3001/webhook/tutorial-demo`);
+    console.log(`   💡 Click "Execute" in the workflow editor to run and test the data flow`);
     console.log(`   📖 Nodes: Webhook Trigger → Generate Data → Transform Data → Response`);
     console.log(`   💡 Tip: Open the workflow and click on each node to inspect input/output data!`);
   } else {

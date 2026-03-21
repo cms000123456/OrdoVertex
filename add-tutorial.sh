@@ -24,15 +24,11 @@ const TUTORIAL_WORKFLOW = {
   nodes: [
     {
       id: 'trigger-1',
-      name: 'When called via Webhook',
-      type: 'webhook',
-      description: 'Triggers when webhook URL is called',
+      name: 'Manual Trigger',
+      type: 'manualTrigger',
+      description: 'Click Execute to run this workflow',
       position: { x: 100, y: 200 },
-      parameters: {
-        path: 'tutorial-demo',
-        method: 'POST',
-        responseMode: 'responseNode'
-      }
+      parameters: {}
     },
     {
       id: 'code-1',
@@ -78,21 +74,23 @@ return [{ json: {
       }
     },
     {
-      id: 'respond-1',
-      name: 'Return Response',
-      type: 'respondToWebhook',
-      description: 'Sends the final result back to the caller',
+      id: 'set-1',
+      name: 'Final Result',
+      type: 'set',
+      description: 'Formats the final output',
       position: { x: 1000, y: 200 },
       parameters: {
-        statusCode: 200,
-        respondWith: 'allIncomingItems'
+        values: {
+          summary: 'Tutorial workflow completed successfully',
+          timestamp: '{{ $now }}'
+        }
       }
     }
   ],
   connections: [
     { source: 'trigger-1', sourceHandle: 'default', target: 'code-1', targetHandle: 'input' },
     { source: 'code-1', sourceHandle: 'default', target: 'code-2', targetHandle: 'input' },
-    { source: 'code-2', sourceHandle: 'default', target: 'respond-1', targetHandle: 'input' }
+    { source: 'code-2', sourceHandle: 'default', target: 'set-1', targetHandle: 'input' }
   ],
   settings: {
     timezone: 'UTC',
@@ -144,8 +142,8 @@ async function main() {
   console.log(`   1. Open the OrdoVertex UI`);
   console.log(`   2. Find the "📚 Tutorial: Data Flow Demo" workflow`);
   console.log(`   3. Click "Execute" to run it`);
-  console.log(`   4. Click on any node to see Input/Output data`);
-  console.log(`\n🔗 Webhook URL: POST http://localhost:3001/webhook/tutorial-demo`);
+  console.log(`   4. Click on any node to see Input/Output data in the Node Inspector`);
+  console.log(`\n💡 The workflow shows how data flows from the Manual Trigger → Generate Data → Transform Data → Final Result`);
 }
 
 main()
