@@ -78,7 +78,24 @@ const stickyNoteColors: Record<string, { bg: string; border: string; text: strin
 };
 
 // Sticky Note Component
-function StickyNoteNode({ data, selected }: NodeProps) {
+interface StickyNoteData {
+  type: string;
+  label?: string;
+  description?: string;
+  parameters?: {
+    color?: string;
+    text?: string;
+    width?: number;
+    height?: number;
+  };
+}
+
+interface StickyNoteProps {
+  data: StickyNoteData;
+  selected?: boolean;
+}
+
+function StickyNoteNode({ data, selected }: StickyNoteProps) {
   const colorKey = data.parameters?.color || 'yellow';
   const colors = stickyNoteColors[colorKey] || stickyNoteColors['yellow'];
   const text = data.parameters?.text || data.description || 'Note';

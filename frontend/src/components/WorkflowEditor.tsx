@@ -173,7 +173,7 @@ function Flow() {
       const sourceNode = storeNodes.find(n => n.id === params.source);
       const targetNode = storeNodes.find(n => n.id === params.target);
       
-      if (sourceNode?.data?.type === 'stickyNote' || targetNode?.data?.type === 'stickyNote') {
+      if (sourceNode?.type === 'stickyNote' || targetNode?.type === 'stickyNote') {
         return; // Don't allow connections to/from sticky notes
       }
       
