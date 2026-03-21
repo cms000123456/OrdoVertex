@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Activity, Cpu, MemoryStick, HardDrive, Clock, RefreshCw, Server, Database, AlertTriangle } from 'lucide-react';
+import api from '../services/api';
 import './PerformanceMonitor.css';
 
 interface SystemStats {
@@ -52,26 +53,30 @@ export function PerformanceMonitor() {
     try {
       setLoading(true);
       
-      // Fetch system stats
-      const systemRes = await fetch('/api/admin/system-stats');
-      const systemData = await systemRes.json();
-      
-      if (systemData.success) {
-        setSystemStats(systemData.data);
-      } else {
-        console.error('System stats error:', systemData.error);
+      // Fetch system stats using authenticated API
+      try {
+        const systemRes = await api.get('/api/admin/system-stats');
+        if (systemRes.data?.success) {
+          setSystemStats(systemRes.data.data);
+        }
+      } catch (err: any) {
+        console.error('System stats error:', err.response?.data?.error || err.message);
+        if (err.response?.status === 403) {
+          setError('Admin access required to view system stats');
+        }
       }
       
-      // Fetch queue stats
-      const queueRes = await fetch('/api/executions/stats');
-      const queueData = await queueRes.json();
-      
-      if (queueData.success) {
-        setQueueStats(queueData.data);
+      // Fetch queue stats using authenticated API
+      try {
+        const queueRes = await api.get('/api/executions/stats');
+        if (queueRes.data?.success) {
+          setQueueStats(queueRes.data.data);
+        }
+      } catch (err: any) {
+        console.error('Queue stats error:', err.response?.data?.error || err.message);
       }
       
       setLastUpdated(new Date());
-      setError(null);
     } catch (err: any) {
       console.error('Fetch stats error:', err);
       setError('Failed to fetch stats: ' + err.message);
