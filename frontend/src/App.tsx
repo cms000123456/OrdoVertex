@@ -203,6 +203,7 @@ function App() {
           <Route path="/admin/execution-logs" element={<ExecutionLogs />} />
           <Route path="/admin/settings" element={<SystemSettings />} />
           <Route path="/workspaces" element={<WorkspaceManager />} />
+          <Route path="/workspaces/:id" element={<WorkspaceManager />} />
           {/* Help routes */}
           <Route path="/help" element={<HelpCenter />} />
           {/* User settings */}

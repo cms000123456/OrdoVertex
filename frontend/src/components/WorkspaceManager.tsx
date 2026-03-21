@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Plus, 
   Users, 
@@ -35,7 +35,9 @@ interface Workspace {
 
 export function WorkspaceManager() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState<string | null>(null);
@@ -44,8 +46,12 @@ export function WorkspaceManager() {
   const [newMemberRole, setNewMemberRole] = useState('viewer');
 
   useEffect(() => {
-    loadWorkspaces();
-  }, []);
+    if (id) {
+      loadWorkspace(id);
+    } else {
+      loadWorkspaces();
+    }
+  }, [id]);
 
   const loadWorkspaces = async () => {
     try {
@@ -53,6 +59,18 @@ export function WorkspaceManager() {
       setWorkspaces(response.data.data || []);
     } catch (error) {
       toast.error('Failed to load workspaces');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadWorkspace = async (workspaceId: string) => {
+    try {
+      const response = await workspacesApi.getById(workspaceId);
+      setCurrentWorkspace(response.data.data);
+    } catch (error) {
+      toast.error('Failed to load workspace');
+      navigate('/workspaces');
     } finally {
       setIsLoading(false);
     }
@@ -120,6 +138,128 @@ export function WorkspaceManager() {
     return <div className="workspace-manager loading">Loading workspaces...</div>;
   }
 
+  // Detail view for single workspace
+  if (id && currentWorkspace) {
+    return (
+      <div className="workspace-manager">
+        <div className="page-header">
+          <button className="btn btn-secondary" onClick={() => navigate('/workspaces')}>
+            ← Back to Workspaces
+          </button>
+          <h1>{currentWorkspace.name}</h1>
+          <button 
+            className="btn btn-primary" 
+            onClick={() => setShowMembersModal(currentWorkspace.id)}
+          >
+            <UserPlus size={18} />
+            Invite Member
+          </button>
+        </div>
+
+        <div className="workspace-detail">
+          <div className="detail-section">
+            <h2>Details</h2>
+            <p><strong>Slug:</strong> {currentWorkspace.slug}</p>
+            <p><strong>Description:</strong> {currentWorkspace.description || 'No description'}</p>
+            <p><strong>Owner:</strong> {currentWorkspace.owner.name || currentWorkspace.owner.email}</p>
+            <p><strong>Created:</strong> {new Date(currentWorkspace.createdAt).toLocaleDateString()}</p>
+          </div>
+
+          <div className="detail-section">
+            <h2>Members ({currentWorkspace.members.length})</h2>
+            <div className="members-list">
+              {currentWorkspace.members.map(member => (
+                <div key={member.id} className="member-item">
+                  <div className="member-info">
+                    <span className="member-name">{member.user.name || member.user.email}</span>
+                    <span className="member-email">{member.user.email}</span>
+                  </div>
+                  <span className={`member-role role-${member.role}`}>
+                    {getRoleIcon(member.role)}
+                    {member.role}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="detail-section">
+            <h2>Workflows ({currentWorkspace._count.workflows})</h2>
+            <p>Workflows in this workspace are listed below. Use the main Workflows page to manage them.</p>
+          </div>
+        </div>
+
+        {/* Members Modal */}
+        {showMembersModal === currentWorkspace.id && (
+          <div className="modal-overlay" onClick={() => setShowMembersModal(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Manage Members</h3>
+                <button className="close-btn" onClick={() => setShowMembersModal(null)}>
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="add-member-form">
+                <h4>Add New Member</h4>
+                <div className="form-row">
+                  <input
+                    type="email"
+                    placeholder="Enter email address"
+                    value={newMemberEmail}
+                    onChange={(e) => setNewMemberEmail(e.target.value)}
+                    className="form-input"
+                  />
+                  <select
+                    value={newMemberRole}
+                    onChange={(e) => setNewMemberRole(e.target.value)}
+                    className="form-select"
+                  >
+                    <option value="viewer">Viewer</option>
+                    <option value="editor">Editor</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => handleAddMember(currentWorkspace.id)}
+                    disabled={!newMemberEmail}
+                  >
+                    <UserPlus size={16} />
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              <div className="members-list-modal">
+                <h4>Current Members</h4>
+                {currentWorkspace.members.map(member => (
+                  <div key={member.id} className="member-row">
+                    <div className="member-info">
+                      <strong>{member.user.name || member.user.email}</strong>
+                      <span className="member-email">{member.user.email}</span>
+                    </div>
+                    <span className={`member-role role-${member.role}`}>
+                      {getRoleIcon(member.role)}
+                      {member.role}
+                    </span>
+                    {member.user.id !== currentWorkspace.owner.id && (
+                      <button 
+                        className="btn btn-sm btn-danger"
+                        onClick={() => handleRemoveMember(currentWorkspace.id, member.id)}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="workspace-manager">
       <div className="page-header">
@@ -143,7 +283,11 @@ export function WorkspaceManager() {
       ) : (
         <div className="workspaces-grid">
           {workspaces.map(workspace => (
-            <div key={workspace.id} className="workspace-card">
+            <div 
+              key={workspace.id} 
+              className="workspace-card"
+              onClick={() => navigate(`/workspaces/${workspace.id}`)}
+              style={{ cursor: 'pointer' }}
               <div className="workspace-header">
                 <div className="workspace-icon">
                   <FolderOpen size={24} />
