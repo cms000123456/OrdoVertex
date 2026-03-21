@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { 
   Play, 
@@ -24,8 +24,10 @@ import {
   FolderOpen,
   Cloud,
   Contact,
-  StickyNote
+  StickyNote,
+  GripVertical
 } from 'lucide-react';
+import { useWorkflowStore } from '../../store/workflowStore';
 
 const iconMap: Record<string, React.ReactNode> = {
   'manualTrigger': <Play size={16} />,
@@ -77,8 +79,9 @@ const stickyNoteColors: Record<string, { bg: string; border: string; text: strin
   'gray': { bg: '#f3f4f6', border: '#d1d5db', text: '#374151' }
 };
 
-// Sticky Note Component
+// Sticky Note Component with resize handle
 interface StickyNoteData {
+  id?: string;
   type: string;
   label?: string;
   description?: string;
@@ -99,12 +102,68 @@ function StickyNoteNode({ data, selected }: StickyNoteProps) {
   const colorKey = data.parameters?.color || 'yellow';
   const colors = stickyNoteColors[colorKey] || stickyNoteColors['yellow'];
   const text = data.parameters?.text || data.description || 'Note';
-  const width = data.parameters?.width || 200;
-  const height = data.parameters?.height || 150;
+  const [width, setWidth] = useState(data.parameters?.width || 200);
+  const [height, setHeight] = useState(data.parameters?.height || 150);
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStart = useRef({ x: 0, y: 0, width: 0, height: 0 });
+  const updateNodeParameters = useWorkflowStore((state) => state.updateNodeParameters);
+
+  // Update local state when props change
+  useEffect(() => {
+    setWidth(data.parameters?.width || 200);
+    setHeight(data.parameters?.height || 150);
+  }, [data.parameters?.width, data.parameters?.height]);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      width,
+      height
+    };
+  }, [width, height]);
+
+  const handleResizeMove = useCallback((e: MouseEvent) => {
+    if (!isResizing) return;
+    
+    const deltaX = e.clientX - resizeStart.current.x;
+    const deltaY = e.clientY - resizeStart.current.y;
+    
+    const newWidth = Math.max(100, resizeStart.current.width + deltaX);
+    const newHeight = Math.max(80, resizeStart.current.height + deltaY);
+    
+    setWidth(newWidth);
+    setHeight(newHeight);
+  }, [isResizing]);
+
+  const handleResizeEnd = useCallback(() => {
+    if (isResizing && data.id) {
+      setIsResizing(false);
+      // Update the store with new dimensions
+      updateNodeParameters(data.id, {
+        width,
+        height
+      });
+    }
+  }, [isResizing, width, height, data.id, updateNodeParameters]);
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleResizeMove);
+      window.addEventListener('mouseup', handleResizeEnd);
+      return () => {
+        window.removeEventListener('mousemove', handleResizeMove);
+        window.removeEventListener('mouseup', handleResizeEnd);
+      };
+    }
+  }, [isResizing, handleResizeMove, handleResizeEnd]);
 
   return (
     <div 
-      className={`sticky-note ${selected ? 'selected' : ''}`}
+      className={`sticky-note ${selected ? 'selected' : ''} ${isResizing ? 'resizing' : ''}`}
       style={{
         backgroundColor: colors.bg,
         borderColor: colors.border,
@@ -123,8 +182,9 @@ function StickyNoteNode({ data, selected }: StickyNoteProps) {
         lineHeight: '1.5',
         wordWrap: 'break-word',
         whiteSpace: 'pre-wrap',
-        cursor: 'grab',
-        position: 'relative'
+        cursor: isResizing ? 'se-resize' : 'grab',
+        position: 'relative',
+        userSelect: 'none'
       }}
     >
       {/* Small fold in corner */}
@@ -190,14 +250,41 @@ function StickyNoteNode({ data, selected }: StickyNoteProps) {
           {data.label}
         </div>
       )}
+
+      {/* Resize handle - only visible when selected */}
+      {selected && (
+        <div
+          onMouseDown={handleResizeStart}
+          style={{
+            position: 'absolute',
+            bottom: '4px',
+            right: '4px',
+            width: '16px',
+            height: '16px',
+            cursor: 'se-resize',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '3px',
+            backgroundColor: colors.border,
+            opacity: 0.6,
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+          title="Drag to resize"
+        >
+          <GripVertical size={12} style={{ transform: 'rotate(45deg)', color: colors.text }} />
+        </div>
+      )}
     </div>
   );
 }
 
-export function WorkflowNode({ data, selected }: NodeProps) {
+export function WorkflowNode({ data, selected, id }: NodeProps) {
   // Render sticky note specially
   if (data.type === 'stickyNote') {
-    return <StickyNoteNode data={data} selected={selected} />;
+    return <StickyNoteNode data={{ ...data, id }} selected={selected} />;
   }
 
   const icon = iconMap[data.type] || iconMap['default'];
