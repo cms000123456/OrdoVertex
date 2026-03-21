@@ -257,10 +257,16 @@ npm test
 
 ## 📖 Documentation
 
-- [AI Workflow Guide](AI_WORKFLOW_GUIDE.md) - Building AI-powered workflows
-- [Node Development Guide](NODE_DEVELOPMENT_GUIDE.md) - Create custom nodes
-- [Security Audit](SECURITY_AUDIT.md) - Security assessment and fixes
-- [API Documentation](API.md) - Full API reference
+| Document | Description |
+|----------|-------------|
+| [AI Workflow Guide](AI_WORKFLOW_GUIDE.md) | Building AI-powered workflows |
+| [Node Development Guide](NODE_DEVELOPMENT_GUIDE.md) | Create custom nodes |
+| [API Documentation](API.md) | Full REST API reference |
+| [Deployment Guide](DEPLOYMENT.md) | Production deployment instructions |
+| [Security Policy](SECURITY.md) | Reporting vulnerabilities |
+| [Security Audit](SECURITY_AUDIT.md) | Security assessment and fixes |
+| [Route Coverage](ROUTE_COVERAGE.md) | API to GUI coverage report |
+| [Test Scheme](TEST_SCHEME.md) | Testing architecture and plan |
 
 ## 📄 License
 

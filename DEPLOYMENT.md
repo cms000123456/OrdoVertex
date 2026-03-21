@@ -192,7 +192,28 @@ UPDATE "User" SET role = 'admin' WHERE email = 'user@example.com';
 
 ---
 
-## Step 6: Configure Backups (Optional but Recommended)
+## Step 6: Data Storage & Backups
+
+### Persistent Data Location
+
+Data is stored in the `.data/` directory within the project folder:
+
+```
+ordovertex/
+├── .data/
+│   ├── postgres/    # PostgreSQL database files
+│   └── redis/       # Redis data files
+```
+
+This directory is:
+- ✅ Created automatically on first start
+- ✅ Persisted across container restarts
+- ✅ Included in `.gitignore` (not committed to git)
+- ⚠️ Should be backed up regularly
+
+### Backup Strategy
+
+#### Option 1: Database Dump (Recommended)
 
 ```bash
 # Create backup script
@@ -201,17 +222,53 @@ cat > /opt/backup-ordovertex.sh << 'EOF'
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR=/backups/ordovertex
 
+# Create backup directory if not exists
+mkdir -p $BACKUP_DIR
+
 # Database backup
 docker exec ordovertex-db pg_dump -U ordovertex ordovertex | gzip > $BACKUP_DIR/db_$DATE.sql.gz
 
+# Backup .data directory (includes Redis)
+tar -czf $BACKUP_DIR/data_$DATE.tar.gz -C /path/to/ordovertex .data/
+
 # Cleanup old backups (keep 7 days)
-find $BACKUP_DIR -name "db_*.sql.gz" -mtime +7 -delete
+find $BACKUP_DIR -name "*.gz" -mtime +7 -delete
 EOF
 
 chmod +x /opt/backup-ordovertex.sh
 
 # Add to crontab (daily at 2 AM)
 echo "0 2 * * * /opt/backup-ordovertex.sh" | sudo crontab -
+```
+
+#### Option 2: Directory Backup
+
+Simply backup the entire `.data/` directory:
+
+```bash
+# Manual backup
+tar -czf ordovertex-backup-$(date +%Y%m%d).tar.gz .data/
+
+# Restore
+tar -xzf ordovertex-backup-20240320.tar.gz
+```
+
+### Restore from Backup
+
+```bash
+# Stop containers
+docker-compose -f docker-compose.prod.yml down
+
+# Restore .data directory
+tar -xzf ordovertex-backup-20240320.tar.gz
+
+# Or restore database only
+docker-compose -f docker-compose.prod.yml up -d postgres
+sleep 5
+gunzip < backup.sql.gz | docker exec -i ordovertex-db psql -U ordovertex ordovertex
+
+# Start all services
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ---
