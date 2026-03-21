@@ -511,6 +511,259 @@ return [{ json: {
     ]
   },
 
+  'demo-security-rss': {
+    name: '🔒 Demo: Security RSS Feed',
+    description: 'Fetch and filter computer security news from RSS feed',
+    category: 'Demo',
+    tags: ['demo', 'rss', 'security', 'news', 'filter'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Fetch News',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Get Hacker News RSS',
+        position: { x: 350, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: 'https://feeds.feedburner.com/TheHackersNews'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Parse & Filter RSS',
+        position: { x: 650, y: 200 },
+        parameters: {
+          code: `const response = items[0]?.json || {};
+const xmlText = response.body || response.data || '';
+
+// Simple RSS XML parser
+function parseRSS(xml) {
+  const items = [];
+  const itemRegex = /<item>([\\s\\S]*?)<\\/item>/g;
+  let match;
+  
+  while ((match = itemRegex.exec(xml)) !== null) {
+    const itemXml = match[1];
+    
+    const title = extractTag(itemXml, 'title');
+    const link = extractTag(itemXml, 'link');
+    const description = extractTag(itemXml, 'description');
+    const pubDate = extractTag(itemXml, 'pubDate');
+    
+    if (title) {
+      items.push({
+        title: cleanHtml(title),
+        link: cleanHtml(link),
+        description: cleanHtml(description).substring(0, 200) + '...',
+        pubDate: pubDate
+      });
+    }
+  }
+  
+  return items;
+}
+
+function extractTag(xml, tag) {
+  const regex = new RegExp('<' + tag + '>([\\s\\S]*?)<\\/' + tag + '>');
+  const match = xml.match(regex);
+  return match ? match[1] : '';
+}
+
+function cleanHtml(text) {
+  return text
+    .replace(/<![CDATA[|]]>/g, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+}
+
+// Security keywords to filter for
+const securityKeywords = [
+  'vulnerability', 'exploit', 'malware', 'ransomware', 'breach', 'hack',
+  'cve', 'patch', 'security', 'cyberattack', 'phishing', 'zero-day',
+  'backdoor', 'trojan', 'spyware', 'botnet', 'ddos', 'data leak',
+  'encryption', 'firewall', 'antivirus', 'penetration', 'threat'
+];
+
+const allItems = parseRSS(xmlText);
+
+// Filter for security-related items
+const securityItems = allItems.filter(item => {
+  const text = (item.title + ' ' + item.description).toLowerCase();
+  return securityKeywords.some(keyword => text.includes(keyword));
+});
+
+return [{ json: {
+  totalArticles: allItems.length,
+  securityArticles: securityItems.length,
+  articles: securityItems.slice(0, 10),
+  keywords: securityKeywords,
+  feedSource: 'The Hacker News',
+  fetchedAt: new Date().toISOString()
+} }];`
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'http-1' },
+      { source: 'http-1', target: 'code-1' }
+    ]
+  },
+
+  'demo-security-rss-email': {
+    name: '🔒 Demo: Security RSS to Email',
+    description: 'Fetch security news and send email digest (requires SMTP credential)',
+    category: 'Demo',
+    tags: ['demo', 'rss', 'security', 'email', 'digest'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Send Digest',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Fetch Hacker News',
+        position: { x: 350, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: 'https://feeds.feedburner.com/TheHackersNews'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Parse & Filter',
+        position: { x: 650, y: 200 },
+        parameters: {
+          code: `const response = items[0]?.json || {};
+const xmlText = response.body || response.data || '';
+
+// Parse RSS XML
+function parseRSS(xml) {
+  const items = [];
+  const itemRegex = /<item>([\\s\\S]*?)<\\/item>/g;
+  let match;
+  
+  while ((match = itemRegex.exec(xml)) !== null) {
+    const itemXml = match[1];
+    const title = extractTag(itemXml, 'title');
+    const link = extractTag(itemXml, 'link');
+    const description = extractTag(itemXml, 'description');
+    const pubDate = extractTag(itemXml, 'pubDate');
+    
+    if (title) {
+      items.push({
+        title: cleanHtml(title),
+        link: cleanHtml(link),
+        description: cleanHtml(description).substring(0, 150) + '...',
+        pubDate: pubDate
+      });
+    }
+  }
+  return items;
+}
+
+function extractTag(xml, tag) {
+  const regex = new RegExp('<' + tag + '>([\\s\\S]*?)<\\/' + tag + '>');
+  const match = xml.match(regex);
+  return match ? match[1] : '';
+}
+
+function cleanHtml(text) {
+  return text.replace(/<![CDATA[|]]>/g, '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+}
+
+const securityKeywords = ['vulnerability', 'exploit', 'malware', 'ransomware', 'breach', 'hack', 'cve', 'patch', 'security', 'cyberattack', 'phishing', 'zero-day', 'backdoor', 'trojan', 'spyware', 'botnet', 'ddos', 'data leak', 'encryption', 'firewall', 'antivirus', 'penetration', 'threat'];
+
+const allItems = parseRSS(xmlText);
+const securityItems = allItems.filter(item => {
+  const text = (item.title + ' ' + item.description).toLowerCase();
+  return securityKeywords.some(keyword => text.includes(keyword));
+});
+
+return [{ json: {
+  totalArticles: allItems.length,
+  securityArticles: securityItems.length,
+  articles: securityItems.slice(0, 5),
+  keywords: securityKeywords,
+  feedSource: 'The Hacker News',
+  fetchedAt: new Date().toISOString()
+} }];`
+        }
+      },
+      {
+        id: 'code-2',
+        type: 'code',
+        name: 'Format Email',
+        position: { x: 950, y: 200 },
+        parameters: {
+          code: `const data = items[0]?.json || {};
+const articles = data.articles || [];
+
+// Build email body
+let emailBody = '🔒 SECURITY NEWS DIGEST\\n';
+emailBody += '====================\\n\\n';
+emailBody += 'Source: ' + (data.feedSource || 'Unknown') + '\\n';
+emailBody += 'Found ' + data.securityArticles + ' security articles (out of ' + data.totalArticles + ' total)\\n';
+emailBody += 'Generated: ' + new Date(data.fetchedAt).toLocaleString() + '\\n\\n';
+emailBody += '--------------------\\n\\n';
+
+articles.forEach((article, index) => {
+  emailBody += (index + 1) + '. ' + article.title + '\\n';
+  emailBody += article.description + '\\n';
+  emailBody += 'Read more: ' + article.link + '\\n';
+  emailBody += 'Published: ' + (article.pubDate || 'Unknown') + '\\n\\n';
+});
+
+emailBody += '\\n--------------------\\n';
+emailBody += 'This digest was generated by OrdoVertex\\n';
+
+return [{ json: {
+  to: 'your-email@example.com',
+  subject: '🔒 Security News Digest - ' + data.securityArticles + ' articles found',
+  body: emailBody,
+  htmlBody: '<h2>🔒 Security News Digest</h2><p>Found <strong>' + data.securityArticles + '</strong> security articles</p><hr>' + articles.map((a, i) => '<h3>' + (i+1) + '. ' + a.title + '</h3><p>' + a.description + '</p><p><a href="' + a.link + '">Read more →</a></p>').join('<hr>')
+} }];`
+        }
+      },
+      {
+        id: 'email-1',
+        type: 'sendEmail',
+        name: 'Send Digest',
+        position: { x: 1250, y: 200 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          to: '{{ $input.to }}',
+          subject: '{{ $input.subject }}',
+          body: '{{ $input.body }}',
+          htmlBody: '{{ $input.htmlBody }}'
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'http-1' },
+      { source: 'http-1', target: 'code-1' },
+      { source: 'code-1', target: 'code-2' },
+      { source: 'code-2', target: 'email-1' }
+    ]
+  },
+
   // AI Templates
   ...Object.entries(aiAgentTemplates).reduce((acc, [key, value]) => ({
     ...acc,
