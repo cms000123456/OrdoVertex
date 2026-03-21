@@ -121,7 +121,7 @@ return [{ json: transformed }];`
           code: `const data = items[0]?.json || {};
 
 const report = {
-  title: 🌤️ Weather Report for \${data.location},
+  title: `🌤️ Weather Report for ${data.location}`,
   generated: new Date().toISOString(),
   report: \`
 📍 Location: \${data.location}
