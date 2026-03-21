@@ -118,6 +118,7 @@ export class WorkflowExecutor {
         executionId: this.executionId,
         nodeId: node.id,
         nodeName: node.name,
+        nodeType: node.type,
         status: 'running',
         input: inputItems
       }
