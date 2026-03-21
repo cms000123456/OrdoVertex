@@ -37,6 +37,8 @@ const categoryIcons: Record<string, React.ReactNode> = {
   'Notification': <Mail size={20} />,
   'File': <FileText size={20} />,
   'Authentication': <Shield size={20} />,
+  'Demo': <Sparkles size={20} />,
+  'Tutorial': <LayoutGrid size={20} />,
   'Default': <Server size={20} />
 };
 
@@ -47,7 +49,9 @@ const categoryColors: Record<string, string> = {
   'Integration': '#f59e0b',
   'Notification': '#ef4444',
   'File': '#06b6d4',
-  'Authentication': '#6366f1'
+  'Authentication': '#6366f1',
+  'Demo': '#f59e0b',
+  'Tutorial': '#10b981'
 };
 
 export function TemplatesGallery() {
