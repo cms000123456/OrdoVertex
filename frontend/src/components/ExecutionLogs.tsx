@@ -11,10 +11,11 @@ import {
   MoreHorizontal,
   ChevronDown,
   ChevronUp,
-  Terminal
+  Terminal,
+  Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { executionLogsApi } from '../services/api';
+import { executionLogsApi, executionsApi } from '../services/api';
 import './ExecutionLogs.css';
 
 interface ExecutionLog {
@@ -129,6 +130,27 @@ export function ExecutionLogs() {
     }
   };
 
+  const handleDeleteExecution = async (executionId: string) => {
+    if (!window.confirm('Are you sure you want to delete this execution? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await executionsApi.delete(executionId);
+      toast.success('Execution deleted');
+      // Remove from local state
+      setExecutions(executions.filter(e => e.id !== executionId));
+      // Clear selection if deleted execution was selected
+      if (selectedExecution === executionId) {
+        setSelectedExecution(null);
+      }
+      // Refresh logs
+      loadLogs();
+    } catch (error) {
+      toast.error('Failed to delete execution');
+    }
+  };
+
   const toggleLogExpand = (logId: string) => {
     const newExpanded = new Set(expandedLogs);
     if (newExpanded.has(logId)) {
@@ -195,23 +217,37 @@ export function ExecutionLogs() {
               <span className="execution-name">All Executions</span>
             </button>
             {executions.map(exec => (
-              <button 
+              <div 
                 key={exec.id}
                 className={`execution-item ${selectedExecution === exec.id ? 'active' : ''}`}
-                onClick={() => setSelectedExecution(exec.id)}
               >
-                {getStatusIcon(exec.status)}
-                <div className="execution-info">
-                  <span className="execution-name">{exec.workflow?.name || 'Unknown'}</span>
-                  <span className="execution-meta">
-                    {new Date(exec.startedAt).toLocaleTimeString()}
-                    {exec.duration && ` • ${exec.duration}ms`}
-                  </span>
-                </div>
-                {(exec._count?.executionLogs || 0) > 0 && (
-                  <span className="log-count">{exec._count?.executionLogs || 0}</span>
-                )}
-              </button>
+                <button
+                  className="execution-content"
+                  onClick={() => setSelectedExecution(exec.id)}
+                >
+                  {getStatusIcon(exec.status)}
+                  <div className="execution-info">
+                    <span className="execution-name">{exec.workflow?.name || 'Unknown'}</span>
+                    <span className="execution-meta">
+                      {new Date(exec.startedAt).toLocaleTimeString()}
+                      {exec.duration && ` • ${exec.duration}ms`}
+                    </span>
+                  </div>
+                  {(exec._count?.executionLogs || 0) > 0 && (
+                    <span className="log-count">{exec._count?.executionLogs || 0}</span>
+                  )}
+                </button>
+                <button
+                  className="delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteExecution(exec.id);
+                  }}
+                  title="Delete execution"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             ))}
           </div>
         </div>

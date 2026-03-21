@@ -91,7 +91,6 @@
   border-radius: 8px;
   background: none;
   border: none;
-  cursor: pointer;
   text-align: left;
   transition: all 0.15s;
 }
@@ -102,6 +101,43 @@
 
 .execution-item.active {
   background: var(--accent-primary-transparent, rgba(99, 102, 241, 0.1));
+}
+
+.execution-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  color: inherit;
+}
+
+.execution-item .delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all 0.15s;
+}
+
+.execution-item:hover .delete-btn {
+  opacity: 1;
+}
+
+.execution-item .delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 .execution-info {

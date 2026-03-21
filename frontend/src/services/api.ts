@@ -112,6 +112,7 @@ export const executionsApi = {
   getAll: () => api.get('/api/executions'),
   getById: (id: string) => api.get(`/api/executions/${id}`),
   cancel: (id: string) => api.post(`/api/executions/${id}/cancel`),
+  delete: (id: string) => api.delete(`/api/executions/${id}`),
   getNodeExecution: (executionId: string, nodeId: string) => 
     api.get(`/api/executions/${executionId}/nodes/${nodeId}`)
 };
