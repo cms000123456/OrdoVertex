@@ -1,9 +1,86 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ExternalLink, Database, PlayCircle, Settings, Lightbulb, XCircle, RefreshCw } from 'lucide-react';
+import { X, ExternalLink, Database, PlayCircle, Settings, Lightbulb, XCircle, RefreshCw, Image } from 'lucide-react';
 import { useWorkflowStore } from '../store/workflowStore';
 import { credentialApi, executionsApi } from '../services/api';
 import { Credential } from '../types';
 import { AITips } from './AITips';
+
+// Check if a string is an image URL
+const isImageUrl = (url: string): boolean => {
+  if (typeof url !== 'string') return false;
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
+  const lowerUrl = url.toLowerCase();
+  return imageExtensions.some(ext => lowerUrl.includes(ext)) || 
+         lowerUrl.includes('cataas.com/cat') ||
+         lowerUrl.includes('dog.ceo/api') ||
+         lowerUrl.includes('picsum.photos');
+};
+
+// Render JSON data with image support
+const RenderJsonData: React.FC<{ data: any }> = ({ data }) => {
+  // Parse if data is a string (JSON string from API)
+  let parsedData = data;
+  if (typeof data === 'string') {
+    try {
+      parsedData = JSON.parse(data);
+    } catch {
+      return <pre className="data-json">{data}</pre>;
+    }
+  }
+  
+  // Handle array of items (unwrap first item)
+  let displayData = parsedData;
+  if (Array.isArray(parsedData) && parsedData.length > 0) {
+    displayData = parsedData[0]?.json || parsedData[0];
+  }
+  
+  // Check for _display hint (from Image Display node)
+  if (displayData?._display?.type === 'image' && displayData._display.url) {
+    return (
+      <div className="image-display">
+        <img 
+          src={displayData._display.url} 
+          alt={displayData._display.alt || 'Image'}
+          style={{ maxWidth: displayData._display.maxWidth || '350px', borderRadius: '8px', width: '100%' }}
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+        {displayData._display.caption && (
+          <p className="image-caption">{displayData._display.caption}</p>
+        )}
+        <details>
+          <summary>View raw data</summary>
+          <pre className="data-json">{JSON.stringify(data, null, 2)}</pre>
+        </details>
+      </div>
+    );
+  }
+
+  // Check for imageUrl field in data
+  if (displayData?.imageUrl && isImageUrl(displayData.imageUrl)) {
+    return (
+      <div className="image-display">
+        <img 
+          src={displayData.imageUrl} 
+          alt={displayData.altText || displayData.breed || 'Image'}
+          style={{ maxWidth: displayData.maxWidth || '350px', borderRadius: '8px', width: '100%' }}
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+        {displayData.caption && <p className="image-caption">{displayData.caption}</p>}
+        <details>
+          <summary>View raw data</summary>
+          <pre className="data-json">{JSON.stringify(data, null, 2)}</pre>
+        </details>
+      </div>
+    );
+  }
+
+  // Default: render as JSON
+  return <pre className="data-json">{JSON.stringify(data, null, 2)}</pre>;
+};
 
 interface NodeConfigPanelProps {
   nodeId: string;
@@ -322,9 +399,7 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
             <span className="data-duration">{executionData.duration}ms</span>
           )}
         </div>
-        <pre className="data-json">
-          {JSON.stringify(displayData, null, 2)}
-        </pre>
+        <RenderJsonData data={displayData} />
       </div>
     );
   };
@@ -733,6 +808,44 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
         .tip-close:hover {
           opacity: 1;
           background: rgba(146, 64, 14, 0.1);
+        }
+        
+        /* Image Display Styles */
+        .image-display {
+          padding: 16px;
+          text-align: center;
+        }
+        
+        .image-display img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .image-caption {
+          font-size: 13px;
+          color: var(--text-secondary, #64748b);
+          margin: 12px 0 0 0;
+          font-style: italic;
+          padding: 0 8px;
+        }
+        
+        .image-display details {
+          margin-top: 16px;
+          text-align: left;
+        }
+        
+        .image-display summary {
+          font-size: 12px;
+          color: var(--primary, #6366f1);
+          cursor: pointer;
+          user-select: none;
+          padding: 8px 0;
+        }
+        
+        .image-display summary:hover {
+          color: #4f46e5;
         }
       `}</style>
     </div>
