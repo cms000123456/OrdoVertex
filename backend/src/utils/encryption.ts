@@ -9,12 +9,18 @@ const AUTH_TAG_LENGTH = 16;
 // In production, this should be set via environment variable
 const getEncryptionKey = (): Buffer => {
   const key = process.env.ENCRYPTION_KEY;
-if (!key) {
-  throw new Error('ENCRYPTION_KEY environment variable is required');
-}
-if (key.length < 32) {
-  throw new Error('ENCRYPTION_KEY must be at least 32 characters long');
-}
+  console.log('DEBUG: ENCRYPTION_KEY exists:', !!key);
+  console.log('DEBUG: ENCRYPTION_KEY length:', key?.length);
+  console.log('DEBUG: NODE_ENV:', process.env.NODE_ENV);
+  
+  if (!key) {
+    console.error('ERROR: ENCRYPTION_KEY environment variable is not set');
+    console.error('Please set ENCRYPTION_KEY in your .env file or environment');
+    throw new Error('ENCRYPTION_KEY environment variable is required');
+  }
+  if (key.length < 32) {
+    throw new Error('ENCRYPTION_KEY must be at least 32 characters long');
+  }
   // Hash the key to ensure it's exactly 32 bytes
   return crypto.createHash('sha256').update(key).digest();
 };
