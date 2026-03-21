@@ -42,6 +42,7 @@ import { aiVectorStoreNode } from './actions/ai-vector-store';
 import { textSplitterNode } from './actions/text-splitter';
 import { imageDisplayNode } from './actions/image-display';
 import { textParserNode } from './actions/text-parser';
+import { googleChatNode } from './actions/google-chat';
 
 // Register all nodes
 export function registerAllNodes() {
@@ -87,6 +88,7 @@ export function registerAllNodes() {
   nodeRegistry.register(textSplitterNode);
   nodeRegistry.register(imageDisplayNode);
   nodeRegistry.register(textParserNode);
+  nodeRegistry.register(googleChatNode);
 
   console.log(`✅ Registered ${nodeRegistry.getAll().length} nodes`);
 }
