@@ -159,7 +159,7 @@ router.get('/execution/:executionId', authenticateToken, async (req, res) => {
 });
 
 // Get execution statistics
-router.get('/stats/overview', authenticateToken, async (req, success) => {
+router.get('/stats/overview', authenticateToken, async (req, res) => {
   try {
     const { workflowId, days = '7' } = req.query;
     const daysAgo = new Date();
