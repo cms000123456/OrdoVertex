@@ -110,38 +110,44 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
 
   // Render JSON data with image support
   const RenderJsonData: React.FC<{ data: any }> = ({ data }) => {
+    // Handle array of items (unwrap first item)
+    let displayData = data;
+    if (Array.isArray(data) && data.length > 0) {
+      displayData = data[0]?.json || data[0];
+    }
+    
     // Check for _display hint (from Image Display node)
-    if (data?._display?.type === 'image' && data._display.url) {
+    if (displayData?._display?.type === 'image' && displayData._display.url) {
       return (
         <div className="image-display">
           <img 
-            src={data._display.url} 
-            alt={data._display.alt || 'Image'}
-            style={{ maxWidth: data._display.maxWidth || '400px', borderRadius: '8px' }}
+            src={displayData._display.url} 
+            alt={displayData._display.alt || 'Image'}
+            style={{ maxWidth: displayData._display.maxWidth || '400px', borderRadius: '8px' }}
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
             }}
           />
-          {data._display.caption && (
-            <p className="image-caption">{data._display.caption}</p>
+          {displayData._display.caption && (
+            <p className="image-caption">{displayData._display.caption}</p>
           )}
         </div>
       );
     }
 
     // Check for imageUrl field in data
-    if (data?.imageUrl && isImageUrl(data.imageUrl)) {
+    if (displayData?.imageUrl && isImageUrl(displayData.imageUrl)) {
       return (
         <div className="image-display">
           <img 
-            src={data.imageUrl} 
-            alt={data.altText || data.breed || 'Image'}
-            style={{ maxWidth: data.maxWidth || '400px', borderRadius: '8px' }}
+            src={displayData.imageUrl} 
+            alt={displayData.altText || displayData.breed || 'Image'}
+            style={{ maxWidth: displayData.maxWidth || '400px', borderRadius: '8px' }}
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
             }}
           />
-          {data.caption && <p className="image-caption">{data.caption}</p>}
+          {displayData.caption && <p className="image-caption">{displayData.caption}</p>}
           <details>
             <summary>View raw data</summary>
             <pre className="json-data">{JSON.stringify(data, null, 2)}</pre>
@@ -151,7 +157,7 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
     }
 
     // Check if any value in the data is an image URL
-    const entries = Object.entries(data || {});
+    const entries = Object.entries(displayData || {});
     const imageEntries = entries.filter(([_, value]) => isImageUrl(value as string));
     
     if (imageEntries.length > 0) {
