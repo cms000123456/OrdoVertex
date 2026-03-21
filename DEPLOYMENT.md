@@ -38,6 +38,7 @@ nano .env
 **Development:** A default admin user is automatically created on first startup:
 - **Email:** `admin@example.com`
 - **Password:** `admin123`
+- **Security:** You will be required to change both email and password on first login
 
 **Production:** Set custom credentials via environment variables:
 

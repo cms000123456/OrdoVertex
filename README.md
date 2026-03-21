@@ -90,6 +90,8 @@ docker-compose up -d
 # Email: admin@example.com
 # Password: admin123
 # 
+# ⚠️  You will be required to change email and password on first login
+# 
 # Or set custom credentials before starting:
 # ADMIN_EMAIL=your@email.com ADMIN_PASSWORD=yourpass docker-compose up -d
 ```
