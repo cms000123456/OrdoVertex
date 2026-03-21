@@ -255,6 +255,7 @@ npm test
 ## 📖 Documentation
 
 - [AI Workflow Guide](AI_WORKFLOW_GUIDE.md) - Building AI-powered workflows
+- [Node Development Guide](NODE_DEVELOPMENT_GUIDE.md) - Create custom nodes
 - [Security Audit](SECURITY_AUDIT.md) - Security assessment and fixes
 - [API Documentation](API.md) - Full API reference
 
