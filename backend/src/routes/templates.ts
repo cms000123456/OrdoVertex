@@ -106,7 +106,7 @@ if (current.weatherDesc?.[0]?.value?.toLowerCase().includes('rain')) {
 }
 
 // Create a summary
-transformed.summary = \`Currently \${transformed.condition.toLowerCase()} with \${transformed.temperature.celsius}°C in \${transformed.location}.\`;
+transformed.summary = `Currently ${transformed.condition.toLowerCase()} with ${transformed.temperature.celsius}C in ${transformed.location}.`;
 
 return [{ json: transformed }];`
         }
@@ -121,25 +121,25 @@ return [{ json: transformed }];`
           code: `const data = items[0]?.json || {};
 
 const report = {
-  title: `🌤️ Weather Report for ${data.location}`,
+  title: '🌤️ Weather Report for ' + data.location,
   generated: new Date().toISOString(),
-  report: \`
-📍 Location: \${data.location}
-📅 Date: \${data.date}
+  report: `
+📍 Location: ${data.location}
+📅 Date: ${data.date}
 
-🌡️ Temperature: \${data.temperature.celsius}°C (feels like \${data.temperature.feelsLike}°C)
-☁️ Condition: \${data.condition}
-💧 Humidity: \${data.humidity}
-💨 Wind: \${data.wind.speed} from \${data.wind.direction}
-👁️ Visibility: \${data.visibility}
-📊 Pressure: \${data.pressure}
-☀️ UV Index: \${data.uvIndex}
+🌡️ Temperature: ${data.temperature.celsius}°C (feels like ${data.temperature.feelsLike}°C)
+☁️ Condition: ${data.condition}
+💧 Humidity: ${data.humidity}
+💨 Wind: ${data.wind.speed} from ${data.wind.direction}
+👁️ Visibility: ${data.visibility}
+📊 Pressure: ${data.pressure}
+☀️ UV Index: ${data.uvIndex}
 
 💡 Recommendations:
-\${data.recommendations.length > 0 ? data.recommendations.map(r => '  • ' + r).join('\\n') : '  • No special recommendations today!'}
+${data.recommendations.length > 0 ? data.recommendations.map(r => '  • ' + r).join('\\n') : '  • No special recommendations today!'}
 
-📝 Summary: \${data.summary}
-  \`.trim(),
+📝 Summary: ${data.summary}
+  `.trim(),
   raw_data: data
 };
 
@@ -287,29 +287,29 @@ return [{ json: {
 
 // Format each coin
 const coinLines = data.portfolio.map(c => 
-  \`\${c.trend} \${c.symbol} | \${c.amount} coins | $\${c.priceUSD.toLocaleString()} | Value: $\${c.valueUSD.toLocaleString()} (\${c.change24h})\`
+  `${c.trend} ${c.symbol} | ${c.amount} coins | $${c.priceUSD.toLocaleString()} | Value: $${c.valueUSD.toLocaleString()} (${c.change24h})`
 ).join('\\n');
 
 const report = {
   title: '💰 Crypto Portfolio Report',
   generated: data.generatedAt,
-  summary: \`\${data.coinCount} coins | Total Value: $\${data.totals.usd} / €\${data.totals.eur}\`,
-  report: \`
+  summary: `${data.coinCount} coins | Total Value: $${data.totals.usd} / €${data.totals.eur}`,
+  report: `
 ═══════════════════════════════════════════════════════════════
 💰 CRYPTO PORTFOLIO REPORT
-Generated: \${new Date(data.generatedAt).toLocaleString()}
+Generated: ${new Date(data.generatedAt).toLocaleString()}
 ═══════════════════════════════════════════════════════════════
 
 📊 HOLDINGS:
-\${coinLines}
+${coinLines}
 
 💵 TOTAL PORTFOLIO VALUE:
-  USD: $\${parseFloat(data.totals.usd).toLocaleString()}
-  EUR: €\${parseFloat(data.totals.eur).toLocaleString()}
+  USD: $${parseFloat(data.totals.usd).toLocaleString()}
+  EUR: €${parseFloat(data.totals.eur).toLocaleString()}
 
 💡 Tip: Prices are fetched from CoinGecko API in real-time.
 ═══════════════════════════════════════════════════════════════
-  \`.trim(),
+  `.trim(),
   raw_data: data
 };
 
@@ -608,13 +608,13 @@ return [{ json: {
           code: `const error = $input.first().json;
 return {
   json: {
-    subject: \`Error: \${error.service}\`,
-    body: \`
-Service: \${error.service}
-Time: \${error.timestamp}
-Error: \${error.message}
-Stack: \${error.stack}
-    \`.trim()
+    subject: 'Error: ' + error.service,
+    body: `
+Service: ${error.service}
+Time: ${error.timestamp}
+Error: ${error.message}
+Stack: ${error.stack}
+    `.trim()
   }
 };`
         }
