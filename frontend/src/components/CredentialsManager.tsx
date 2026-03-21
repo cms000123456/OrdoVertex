@@ -114,9 +114,13 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
     try {
       setLoading(true);
       const response = await credentialApi.list();
-      setCredentials(response.data.credentials || []);
+      console.log('Credentials response:', response.data);
+      // Handle both response formats
+      const creds = response.data.credentials || response.data.data?.credentials || [];
+      setCredentials(creds);
       setError(null);
     } catch (err: any) {
+      console.error('Failed to load credentials:', err);
       setError(err.message || 'Failed to load credentials');
       setCredentials([]);
     } finally {
@@ -180,14 +184,18 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
       setError(null);
       setSaving(true);
       console.log('Creating credential:', { name: formName.trim(), type: formType, data: formData });
-      await credentialApi.create({
+      const createResponse = await credentialApi.create({
         name: formName.trim(),
         type: formType,
         data: formData,
       });
+      console.log('Create response:', createResponse.data);
       resetForm();
       setShowCreateForm(false);
-      fetchCredentials();
+      // Small delay to ensure DB commit before fetching
+      setTimeout(() => {
+        fetchCredentials();
+      }, 100);
       toast.success('Credential created successfully');
     } catch (err: any) {
       console.error('Credential creation error:', err);
