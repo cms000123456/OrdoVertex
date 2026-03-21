@@ -119,6 +119,9 @@ router.get('/:id', authenticateToken, async (req, res) => {
         credentials: {
           where: { workspaceId: req.params.id },
           select: { id: true, name: true, type: true, createdAt: true }
+        },
+        _count: {
+          select: { workflows: true, members: true }
         }
       }
     });

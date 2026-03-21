@@ -16,6 +16,8 @@ export interface Workflow {
   nodes: WorkflowNode[];
   connections: WorkflowConnection[];
   settings?: WorkflowSettings;
+  userId?: string;
+  workspaceId?: string;
   createdAt: string;
   updatedAt: string;
   executions?: Execution[];

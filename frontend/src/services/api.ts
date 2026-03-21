@@ -96,7 +96,9 @@ export const workflowsApi = {
   getExecutions: (id: string) => api.get(`/api/workflows/${id}/executions`),
   export: (id: string) => api.get(`/api/workflows/${id}/export`, { responseType: 'blob' }),
   import: (data: any) => api.post('/api/workflows/import', data),
-  validateImport: (data: any) => api.post('/api/workflows/import/validate', data)
+  validateImport: (data: any) => api.post('/api/workflows/import/validate', data),
+  moveToWorkspace: (id: string, workspaceId: string | null) => 
+    api.post(`/api/workflows/${id}/move`, { workspaceId })
 };
 
 // Node API

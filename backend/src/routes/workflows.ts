@@ -32,6 +32,8 @@ router.get('/', async (req: AuthRequest, res) => {
         name: true,
         description: true,
         active: true,
+        userId: true,
+        workspaceId: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -414,6 +416,71 @@ router.post('/import/validate', async (req: AuthRequest, res) => {
   } catch (error: any) {
     console.error('Validate workflow error:', error);
     return errorResponse(res, 'Failed to validate workflow', 500);
+  }
+});
+
+// Move workflow to a different workspace
+router.post('/:id/move', async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { workspaceId } = req.body;
+
+    // Verify workflow ownership
+    const workflow = await prisma.workflow.findFirst({
+      where: { id, userId: req.user!.id }
+    });
+
+    if (!workflow) {
+      return errorResponse(res, 'Workflow not found', 404);
+    }
+
+    // If workspaceId is null, move to personal (no workspace)
+    if (workspaceId === null || workspaceId === undefined) {
+      const updated = await prisma.workflow.update({
+        where: { id },
+        data: { workspaceId: null }
+      });
+      return successResponse(res, { 
+        message: 'Workflow moved to personal workflows',
+        workflow: updated 
+      });
+    }
+
+    // Verify user has access to the target workspace
+    const workspace = await prisma.workspace.findFirst({
+      where: {
+        id: workspaceId,
+        OR: [
+          { ownerId: req.user!.id },
+          { 
+            members: { 
+              some: { 
+                userId: req.user!.id,
+                role: { in: ['admin', 'editor'] }
+              } 
+            } 
+          }
+        ]
+      }
+    });
+
+    if (!workspace) {
+      return errorResponse(res, 'Workspace not found or insufficient permissions', 403);
+    }
+
+    // Move the workflow
+    const updated = await prisma.workflow.update({
+      where: { id },
+      data: { workspaceId }
+    });
+
+    return successResponse(res, { 
+      message: 'Workflow moved successfully',
+      workflow: updated 
+    });
+  } catch (error: any) {
+    console.error('Move workflow error:', error);
+    return errorResponse(res, 'Failed to move workflow', 500);
   }
 });
 

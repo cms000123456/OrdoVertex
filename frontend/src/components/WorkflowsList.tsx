@@ -1,10 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Play, Settings, Trash2, Clock, Activity, MoreVertical, LayoutGrid, Upload, Download, Terminal, GraduationCap, ExternalLink } from 'lucide-react';
+import { Plus, Play, Settings, Trash2, Clock, Activity, MoreVertical, LayoutGrid, Upload, Download, Terminal, GraduationCap, ExternalLink, Move, FolderOpen, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { workflowsApi } from '../services/api';
+import { workflowsApi, workspacesApi } from '../services/api';
 import { Workflow } from '../types';
 import './WorkflowsList.css';
+
+interface Workspace {
+  id: string;
+  name: string;
+  slug: string;
+  owner: { id: string; name?: string; email: string };
+  members: Array<{ id: string; user: { id: string; name?: string; email: string }; role: string }>;
+}
 
 export function WorkflowsList() {
   const navigate = useNavigate();
@@ -15,6 +23,13 @@ export function WorkflowsList() {
   const [newWorkflowName, setNewWorkflowName] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<any>(null);
+  
+  // Move workflow state
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workflowToMove, setWorkflowToMove] = useState<Workflow | null>(null);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>('');
+  const [isMoving, setIsMoving] = useState(false);
 
   useEffect(() => {
     loadWorkflows();
@@ -32,6 +47,26 @@ export function WorkflowsList() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Load workspaces for display
+  const [userWorkspaces, setUserWorkspaces] = useState<Workspace[]>([]);
+  useEffect(() => {
+    const loadWorkspaces = async () => {
+      try {
+        const response = await workspacesApi.getAll();
+        setUserWorkspaces(response.data.data || []);
+      } catch (error) {
+        console.error('Failed to load workspaces:', error);
+      }
+    };
+    loadWorkspaces();
+  }, []);
+
+  const getWorkspaceName = (workspaceId?: string) => {
+    if (!workspaceId) return null;
+    const workspace = userWorkspaces.find(w => w.id === workspaceId);
+    return workspace?.name;
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -128,6 +163,47 @@ export function WorkflowsList() {
       toast.success('Workflow execution started');
     } catch (error) {
       toast.error('Failed to start execution');
+    }
+  };
+
+  const openMoveModal = async (workflow: Workflow) => {
+    setWorkflowToMove(workflow);
+    setSelectedWorkspaceId('');
+    setShowMoveModal(true);
+    
+    try {
+      const response = await workspacesApi.getAll();
+      // Filter workspaces where user has editor/admin/owner permissions
+      const accessibleWorkspaces = response.data.data?.filter((w: Workspace) => {
+        const isOwner = w.owner.id === workflow.userId;
+        const member = w.members.find(m => m.user.id === workflow.userId);
+        const hasEditPermission = member && ['admin', 'editor'].includes(member.role);
+        return isOwner || hasEditPermission;
+      }) || [];
+      setWorkspaces(accessibleWorkspaces);
+    } catch (error) {
+      toast.error('Failed to load workspaces');
+    }
+  };
+
+  const handleMove = async () => {
+    if (!workflowToMove) return;
+    
+    setIsMoving(true);
+    try {
+      const workspaceId = selectedWorkspaceId === '' ? null : selectedWorkspaceId;
+      await workflowsApi.moveToWorkspace(workflowToMove.id, workspaceId);
+      toast.success(workspaceId 
+        ? 'Workflow moved to workspace' 
+        : 'Workflow moved to personal workflows'
+      );
+      setShowMoveModal(false);
+      setWorkflowToMove(null);
+      loadWorkflows();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to move workflow');
+    } finally {
+      setIsMoving(false);
     }
   };
 
@@ -240,6 +316,12 @@ export function WorkflowsList() {
                   <Clock size={14} />
                   {new Date(workflow.updatedAt).toLocaleDateString()}
                 </span>
+                {getWorkspaceName(workflow.workspaceId) && (
+                  <span className="meta-item workspace-badge">
+                    <FolderOpen size={14} />
+                    {getWorkspaceName(workflow.workspaceId)}
+                  </span>
+                )}
               </div>
 
               <div className="card-actions">
@@ -256,6 +338,13 @@ export function WorkflowsList() {
                   title="Edit"
                 >
                   <Settings size={16} />
+                </button>
+                <button
+                  className="action-btn"
+                  onClick={() => openMoveModal(workflow)}
+                  title="Move to Workspace"
+                >
+                  <Move size={16} />
                 </button>
                 <button
                   className="action-btn"
@@ -355,6 +444,67 @@ export function WorkflowsList() {
                 disabled={!importPreview}
               >
                 Import
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMoveModal && workflowToMove && (
+        <div className="modal-overlay" onClick={() => setShowMoveModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Move Workflow</h2>
+              <button 
+                className="close-btn" 
+                onClick={() => setShowMoveModal(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <p className="move-workflow-info">
+              Moving: <strong>{workflowToMove.name}</strong>
+            </p>
+            
+            <div className="form-group">
+              <label>Select Destination</label>
+              <select
+                value={selectedWorkspaceId}
+                onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+                className="workspace-select"
+              >
+                <option value="">Personal Workflows (no workspace)</option>
+                {workspaces.map((workspace) => (
+                  <option key={workspace.id} value={workspace.id}>
+                    {workspace.name} /{workspace.slug}
+                  </option>
+                ))}
+              </select>
+              {workspaces.length === 0 && (
+                <p className="hint-text">
+                  No workspaces with editor permissions available. 
+                  Create a workspace or ask to be added as an editor.
+                </p>
+              )}
+            </div>
+            
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowMoveModal(false)}
+                disabled={isMoving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleMove}
+                disabled={isMoving}
+              >
+                {isMoving ? 'Moving...' : 'Move Workflow'}
               </button>
             </div>
           </div>

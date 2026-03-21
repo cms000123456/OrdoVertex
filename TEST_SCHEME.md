@@ -1,475 +1,321 @@
-# OrdoVertex Test Scheme
+# OrdoVertex Test Scheme v2.0
 
-> Comprehensive testing plan for the OrdoVertex workflow automation platform.
+> Comprehensive, actionable testing plan with automated pre-push validation.
 
-## 📊 Current Test Status
+## 📊 Quick Status
 
-| Component | Status | Coverage | Notes |
-|-----------|--------|----------|-------|
-| Backend API | ✅ Partial | 77% | 23 integration tests |
-| Frontend | ❌ Missing | 0% | No tests implemented |
-| End-to-End | ❌ Missing | 0% | No E2E tests |
-| Security | ❌ Missing | 0% | No penetration tests |
-| Performance | ❌ Missing | 0% | No load tests |
+| Component | Tests | Status | Coverage |
+|-----------|-------|--------|----------|
+| Backend API | 23+ | 🟡 Partial | 77% |
+| Workspace API | 0 | 🔴 Missing | 0% |
+| Move Workflow | 0 | 🔴 Missing | 0% |
+| Frontend | 0 | 🔴 Missing | 0% |
+| E2E | 0 | 🔴 Missing | 0% |
 
 ---
 
-## 🎯 Test Categories
+## 🎯 Testing Philosophy
 
-### 1. Unit Tests
+**Test Before Push**: Every push must pass:
+1. ✅ TypeScript compilation (backend + frontend)
+2. ✅ API integration tests
+3. ✅ Database migration check
+4. ✅ Lint checks
 
-#### Backend (Priority: High)
+---
+
+## 🚀 Quick Start
+
+```bash
+# Run all tests before pushing
+npm run test:all
+
+# Run specific test suites
+npm run test:backend          # Backend API tests
+npm run test:workflows        # Workflow-specific tests
+npm run test:workspaces       # Workspace-specific tests
+npm run test:typecheck        # TypeScript checks
+npm run test:pre-push         # Full pre-push suite
 ```
-backend/src/
+
+---
+
+## 📁 Test Structure
+
+```
+backend/src/__tests__/
+├── setup.ts                    # Test configuration
 ├── utils/
 │   ├── auth.test.ts           # JWT, password hashing
-│   ├── encryption.test.ts     # AES-256-GCM encryption
-│   ├── vault.test.ts          # Credential vault operations
-│   ├── rate-limit.test.ts     # Rate limiting logic
-│   └── email-sender.test.ts   # Email functionality
+│   ├── encryption.test.ts     # AES encryption
+│   └── rate-limit.test.ts     # Rate limiting
+├── routes/
+│   ├── auth.test.ts           # Auth routes
+│   ├── workflows.test.ts      # Workflow CRUD + move
+│   ├── workspaces.test.ts     # Workspace CRUD
+│   └── credentials.test.ts    # Credential routes
 ├── engine/
 │   ├── executor.test.ts       # Workflow execution
-│   ├── scheduler.test.ts      # Cron scheduling
-│   └── queue.test.ts          # BullMQ queue operations
-└── nodes/
-    └── [each node].test.ts    # Individual node execution
-```
-
-**Required Tests:**
-- [ ] **Auth Utils** - Password hashing, JWT generation/verification, token expiry
-- [ ] **Encryption** - Encrypt/decrypt roundtrip, IV generation, key validation
-- [ ] **Vault** - Store/retrieve credentials, key rotation, error handling
-- [ ] **Rate Limit** - Window expiration, count tracking, IP identification
-- [ ] **Executor** - Node execution order, error handling, data flow
-- [ ] **Scheduler** - Cron parsing, trigger firing, timezone handling
-- [ ] **Queue** - Job enqueueing, worker processing, retry logic
-
-#### Frontend (Priority: High)
-```
-frontend/src/
-├── components/
-│   ├── WorkflowEditor.test.tsx
-│   ├── NodePanel.test.tsx
-│   ├── ExecutionLogs.test.tsx
-│   └── [each component].test.tsx
-├── store/
-│   └── workflowSlice.test.ts
-└── utils/
-    └── api.test.ts
-```
-
-**Required Tests:**
-- [ ] **Component Rendering** - All components render without errors
-- [ ] **User Interactions** - Click handlers, form submissions, drag-and-drop
-- [ ] **State Management** - Redux store updates, selectors
-- [ ] **API Integration** - Request/response handling, error states
-
----
-
-### 2. Integration Tests
-
-#### API Routes (Priority: High - Partially Done)
-**Existing:** `backend/src/__tests__/routes.test.ts` (23 tests)
-
-**Missing Coverage:**
-- [ ] **Auth Extended Routes**
-  - PATCH /api/auth/profile
-  - POST /api/auth/change-password
-  - POST /api/auth/mfa/setup
-  - POST /api/auth/mfa/verify
-  - POST /api/auth/mfa/disable
-  - POST /api/auth/mfa/backup
-
-- [ ] **SAML Routes**
-  - GET /api/auth/saml/config
-  - POST /api/auth/saml/config
-  - PATCH /api/auth/saml/config/:id
-  - DELETE /api/auth/saml/config/:id
-  - GET /api/auth/saml/providers
-
-- [ ] **Workspace Routes**
-  - POST /api/workspaces/:id/members
-  - PATCH /api/workspaces/:id/members/:memberId
-  - DELETE /api/workspaces/:id/members/:memberId
-  - GET /api/workspaces/:id/workflows
-
-- [ ] **User Routes**
-  - GET /api/users
-  - POST /api/users
-  - PATCH /api/users/:id
-  - DELETE /api/users/:id
-
-- [ ] **Alert Routes** (Not in GUI)
-  - GET /api/alerts
-  - POST /api/alerts
-  - PATCH /api/alerts/:id
-  - DELETE /api/alerts/:id
-
-- [ ] **Webhook Routes**
-  - POST /webhook/:workflowId/:path
-
-#### Database Integration (Priority: Medium)
-- [ ] **Prisma Operations** - All CRUD operations
-- [ ] **Transaction Handling** - Rollback on error
-- [ ] **Connection Pooling** - Under load
-- [ ] **Migration Testing** - Schema changes
-
-#### External Services (Priority: Medium)
-- [ ] **Redis** - Connection, pub/sub, queue operations
-- [ ] **Email Provider** - SMTP connection, sending
-- [ ] **AI Providers** - OpenAI, Anthropic, Gemini, Kimi API calls
-- [ ] **LDAP** - Connection, authentication, search
-- [ ] **SFTP** - Connection, file transfer
-- [ ] **SQL Databases** - PostgreSQL, MySQL, MSSQL, SQLite connections
-
----
-
-### 3. Node Tests (Priority: High)
-
-Each node needs isolated testing:
-
-#### Core Nodes
-- [ ] **Manual Trigger** - Execution initiation
-- [ ] **Schedule** - Cron expression parsing, trigger timing
-- [ ] **Webhook** - HTTP request handling, response
-
-#### Action Nodes
-- [ ] **HTTP Request** - GET, POST, headers, body, timeout
-- [ ] **Code** - JavaScript execution, Python execution, error handling
-- [ ] **Set** - Data setting, expressions
-- [ ] **IF** - Condition evaluation, branching
-- [ ] **Wait** - Delay execution
-- [ ] **Split** - Data splitting logic
-- [ ] **Aggregate** - Data aggregation
-
-#### Data Nodes
-- [ ] **CSV** - Parse/generate, delimiter handling
-- [ ] **Filter** - Condition filtering
-- [ ] **Sort** - Multi-field sorting
-- [ ] **Remove Duplicates** - Field-based deduplication
-- [ ] **Date & Time** - Formatting, manipulation
-- [ ] **String Operations** - Transformations
-- [ ] **Math** - Calculations
-- [ ] **Rename Fields** - Field mapping
-
-#### Integration Nodes
-- [ ] **SQL Database** - Query execution, parameter binding
-- [ ] **Send Email** - SMTP, attachments
-- [ ] **SFTP** - Upload, download, list
-- [ ] **LDAP** - Search, authentication
-
-#### AI Nodes
-- [ ] **AI Agent** - Multi-step reasoning, tool calls, memory
-- [ ] **AI Embedding** - Text to vector
-- [ ] **AI Vector Store** - Store/search embeddings
-- [ ] **Text Splitter** - Chunking strategies
-
----
-
-### 4. Security Tests (Priority: Critical)
-
-#### Authentication & Authorization
-- [ ] **JWT Security**
-  - Token expiration handling
-  - Invalid signature rejection
-  - Algorithm confusion attacks
-  - Secret key strength
-
-- [ ] **Password Security**
-  - Minimum length enforcement
-  - Complexity requirements
-  - Bcrypt rounds adequacy
-  - Password reset flow
-
-- [ ] **Session Management**
-  - Token refresh mechanism
-  - Concurrent session handling
-  - Logout invalidation
-
-- [ ] **Role-Based Access Control**
-  - Admin-only endpoints
-  - Workspace permissions
-  - Resource ownership
-
-#### Input Validation
-- [ ] **SQL Injection** - All database queries
-- [ ] **NoSQL Injection** - MongoDB (if used)
-- [ ] **XSS Prevention** - Output encoding
-- [ ] **CSRF Protection** - Token validation
-- [ ] **File Upload** - Type validation, size limits
-- [ ] **Path Traversal** - File system access
-
-#### Network Security
-- [ ] **SSRF Prevention** - Internal IP blocking (already implemented)
-- [ ] **Rate Limiting** - Brute force protection
-- [ ] **CORS Configuration** - Origin validation
-- [ ] **HTTPS Enforcement** - TLS version, certificates
-
-#### Secret Management
-- [ ] **Encryption at Rest** - Credential storage
-- [ ] **Key Rotation** - Encryption key updates
-- [ ] **Environment Variables** - Secret exposure check
-
----
-
-### 5. End-to-End Tests (Priority: High)
-
-#### Critical User Flows
-```
-e2e/tests/
-├── auth/
-│   ├── login.spec.ts
-│   ├── register.spec.ts
-│   └── mfa.spec.ts
-├── workflows/
-│   ├── create.spec.ts
-│   ├── edit.spec.ts
-│   ├── execute.spec.ts
-│   └── delete.spec.ts
-├── credentials/
-│   ├── create.spec.ts
-│   └── use-in-workflow.spec.ts
-└── admin/
-    ├── user-management.spec.ts
-    └── workspace-management.spec.ts
-```
-
-**Test Scenarios:**
-- [ ] **User Registration** → Login → Create Workflow → Execute → Logout
-- [ ] **Admin Flow** → Create User → Create Workspace → Assign Member
-- [ ] **Credential Flow** → Store Credential → Use in HTTP Node → Verify Execution
-- [ ] **AI Workflow** → Create AI Agent → Configure Tools → Execute Query
-- [ ] **Import/Export** → Export Workflow → Import → Verify Integrity
-
-#### Cross-Browser Testing
-- [ ] Chrome/Chromium
-- [ ] Firefox
-- [ ] Safari
-- [ ] Edge
-
----
-
-### 6. Performance Tests (Priority: Medium)
-
-#### Load Testing
-- [ ] **API Endpoints**
-  - 100 concurrent requests
-  - Response time < 200ms (p95)
-  - Error rate < 0.1%
-
-- [ ] **Workflow Execution**
-  - 50 concurrent executions
-  - Queue processing rate
-  - Memory usage under load
-
-- [ ] **WebSocket Connections** (if implemented)
-  - 1000 concurrent connections
-  - Message broadcast latency
-
-#### Stress Testing
-- [ ] **Database Connections** - Pool exhaustion
-- [ ] **Redis Memory** - Queue size limits
-- [ ] **Worker Crashes** - Recovery time
-- [ ] **Large Workflows** - 100+ nodes
-
-#### Benchmarks
-```javascript
-// Target metrics
-const targets = {
-  apiResponseTime: { p50: 50, p95: 200, p99: 500 }, // ms
-  workflowExecution: { simple: 100, complex: 5000 }, // ms
-  throughput: { requestsPerSecond: 1000 },
-  concurrentUsers: 100
-};
+│   └── scheduler.test.ts      # Cron scheduling
+└── integration/
+    └── full-flow.test.ts      # End-to-end scenarios
 ```
 
 ---
 
-### 7. Frontend-Specific Tests
+## 🧪 Test Categories
 
-#### Component Tests
-- [ ] **Workflow Editor**
-  - Node dragging
-  - Connection creation
-  - Zoom/pan
-  - Undo/redo
-  - Copy/paste
+### 1. Unit Tests (Priority: High)
 
-- [ ] **Node Configuration**
-  - Form validation
-  - Dynamic fields
-  - Expression editor
-  - Credential selection
+#### Backend Utils
+```typescript
+// utils/auth.test.ts
+- [x] JWT generation/verification
+- [x] Password hashing (bcrypt)
+- [x] Token expiration handling
 
-- [ ] **Execution Viewer**
-  - Real-time updates
-  - Log filtering
-  - Result display
-  - Error highlighting
+// utils/encryption.test.ts
+- [ ] Encrypt/decrypt roundtrip
+- [ ] IV generation uniqueness
+- [ ] Key validation
 
-#### Accessibility (a11y)
-- [ ] **Keyboard Navigation** - Tab order, shortcuts
-- [ ] **Screen Readers** - ARIA labels
-- [ ] **Color Contrast** - WCAG 2.1 AA compliance
-- [ ] **Focus Management** - Visible focus indicators
+// utils/rate-limit.test.ts
+- [ ] Window expiration
+- [ ] Count tracking
+- [ ] IP identification
+```
 
-#### Responsive Design
-- [ ] **Desktop** - 1920x1080, 1366x768
-- [ ] **Tablet** - iPad, Android tablets
-- [ ] **Mobile** - iPhone, Android phones (if supported)
+### 2. Integration Tests (Priority: High)
+
+#### Workflow Routes
+```typescript
+// routes/workflows.test.ts
+- [x] GET /api/workflows - List workflows
+- [x] POST /api/workflows - Create workflow
+- [x] GET /api/workflows/:id - Get workflow
+- [x] PATCH /api/workflows/:id - Update workflow
+- [x] DELETE /api/workflows/:id - Delete workflow
+- [x] POST /api/workflows/:id/execute - Execute workflow
+- [x] POST /api/workflows/:id/move - ⭐ NEW: Move to workspace
+```
+
+#### Workspace Routes (NEW)
+```typescript
+// routes/workspaces.test.ts
+- [ ] GET /api/workspaces - List workspaces
+- [ ] POST /api/workspaces - Create workspace
+- [ ] GET /api/workspaces/:id - Get workspace
+- [ ] PATCH /api/workspaces/:id - Update workspace
+- [ ] DELETE /api/workspaces/:id - Delete workspace
+- [ ] POST /api/workspaces/:id/members - Add member
+- [ ] PATCH /api/workspaces/:id/members/:id - Update role
+- [ ] DELETE /api/workspaces/:id/members/:id - Remove member
+- [ ] POST /api/workspaces/:id/workflows/:id - Add workflow
+```
+
+### 3. Feature-Specific Tests
+
+#### Move Workflow Feature
+```typescript
+describe('POST /api/workflows/:id/move', () => {
+  test('should move workflow to workspace', async () => {
+    // Create workspace
+    // Create workflow (personal)
+    // Move workflow to workspace
+    // Verify workspaceId updated
+  });
+
+  test('should move workflow to personal (null workspace)', async () => {
+    // Create workspace with workflow
+    // Move workflow to personal
+    // Verify workspaceId is null
+  });
+
+  test('should reject move to workspace without permission', async () => {
+    // Create workspace where user is viewer only
+    // Try to move workflow to workspace
+    // Expect 403 Forbidden
+  });
+
+  test('should reject move of non-owned workflow', async () => {
+    // Create workflow as user A
+    // Try to move as user B
+    // Expect 404 Not Found
+  });
+
+  test('should reject move to non-existent workspace', async () => {
+    // Try to move to fake workspace ID
+    // Expect 403/404 error
+  });
+});
+```
 
 ---
 
-## 🛠️ Testing Tools
+## 🔒 Security Tests
 
-### Backend
+```typescript
+describe('Security', () => {
+  test('should reject requests without auth token', async () => {});
+  test('should reject expired tokens', async () => {});
+  test('should reject invalid tokens', async () => {});
+  test('should prevent SQL injection', async () => {});
+  test('should prevent XSS in workflow names', async () => {});
+  test('should enforce rate limiting', async () => {});
+  test('should validate workspace permissions', async () => {});
+});
+```
+
+---
+
+## 🔄 Pre-Push Testing
+
+### Git Hook (`.git/hooks/pre-push`)
+
+```bash
+#!/bin/bash
+echo "🔍 Running pre-push tests..."
+
+# 1. TypeScript compilation
+echo "Checking TypeScript..."
+cd backend && npx tsc --noEmit || exit 1
+cd ../frontend && npx tsc --noEmit || exit 1
+cd ..
+
+# 2. Database schema check
+echo "Checking database schema..."
+cd backend && npx prisma validate || exit 1
+cd ..
+
+# 3. Backend tests
+echo "Running backend tests..."
+cd backend && npm test || exit 1
+cd ..
+
+# 4. Frontend build test
+echo "Testing frontend build..."
+cd frontend && npm run build || exit 1
+cd ..
+
+echo "✅ All pre-push tests passed!"
+```
+
+### Install Hook
+```bash
+chmod +x .git/hooks/pre-push
+```
+
+---
+
+## 🛠️ Test Commands
+
+### package.json scripts
 ```json
 {
-  "jest": "^29.7.0",
-  "supertest": "^6.3.3",
-  "@faker-js/faker": "^8.0.0",
-  "testcontainers": "^10.0.0"
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:workspaces": "jest workspaces",
+    "test:workflows": "jest workflows",
+    "test:typecheck": "tsc --noEmit",
+    "test:pre-push": "npm run test:typecheck && npm run test"
+  }
 }
-```
-
-### Frontend
-```json
-{
-  "@testing-library/react": "^14.0.0",
-  "@testing-library/jest-dom": "^6.0.0",
-  "vitest": "^1.0.0",
-  "cypress": "^13.0.0",
-  "playwright": "^1.40.0"
-}
-```
-
-### Security
-- **Snyk** - Dependency vulnerabilities
-- **OWASP ZAP** - Web app security scanning
-- **npm audit** - Known vulnerabilities
-
-### Performance
-- **k6** - Load testing
-- **Artillery** - API load testing
-- **Lighthouse** - Frontend performance
-
----
-
-## 📝 Test Data
-
-### Test Fixtures
-```
-backend/src/__tests__/fixtures/
-├── workflows/
-│   ├── simple-http.json
-│   ├── ai-agent.json
-│   └── data-processing.json
-├── users/
-│   ├── admin.json
-│   └── regular-user.json
-└── credentials/
-    ├── database.json
-    └── api-key.json
-```
-
-### Mock Services
-- [ ] **SMTP Server** - Mailtrap or similar
-- [ ] **AI Providers** - Mock responses
-- [ ] **LDAP Server** - Test directory
-- [ ] **SFTP Server** - Test file transfers
-
----
-
-## 🚀 CI/CD Integration
-
-### GitHub Actions Workflow
-```yaml
-name: Test Suite
-on: [push, pull_request]
-jobs:
-  unit-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Run Backend Tests
-        run: cd backend && npm test
-      - name: Run Frontend Tests
-        run: cd frontend && npm test
-  
-  integration-tests:
-    services:
-      postgres:
-        image: postgres:16
-      redis:
-        image: redis:7
-    steps:
-      - name: Run Integration Tests
-        run: npm run test:integration
-  
-  e2e-tests:
-    steps:
-      - name: Run E2E Tests
-        run: npm run test:e2e
-  
-  security-scan:
-    steps:
-      - name: Run Snyk
-        run: snyk test
-      - name: Run OWASP ZAP
-        run: zap-baseline.py -t http://localhost:3001
 ```
 
 ---
 
 ## 📈 Coverage Targets
 
-| Category | Current | Target | Priority |
-|----------|---------|--------|----------|
-| Backend Unit | 0% | 80% | High |
-| Backend Integration | 77% | 90% | High |
-| Frontend Unit | 0% | 70% | High |
-| E2E Critical Flows | 0% | 100% | High |
-| Security | 0% | 100% | Critical |
-| Performance | 0% | Baseline | Medium |
+| Component | Current | Target | Priority |
+|-----------|---------|--------|----------|
+| Auth Utils | 0% | 90% | 🔴 High |
+| Workflow Routes | 60% | 90% | 🔴 High |
+| Workspace Routes | 0% | 90% | 🔴 High |
+| Move Workflow | 0% | 100% | 🔴 High |
+| Encryption | 0% | 80% | 🟡 Medium |
+| Executor | 0% | 70% | 🟡 Medium |
 
 ---
 
-## 🎯 Implementation Roadmap
+## 🎯 Implementation Checklist
 
-### Phase 1: Foundation (Week 1-2)
-- [ ] Set up Jest for backend unit tests
-- [ ] Set up Vitest for frontend
-- [ ] Create test utilities and helpers
-- [ ] Add test data fixtures
+### Phase 1: Fix Current Tests (Week 1)
+- [ ] Add workspace table to test cleanup
+- [ ] Fix test database isolation
+- [ ] Add TESTING.md documentation
 
-### Phase 2: Backend Coverage (Week 3-4)
-- [ ] Unit tests for all utils
-- [ ] Complete API route integration tests
-- [ ] Node execution tests
+### Phase 2: Workspace Tests (Week 1-2)
+- [ ] Create `routes/workspaces.test.ts`
+- [ ] Test all workspace CRUD operations
+- [ ] Test member management
+- [ ] Test permission checks
 
-### Phase 3: Frontend Coverage (Week 5-6)
-- [ ] Component tests for core UI
-- [ ] Store/slice tests
-- [ ] API integration tests
+### Phase 3: Move Workflow Tests (Week 2)
+- [ ] Create workflow move tests
+- [ ] Test success cases
+- [ ] Test permission failures
+- [ ] Test edge cases
 
-### Phase 4: Security & E2E (Week 7-8)
-- [ ] Security test suite
-- [ ] Critical path E2E tests
-- [ ] Performance benchmarks
+### Phase 4: Pre-Push Hook (Week 2)
+- [ ] Create pre-push script
+- [ ] Add type checking
+- [ ] Add build verification
+- [ ] Document installation
 
-### Phase 5: CI/CD Integration (Week 9)
-- [ ] GitHub Actions workflows
-- [ ] Coverage reporting
-- [ ] Automated security scans
-
----
-
-## 🔗 Related Documents
-
-- [ROUTE_COVERAGE.md](./ROUTE_COVERAGE.md) - API route coverage analysis
-- [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) - Security assessment
-- [AI_WORKFLOW_GUIDE.md](./AI_WORKFLOW_GUIDE.md) - AI features documentation
+### Phase 5: CI/CD (Week 3)
+- [ ] GitHub Actions workflow
+- [ ] Test reporting
+- [ ] Coverage badges
 
 ---
 
-*Last updated: March 19, 2026*
+## 🐛 Debugging Tests
+
+```bash
+# Run specific test with debug output
+cd backend && npm test -- --verbose routes.test.ts
+
+# Run with coverage report
+cd backend && npm run test:coverage
+
+# Debug specific test
+cd backend && node --inspect-brk node_modules/.bin/jest routes.test.ts
+
+# Check database state during tests
+# Add to test: console.log(await prisma.workflow.findMany())
+```
+
+---
+
+## 📝 Test Data
+
+### Test Users
+```typescript
+const testUsers = {
+  admin: { email: 'admin@test.com', role: 'admin' },
+  user: { email: 'user@test.com', role: 'user' },
+  viewer: { email: 'viewer@test.com', role: 'user' }
+};
+```
+
+### Test Workflows
+```typescript
+const testWorkflows = {
+  simple: { name: 'Simple', nodes: [], connections: [] },
+  withData: { name: 'With Data', nodes: [...], connections: [...] }
+};
+```
+
+---
+
+## 🔗 Related Files
+
+- [ROUTE_COVERAGE.md](./ROUTE_COVERAGE.md) - API coverage analysis
+- [backend/src/__tests__/](./backend/src/__tests__/) - Test files
+- [backend/jest.config.js](./backend/jest.config.js) - Jest configuration
+
+---
+
+*Last updated: March 21, 2026*

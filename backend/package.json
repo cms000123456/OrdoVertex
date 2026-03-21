@@ -14,7 +14,12 @@
     "db:seed": "ts-node prisma/seed.ts",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:workspaces": "jest workspaces",
+    "test:workflows": "jest workflows",
+    "test:routes": "jest routes",
+    "test:typecheck": "tsc --noEmit",
+    "test:pre-push": "npm run test:typecheck && npm test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",

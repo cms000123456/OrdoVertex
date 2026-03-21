@@ -184,7 +184,7 @@ export function WorkspaceManager() {
           </div>
 
           <div className="detail-section">
-            <h2>Workflows ({currentWorkspace._count.workflows})</h2>
+            <h2>Workflows ({currentWorkspace._count?.workflows ?? 0})</h2>
             <p>Workflows in this workspace are listed below. Use the main Workflows page to manage them.</p>
           </div>
         </div>
@@ -288,6 +288,7 @@ export function WorkspaceManager() {
               className="workspace-card"
               onClick={() => navigate(`/workspaces/${workspace.id}`)}
               style={{ cursor: 'pointer' }}
+            >
               <div className="workspace-header">
                 <div className="workspace-icon">
                   <FolderOpen size={24} />
@@ -323,11 +324,11 @@ export function WorkspaceManager() {
               <div className="workspace-stats">
                 <span className="stat">
                   <FolderOpen size={14} />
-                  {workspace._count.workflows} workflows
+                  {workspace._count?.workflows ?? 0} workflows
                 </span>
                 <span className="stat">
                   <Users size={14} />
-                  {workspace._count.members} members
+                  {workspace._count?.members ?? 0} members
                 </span>
               </div>
 

@@ -81,6 +81,7 @@ model User {
   credentials    Credential[]
   workspaceMembers WorkspaceMember[]
   ownedWorkspaces  Workspace[]
+  groupMemberships UserGroupMember[]
   alerts         Alert[]
   samlConfig     SAMLConfig?
   mfaSettings    MFASettings?
@@ -149,6 +150,7 @@ model Workspace {
   updatedAt   DateTime @updatedAt
 
   members    WorkspaceMember[]
+  groups     UserGroup[]
   workflows  Workflow[]
   credentials Credential[]
   alerts     Alert[]
@@ -165,6 +167,34 @@ model WorkspaceMember {
 
   @@unique([workspaceId, userId])
   @@index([workspaceId])
+  @@index([userId])
+}
+
+// User Groups for organizing users in workspaces
+model UserGroup {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     UserGroupMember[]
+  
+  @@index([workspaceId])
+}
+
+model UserGroupMember {
+  id          String    @id @default(uuid())
+  groupId     String
+  group       UserGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  addedAt     DateTime  @default(now())
+
+  @@unique([groupId, userId])
+  @@index([groupId])
   @@index([userId])
 }
 
