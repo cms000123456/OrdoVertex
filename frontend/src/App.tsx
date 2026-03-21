@@ -23,6 +23,7 @@ import { MFASetup } from './components/MFASetup';
 import { SAMLConfig } from './components/SAMLConfig';
 import { ExecutionLogs } from './components/ExecutionLogs';
 import { Onboarding } from './components/Onboarding';
+import { WorkspaceManager } from './components/WorkspaceManager';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAuthSession } from './hooks/useAuthSession';
 import './App.css';
@@ -113,6 +114,9 @@ function MainLayout() {
             </button>
             {showUserMenu && (
               <div className="user-dropdown">
+                <button onClick={() => { navigate('/workspaces'); setShowUserMenu(false); }}>
+                  Workspaces
+                </button>
                 <button onClick={() => { navigate('/execution-logs'); setShowUserMenu(false); }}>
                   Execution Logs
                 </button>
@@ -198,6 +202,7 @@ function App() {
           <Route path="/admin/saml" element={<SAMLConfig />} />
           <Route path="/admin/execution-logs" element={<ExecutionLogs />} />
           <Route path="/admin/settings" element={<SystemSettings />} />
+          <Route path="/workspaces" element={<WorkspaceManager />} />
           {/* Help routes */}
           <Route path="/help" element={<HelpCenter />} />
           {/* User settings */}
