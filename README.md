@@ -114,8 +114,11 @@ Open your browser and go to: **http://localhost:3000**
 Add a pre-built tutorial workflow that demonstrates data flow between nodes:
 
 ```bash
-# One-liner to add the tutorial workflow
-docker compose exec api npx ts-node /app/scripts/add-tutorial-workflow.js
+# Run the helper script
+./add-tutorial.sh
+
+# Or manually with docker:
+docker compose exec -w /app api node scripts/add-tutorial-workflow.js
 ```
 
 This creates a **"📚 Tutorial: Data Flow Demo"** workflow that:
