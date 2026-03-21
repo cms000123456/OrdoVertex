@@ -110,10 +110,11 @@ function StickyNoteNode({ data, selected }: StickyNoteProps) {
         borderColor: colors.border,
         color: colors.text,
         width: `${width}px`,
-        minHeight: `${height}px`,
+        height: `${height}px`,
         padding: '12px',
         borderRadius: '4px',
         border: `1px solid ${colors.border}`,
+        overflow: 'auto',
         boxShadow: selected 
           ? `0 0 0 2px ${colors.border}, 0 4px 12px rgba(0,0,0,0.15)` 
           : '0 2px 8px rgba(0,0,0,0.1)',
