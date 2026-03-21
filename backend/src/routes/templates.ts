@@ -415,7 +415,7 @@ return [{ json: {
 
   'demo-stable-diffusion': {
     name: '🎨 Demo: Stable Diffusion AI Image',
-    description: 'Generate AI images using Pollinations (free, no API key)',
+    description: 'Generate AI images using Pollinations (free, no API key). Note: API may be slow/unstable.',
     category: 'Demo',
     tags: ['demo', 'ai', 'image', 'stable-diffusion', 'generative'],
     nodes: [
@@ -447,7 +447,11 @@ return [{ json: { prompt, imageUrl, width, height, seed } }];`
         position: { x: 650, y: 200 },
         parameters: {
           method: 'GET',
-          url: 'https://image.pollinations.ai/prompt/a%20beautiful%20sunset%20over%20mountains%20digital%20art?width=512&height=512&nologo=true&seed=12345'
+          url: 'https://image.pollinations.ai/prompt/a%20beautiful%20sunset%20over%20mountains%20digital%20art?width=512&height=512&nologo=true&seed=12345',
+          options: {
+            timeout: 120000,
+            responseType: 'arraybuffer'
+          }
         }
       },
       {
@@ -456,8 +460,17 @@ return [{ json: { prompt, imageUrl, width, height, seed } }];`
         name: 'Format Result',
         position: { x: 950, y: 200 },
         parameters: {
-          code: `const prompt = 'a beautiful sunset over mountains digital art';
-const imageUrl = 'https://image.pollinations.ai/prompt/a%20beautiful%20sunset%20over%20mountains%20digital%20art?width=512&height=512&nologo=true&seed=12345';
+          code: `// Get data from previous nodes
+const httpResponse = items[0]?.json || {};
+const promptData = items[1]?.json || {};
+
+// If HTTP failed, use the URL from code-1 directly
+const imageUrl = promptData.imageUrl || 'https://image.pollinations.ai/prompt/a%20beautiful%20sunset%20over%20mountains%20digital%20art?width=512&height=512&nologo=true&seed=12345';
+const prompt = promptData.prompt || 'a beautiful sunset over mountains digital art';
+
+// Check if we got binary image data or if HTTP failed
+const hasImageData = httpResponse && (httpResponse.body || httpResponse.data);
+
 return [{ json: {
   prompt: prompt,
   imageUrl: imageUrl,
@@ -465,11 +478,13 @@ return [{ json: {
   height: 512,
   provider: 'Pollinations.ai',
   apiCalled: true,
+  apiSuccess: !!hasImageData,
+  note: hasImageData ? 'Image generated successfully' : 'API call attempted - view image using URL below',
   _display: {
     type: 'image',
     url: imageUrl,
     alt: 'AI Generated',
-    caption: prompt,
+    caption: 'Prompt: ' + prompt,
     maxWidth: '512px'
   }
 } }];`
