@@ -198,7 +198,7 @@ return [{ json: {
         id: 'http-fact',
         type: 'httpRequest',
         name: 'Get Cat Fact',
-        position: { x: 350, y: 150 },
+        position: { x: 350, y: 100 },
         parameters: {
           method: 'GET',
           url: 'https://catfact.ninja/fact'
@@ -208,7 +208,7 @@ return [{ json: {
         id: 'http-img',
         type: 'httpRequest',
         name: 'Get Cat Image',
-        position: { x: 350, y: 300 },
+        position: { x: 350, y: 250 },
         parameters: {
           method: 'GET',
           url: 'https://cataas.com/cat?json=true'
@@ -218,7 +218,7 @@ return [{ json: {
         id: 'code-1',
         type: 'code',
         name: 'Combine Results',
-        position: { x: 650, y: 200 },
+        position: { x: 650, y: 175 },
         parameters: {
           code: `const inputs = items.map(i => i?.json || {});
 const factResponse = inputs.find(i => i.body?.fact) || {};
@@ -228,13 +228,26 @@ const imgId = imgResponse.body?._id;
 const imgUrl = imgId ? 'https://cataas.com/cat/' + imgId : 'https://cataas.com/cat';
 return [{ json: { fact, imageUrl: imgUrl, imageMarkdown: '![Cat](' + imgUrl + ')' } }];`
         }
+      },
+      {
+        id: 'display-1',
+        type: 'imageDisplay',
+        name: 'Show Image',
+        position: { x: 950, y: 175 },
+        parameters: {
+          imageUrl: '{{ $input.imageUrl }}',
+          altText: 'Random Cat',
+          caption: '{{ $input.fact }}',
+          maxWidth: '350px'
+        }
       }
     ],
     connections: [
       { source: 'trigger-1', target: 'http-fact' },
       { source: 'trigger-1', target: 'http-img' },
       { source: 'http-fact', target: 'code-1' },
-      { source: 'http-img', target: 'code-1' }
+      { source: 'http-img', target: 'code-1' },
+      { source: 'code-1', target: 'display-1' }
     ]
   },
 
@@ -354,7 +367,7 @@ return [{ json: {
         id: 'http-1',
         type: 'httpRequest',
         name: 'Get Dog Image',
-        position: { x: 400, y: 200 },
+        position: { x: 350, y: 200 },
         parameters: {
           method: 'GET',
           url: 'https://dog.ceo/api/breeds/image/random'
@@ -364,7 +377,7 @@ return [{ json: {
         id: 'code-1',
         type: 'code',
         name: 'Format Result',
-        position: { x: 700, y: 200 },
+        position: { x: 650, y: 200 },
         parameters: {
           code: `const response = items[0]?.json || {};
 const data = response.body || {};
@@ -379,11 +392,24 @@ return [{ json: {
   imageMarkdown: '![Dog](' + imgUrl + ')'
 } }];`
         }
+      },
+      {
+        id: 'display-1',
+        type: 'imageDisplay',
+        name: 'Show Image',
+        position: { x: 950, y: 200 },
+        parameters: {
+          imageUrl: '{{ $input.imageUrl }}',
+          altText: '{{ $input.breed }}',
+          caption: 'Breed: {{ $input.breed }}',
+          maxWidth: '350px'
+        }
       }
     ],
     connections: [
       { source: 'trigger-1', target: 'http-1' },
-      { source: 'http-1', target: 'code-1' }
+      { source: 'http-1', target: 'code-1' },
+      { source: 'code-1', target: 'display-1' }
     ]
   },
 
