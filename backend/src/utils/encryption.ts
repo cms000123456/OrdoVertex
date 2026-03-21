@@ -7,20 +7,21 @@ const AUTH_TAG_LENGTH = 16;
 
 // Get encryption key from environment or use a default for development
 // In production, this should be set via environment variable
+const DEV_FALLBACK_KEY = 'CHANGEME-32-character-random-key-for-dev-only!!';
+
 const getEncryptionKey = (): Buffer => {
-  const key = process.env.ENCRYPTION_KEY;
-  console.log('DEBUG: ENCRYPTION_KEY exists:', !!key);
-  console.log('DEBUG: ENCRYPTION_KEY length:', key?.length);
-  console.log('DEBUG: NODE_ENV:', process.env.NODE_ENV);
+  let key = process.env.ENCRYPTION_KEY;
   
   if (!key) {
-    console.error('ERROR: ENCRYPTION_KEY environment variable is not set');
-    console.error('Please set ENCRYPTION_KEY in your .env file or environment');
-    throw new Error('ENCRYPTION_KEY environment variable is required');
+    console.warn('WARNING: ENCRYPTION_KEY not set, using development fallback key');
+    console.warn('WARNING: For production, set ENCRYPTION_KEY environment variable');
+    key = DEV_FALLBACK_KEY;
   }
+  
   if (key.length < 32) {
     throw new Error('ENCRYPTION_KEY must be at least 32 characters long');
   }
+  
   // Hash the key to ensure it's exactly 32 bytes
   return crypto.createHash('sha256').update(key).digest();
 };
