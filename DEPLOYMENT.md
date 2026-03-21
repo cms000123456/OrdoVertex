@@ -33,16 +33,24 @@ nano .env
 | `DB_PASSWORD` | PostgreSQL password | `YourStrongDBPass` |
 | `CORS_ORIGIN` | Your frontend domain | `https://ordovertex.yourcompany.com` |
 
-### Initial Admin User (Optional but Recommended)
+### Initial Admin User
 
-The first time you start the application, you can automatically create an admin user by setting these environment variables:
+**Development:** A default admin user is automatically created on first startup:
+- **Email:** `admin@example.com`
+- **Password:** `admin123`
+
+**Production:** Set custom credentials via environment variables:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `ADMIN_EMAIL` | Admin user email | `admin@example.com` |
+| `ADMIN_EMAIL` | Admin user email | `admin@yourcompany.com` |
 | `ADMIN_PASSWORD` | Admin user password | `StrongAdminPass123!` |
 
-**Note:** These variables are only used if no admin user exists. Once an admin is created, these variables are ignored. You can also create the first admin manually via the API or promote an existing user through the database.
+**Important:** 
+- These variables are only used if no admin user exists
+- Once an admin is created, these variables are ignored
+- For production, always set strong custom credentials
+- You can also create the first admin manually via Prisma Studio or SQL
 
 ### Rate Limiting (Optional)
 

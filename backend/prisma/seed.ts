@@ -3,14 +3,13 @@ import { hashPassword } from '../src/utils/auth';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const adminPassword = process.env.ADMIN_PASSWORD;
+// Default credentials for fresh installs (development only)
+const DEFAULT_ADMIN_EMAIL = 'admin@example.com';
+const DEFAULT_ADMIN_PASSWORD = 'admin123';
 
-  if (!adminEmail || !adminPassword) {
-    console.log('ℹ️  ADMIN_EMAIL and ADMIN_PASSWORD not set, skipping admin seed');
-    return;
-  }
+async function main() {
+  const adminEmail = process.env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
 
   // Check if any admin already exists
   const existingAdmin = await prisma.user.findFirst({
@@ -50,6 +49,11 @@ async function main() {
   });
 
   console.log(`✅ Admin user created: ${admin.email}`);
+  if (adminEmail === DEFAULT_ADMIN_EMAIL) {
+    console.log(`   ⚠️  Using default credentials. Change password after first login!`);
+    console.log(`   Email: ${DEFAULT_ADMIN_EMAIL}`);
+    console.log(`   Password: ${DEFAULT_ADMIN_PASSWORD}`);
+  }
 }
 
 main()
