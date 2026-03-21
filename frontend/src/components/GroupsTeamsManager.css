@@ -68,6 +68,15 @@
   margin-bottom: 24px;
 }
 
+.no-workspace-warning {
+  padding: 12px 16px;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: 14px;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

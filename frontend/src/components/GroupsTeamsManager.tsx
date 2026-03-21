@@ -69,19 +69,11 @@ export function GroupsTeamsManager() {
     setIsAdmin(user.role === 'admin');
   }, []);
 
-  // Load workspaces on mount
+  // Load all data on mount
   useEffect(() => {
     loadWorkspaces();
+    loadAllGroups();
   }, []);
-
-  // Load groups when workspace changes
-  useEffect(() => {
-    if (selectedWorkspace) {
-      loadGroups(selectedWorkspace);
-    } else {
-      setLoading(false);
-    }
-  }, [selectedWorkspace]);
 
   const loadWorkspaces = async () => {
     try {
@@ -106,10 +98,10 @@ export function GroupsTeamsManager() {
     }
   };
 
-  const loadGroups = async (workspaceId: string) => {
+  const loadAllGroups = async () => {
     setLoading(true);
     try {
-      const response = await groupsApi.getByWorkspace(workspaceId);
+      const response = await groupsApi.getAll();
       setGroups(response.data?.data || []);
       setError(null);
     } catch (err: any) {
@@ -119,27 +111,39 @@ export function GroupsTeamsManager() {
     }
   };
 
+  const handleAssignWorkspace = async (groupId: string, workspaceId: string) => {
+    try {
+      await groupsApi.addWorkspaceAccess(groupId, workspaceId, 'viewer');
+      loadAllGroups();
+    } catch (err: any) {
+      setError('Failed to assign workspace: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleRemoveWorkspaceAccess = async (groupId: string, accessId: string) => {
+    try {
+      await groupsApi.removeWorkspaceAccess(groupId, accessId);
+      loadAllGroups();
+    } catch (err: any) {
+      setError('Failed to remove workspace access: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGroupName.trim()) return;
-    
-    const workspaceIds = selectedWorkspaces.length > 0 ? selectedWorkspaces : [selectedWorkspace];
-    if (workspaceIds.length === 0 || !workspaceIds[0]) {
-      setError('Please select at least one workspace');
-      return;
-    }
 
     try {
       await groupsApi.create({
         name: newGroupName,
         description: newGroupDescription,
-        workspaceIds: workspaceIds
+        workspaceIds: selectedWorkspaces.length > 0 ? selectedWorkspaces : []
       });
       setNewGroupName('');
       setNewGroupDescription('');
       setSelectedWorkspaces([]);
       setShowCreateForm(false);
-      loadGroups(selectedWorkspace);
+      loadAllGroups();
     } catch (err: any) {
       setError('Failed to create group: ' + (err.response?.data?.error || err.message));
     }
@@ -152,7 +156,7 @@ export function GroupsTeamsManager() {
         description: editDescription
       });
       setEditingGroup(null);
-      loadGroups(selectedWorkspace);
+      loadAllGroups();
     } catch (err: any) {
       setError('Failed to update group: ' + (err.response?.data?.error || err.message));
     }
@@ -163,7 +167,7 @@ export function GroupsTeamsManager() {
 
     try {
       await groupsApi.delete(groupId);
-      loadGroups(selectedWorkspace);
+      loadAllGroups();
     } catch (err: any) {
       setError('Failed to delete group: ' + (err.response?.data?.error || err.message));
     }
@@ -176,7 +180,7 @@ export function GroupsTeamsManager() {
       await groupsApi.addMember(groupId, selectedUser);
       setShowAddMember(null);
       setSelectedUser('');
-      loadGroups(selectedWorkspace);
+      loadAllGroups();
     } catch (err: any) {
       setError('Failed to add member: ' + (err.response?.data?.error || err.message));
     }
@@ -187,7 +191,7 @@ export function GroupsTeamsManager() {
 
     try {
       await groupsApi.removeMember(groupId, memberId);
-      loadGroups(selectedWorkspace);
+      loadAllGroups();
     } catch (err: any) {
       setError('Failed to remove member: ' + (err.response?.data?.error || err.message));
     }
@@ -212,23 +216,10 @@ export function GroupsTeamsManager() {
         </div>
       )}
 
-      <div className="workspace-selector">
-        <label>Select Workspace:</label>
-        <select 
-          value={selectedWorkspace} 
-          onChange={(e) => setSelectedWorkspace(e.target.value)}
-        >
-          {workspaces.map(w => (
-            <option key={w.id} value={w.id}>{w.name}</option>
-          ))}
-        </select>
-      </div>
-
       <div className="groups-actions">
         <button 
           className="btn btn-primary"
           onClick={() => setShowCreateForm(!showCreateForm)}
-          disabled={!selectedWorkspace}
         >
           <Plus size={16} />
           Create Group
@@ -255,11 +246,11 @@ export function GroupsTeamsManager() {
               onChange={(e) => setNewGroupDescription(e.target.value)}
             />
           </div>
-          <div className="form-row">
-            <label className="form-label">
-              {isAdmin ? 'Select Workspaces (Admin: can select multiple)' : 'Workspace'}
-            </label>
-            {isAdmin ? (
+          {workspaces.length > 0 && (
+            <div className="form-row">
+              <label className="form-label">
+                Assign to Workspaces (optional)
+              </label>
               <div className="workspace-checkboxes">
                 {workspaces.map(ws => (
                   <label key={ws.id} className="checkbox-item">
@@ -278,19 +269,9 @@ export function GroupsTeamsManager() {
                   </label>
                 ))}
               </div>
-            ) : (
-              <select 
-                value={selectedWorkspace} 
-                onChange={(e) => setSelectedWorkspace(e.target.value)}
-                required
-              >
-                <option value="">Select a workspace...</option>
-                {workspaces.map(ws => (
-                  <option key={ws.id} value={ws.id}>{ws.name}</option>
-                ))}
-              </select>
-            )}
-          </div>
+              <p className="form-hint">You can assign workspaces to the group now or later.</p>
+            </div>
+          )}
           <div className="form-actions">
             <button type="submit" className="btn btn-primary">Create</button>
             <button type="button" className="btn btn-secondary" onClick={() => setShowCreateForm(false)}>Cancel</button>
