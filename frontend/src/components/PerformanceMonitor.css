@@ -107,7 +107,7 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 16px;
-  color: var(--text-secondary, #64748b);
+  color: #475569;
 }
 
 .metric-header h3 {
@@ -116,6 +116,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  color: #1e293b;
 }
 
 .metric-value {
@@ -138,7 +139,7 @@
 
 .metric-details {
   font-size: 13px;
-  color: var(--text-secondary, #64748b);
+  color: #334155;
   margin-bottom: 16px;
 }
 
@@ -188,7 +189,8 @@
 
 .queue-label {
   font-size: 13px;
-  color: var(--text-secondary, #64748b);
+  color: #334155;
+  font-weight: 500;
 }
 
 .queue-value {
@@ -242,7 +244,8 @@
 
 .info-label {
   font-size: 13px;
-  color: var(--text-secondary, #64748b);
+  color: #334155;
+  font-weight: 500;
 }
 
 .info-value {
@@ -255,7 +258,7 @@
 .no-data {
   text-align: center;
   padding: 32px;
-  color: var(--text-secondary, #64748b);
+  color: #475569;
   font-size: 14px;
 }
 
@@ -280,10 +283,10 @@
 
 .monitor-footer {
   text-align: center;
-  color: var(--text-secondary, #64748b);
+  color: #475569;
   font-size: 13px;
   padding-top: 24px;
-  border-top: 1px solid var(--border-color, #e2e8f0);
+  border-top: 1px solid #e2e8f0;
 }
 
 .monitor-footer p {

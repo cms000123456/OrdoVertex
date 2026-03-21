@@ -50,23 +50,30 @@ export function PerformanceMonitor() {
 
   const fetchStats = useCallback(async () => {
     try {
+      setLoading(true);
+      
       // Fetch system stats
       const systemRes = await fetch('/api/admin/system-stats');
-      const queueRes = await fetch('/api/executions/stats');
+      const systemData = await systemRes.json();
       
-      if (systemRes.ok) {
-        const systemData = await systemRes.json();
+      if (systemData.success) {
         setSystemStats(systemData.data);
+      } else {
+        console.error('System stats error:', systemData.error);
       }
       
-      if (queueRes.ok) {
-        const queueData = await queueRes.json();
+      // Fetch queue stats
+      const queueRes = await fetch('/api/executions/stats');
+      const queueData = await queueRes.json();
+      
+      if (queueData.success) {
         setQueueStats(queueData.data);
       }
       
       setLastUpdated(new Date());
       setError(null);
     } catch (err: any) {
+      console.error('Fetch stats error:', err);
       setError('Failed to fetch stats: ' + err.message);
     } finally {
       setLoading(false);

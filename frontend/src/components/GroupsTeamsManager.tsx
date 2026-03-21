@@ -71,8 +71,11 @@ export function GroupsTeamsManager() {
       if (workspacesData.length > 0 && !selectedWorkspace) {
         setSelectedWorkspace(workspacesData[0].id);
       }
+      setError(null);
     } catch (err: any) {
-      setError('Failed to load workspaces: ' + (err.message || 'Unknown error'));
+      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
+      setError('Failed to load workspaces: ' + errorMsg + '. Please ensure you are logged in and have workspace access.');
+      console.error('Workspace load error:', err);
     }
   };
 
