@@ -52,7 +52,9 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
     try {
       setCredentialsLoading(true);
       const response = await credentialApi.list(type);
-      setCredentials(response.data.credentials);
+      // Handle both response formats
+      const creds = response.data.credentials || response.data.data?.credentials || [];
+      setCredentials(creds);
     } catch (err) {
       console.error('Failed to load credentials:', err);
     } finally {
