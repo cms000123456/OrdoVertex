@@ -56,20 +56,30 @@ export const imageDisplayNode: NodeType = {
       const items = context.getInputData();
       const item = items[0]?.json || {};
       
-      // Replace template variables in URL
+      // Helper to replace template variables
+      const replaceVars = (str: string): string => {
+        return str.replace(/\{\{\s*\$input\.(\w+)\s*\}\}/g, (_, key) => {
+          return item[key] ?? '';
+        });
+      };
+      
+      // Replace template variables in all fields
       let imageUrl = context.getNodeParameter('imageUrl', '') as string;
-      imageUrl = imageUrl.replace(/\{\{\s*\$input\.(\w+)\s*\}\}/g, (_, key) => {
-        return item[key] || '';
-      });
+      imageUrl = replaceVars(imageUrl);
       
       // Also try common field names if URL is empty
       if (!imageUrl) {
         imageUrl = item.imageUrl || item.url || item.image || item.src || item.link || '';
       }
       
-      const altText = context.getNodeParameter('altText', 'Image') as string;
-      const caption = context.getNodeParameter('caption', '') as string;
-      const maxWidth = context.getNodeParameter('maxWidth', '400px') as string;
+      let altText = context.getNodeParameter('altText', 'Image') as string;
+      altText = replaceVars(altText);
+      
+      let caption = context.getNodeParameter('caption', '') as string;
+      caption = replaceVars(caption);
+      
+      let maxWidth = context.getNodeParameter('maxWidth', '400px') as string;
+      maxWidth = replaceVars(maxWidth);
       
       // Return structured image data with display hint
       const output = [{
