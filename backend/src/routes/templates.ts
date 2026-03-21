@@ -171,7 +171,7 @@ return [{ json: {
         name: 'Format Prices',
         position: { x: 700, y: 200 },
         parameters: {
-          code: 'const prices = items[0]?.json || {};\nreturn [{ json: {\n  bitcoin: "$" + prices.bitcoin?.usd || "N/A",\n  ethereum: "$" + prices.ethereum?.usd || "N/A",\n  timestamp: new Date().toISOString()\n} }];'
+          code: 'const response = items[0]?.json || {};\nconst prices = response.body || {};\nreturn [{ json: {\n  bitcoin: "$" + (prices.bitcoin?.usd || "N/A"),\n  ethereum: "$" + (prices.ethereum?.usd || "N/A"),\n  timestamp: new Date().toISOString()\n} }];'
         }
       }
     ],
