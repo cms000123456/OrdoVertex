@@ -10,7 +10,7 @@
 ## 🌟 Features
 
 - **Visual Workflow Editor**: Drag-and-drop interface built with React Flow
-- **30+ Built-in Nodes**: HTTP, Code, SQL, Email, CSV, AI Agents, LDAP, and more
+- **32+ Built-in Nodes**: HTTP, Code, SQL, Email, CSV, AI Agents, LDAP, Text Parser, Image Display, and more
 - **AI-Powered Workflows**: Multi-provider LLM support (OpenAI, Anthropic, Gemini, Kimi, Ollama)
 - **Multiple Trigger Types**: Webhook, Schedule (Cron), Manual, File Watch
 - **Team Collaboration**: Workspaces for sharing workflows and credentials with role-based access
@@ -194,11 +194,11 @@ For production deployment with HTTPS, see the **[Deployment Guide](DEPLOYMENT.md
 | File Watch | Monitor file system changes |
 | S3 Trigger | React to S3 bucket events |
 
-### Actions (24)
+### Actions (26)
 | Category | Nodes |
 |----------|-------|
 | **Core** | HTTP Request, Code, Set, IF, Wait, Split, Aggregate |
-| **Data** | CSV, Filter, Sort, Remove Duplicates, Date/Time, Math |
+| **Data** | CSV, Filter, Sort, Remove Duplicates, Date/Time, Math, Text Parser, Image Display |
 | **Database** | SQL Database (PostgreSQL, MySQL, MSSQL, SQLite) |
 | **Integration** | Send Email, SFTP, LDAP |
 | **AI** | AI Agent, AI Embedding, AI Vector Store, Text Splitter |

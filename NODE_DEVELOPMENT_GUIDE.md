@@ -793,6 +793,117 @@ export const calculatorNode: NodeType = {
 };
 ```
 
+### Example 4: Text Parser Node (Multi-Mode Parser)
+
+A real-world example showing a node with multiple parsing modes and conditional properties:
+
+```typescript
+import { NodeType } from '../../types';
+
+export const textParserNode: NodeType = {
+  name: 'textParser',
+  displayName: 'Text Parser',
+  description: 'Parse text in various formats (RSS, XML, JSON, CSV, Regex)',
+  icon: 'fa:file-code',
+  category: 'Actions',
+  version: 1,
+  
+  inputs: [{
+    name: 'input',
+    type: 'all',
+    description: 'Input containing text to parse'
+  }],
+  
+  outputs: [{
+    name: 'output',
+    type: 'all',
+    description: 'Parsed data'
+  }],
+  
+  properties: [
+    {
+      name: 'parseMode',
+      displayName: 'Parse Mode',
+      type: 'options',
+      options: [
+        { name: 'RSS Feed', value: 'rss' },
+        { name: 'XML', value: 'xml' },
+        { name: 'JSON', value: 'json' },
+        { name: 'CSV', value: 'csv' },
+        { name: 'Regex Extract', value: 'regex' },
+        { name: 'Split', value: 'split' }
+      ],
+      default: 'rss'
+    },
+    {
+      name: 'sourceField',
+      displayName: 'Source Field',
+      type: 'string',
+      default: '{{ $input.body }}'
+    },
+    {
+      name: 'regexPattern',
+      displayName: 'Regex Pattern',
+      type: 'string',
+      // Only show when parseMode is 'regex'
+      displayOptions: {
+        show: { parseMode: ['regex'] }
+      }
+    },
+    {
+      name: 'maxResults',
+      displayName: 'Max Results',
+      type: 'number',
+      default: 50
+    }
+  ],
+  
+  execute: async (context) => {
+    try {
+      const items = context.getInputData();
+      const item = items[0]?.json || {};
+      
+      const parseMode = context.getNodeParameter('parseMode', 'rss');
+      let sourceField = context.getNodeParameter('sourceField', '{{ $input.body }}');
+      
+      // Replace template variables
+      sourceField = sourceField.replace(/\{\{\s*\$input\.(\w+)\s*\}\}/g, (_, key) => item[key] ?? '');
+      
+      // Get text to parse
+      let text = sourceField || item.body || item.text || item.data || JSON.stringify(item);
+      
+      let result: any;
+      
+      switch (parseMode) {
+        case 'rss':
+          result = parseRSS(text);
+          break;
+        case 'json':
+          result = JSON.parse(text);
+          break;
+        // ... other modes
+      }
+      
+      return {
+        success: true,
+        output: [{ json: result }]
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Parsing failed'
+      };
+    }
+  }
+};
+```
+
+**Key Features Demonstrated:**
+- **Options Property**: Dropdown with multiple parsing modes
+- **Conditional Display**: `regexPattern` only shows when mode is 'regex'
+- **Template Variable Replacement**: Supporting `{{ $input.field }}` syntax
+- **Multiple Output Formats**: Returns different structures based on mode
+
 ---
 
 ## Testing Your Node
