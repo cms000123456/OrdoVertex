@@ -337,7 +337,7 @@ return [{ json: {
         name: 'Transform',
         position: { x: 700, y: 200 },
         parameters: {
-          code: '// Transform data for target\nconst rows = $input.all();\nreturn rows.map(r => ({\n  json: {\n    ...r.json,\n    synced_at: new Date().toISOString()\n  }\n}));'
+          code: `// Transform data for target\nconst rows = items;\nreturn rows.map(r => ({\n  json: {\n    ...r.json,\n    synced_at: new Date().toISOString()\n  }\n}));`
         }
       },
       {
@@ -381,18 +381,7 @@ return [{ json: {
         name: 'Format Alert',
         position: { x: 400, y: 200 },
         parameters: {
-          code: `const error = $input.first().json;
-return {
-  json: {
-    subject: \`Error: \${error.service}\`,
-    body: \`
-Service: \${error.service}
-Time: \${error.timestamp}
-Error: \${error.message}
-Stack: \${error.stack}
-    \`.trim()
-  }
-};`
+          code: `const error = items[0]?.json || {};\nreturn [{\n  json: {\n    subject: 'Error: ' + (error.service || 'Unknown'),\n    body: \`\nService: \${error.service || 'N/A'}\nTime: \${error.timestamp || 'N/A'}\nError: \${error.message || 'N/A'}\nStack: \${error.stack || 'N/A'}\n    \`.trim()\n  }\n}];`
         }
       },
       {
@@ -441,7 +430,7 @@ Stack: \${error.stack}
         name: 'Parse XML',
         position: { x: 400, y: 200 },
         parameters: {
-          code: '// Parse XML content\nconst xml = $input.first().json.content;\n// Add XML parsing logic here\nreturn { json: { parsed: xml } };'
+          code: `// Parse XML content\nconst xml = items[0]?.json?.content || '';\n// Add XML parsing logic here\nreturn [{ json: { parsed: xml } }];`
         }
       },
       {
@@ -498,13 +487,7 @@ Stack: \${error.stack}
         name: 'Format Users',
         position: { x: 700, y: 200 },
         parameters: {
-          code: `const entries = $input.first().json.entries;
-const users = entries.map(e => ({
-  name: e.attributes.cn?.[0],
-  email: e.attributes.mail?.[0],
-  department: e.attributes.department?.[0]
-}));
-return { json: { users } };`
+          code: `const data = items[0]?.json || {};\nconst entries = data.entries || [];\nconst users = entries.map(e => ({\n  name: e.attributes?.cn?.[0],\n  email: e.attributes?.mail?.[0],\n  department: e.attributes?.department?.[0]\n}));\nreturn [{ json: { users } }];`
         }
       }
     ],
