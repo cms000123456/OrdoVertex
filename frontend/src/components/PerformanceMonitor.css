@@ -123,6 +123,7 @@
   font-size: 36px;
   font-weight: 700;
   margin-bottom: 12px;
+  color: #1e293b;
 }
 
 .metric-value.good {
@@ -183,7 +184,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  background: var(--bg-secondary, #f8fafc);
+  background: #f1f5f9;
   border-radius: 8px;
 }
 
@@ -238,7 +239,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px;
-  background: var(--bg-secondary, #f8fafc);
+  background: #f1f5f9;
   border-radius: 8px;
 }
 
@@ -269,7 +270,7 @@
   justify-content: center;
   gap: 16px;
   padding: 64px;
-  color: var(--text-secondary, #64748b);
+  color: #475569;
 }
 
 .spin {
