@@ -8,6 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required');
 }
+const JWT_SECRET_KEY = JWT_SECRET as string;
 
 export interface AuthRequest extends Request {
   user?: {
@@ -29,12 +30,12 @@ export function generateToken(userId: string, email: string, role?: string): str
   if (role) payload.role = role;
   // Shorter token lifetime for security (24 hours instead of 7 days)
   // Can be configured via JWT_EXPIRES_IN env var
-  const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
-  return jwt.sign(payload, JWT_SECRET, { expiresIn });
+  const expiresIn = (process.env.JWT_EXPIRES_IN || '24h') as jwt.SignOptions['expiresIn'];
+  return jwt.sign(payload, JWT_SECRET_KEY, { expiresIn });
 }
 
 export function verifyToken(token: string): { id: string; email: string; role?: string } {
-  return jwt.verify(token, JWT_SECRET) as { id: string; email: string; role?: string };
+  return jwt.verify(token, JWT_SECRET_KEY) as { id: string; email: string; role?: string };
 }
 
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
