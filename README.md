@@ -67,12 +67,14 @@ The intuitive drag-and-drop interface for building automation workflows:
 
 ## 🚀 Quick Start
 
+Get OrdoVertex running in under 5 minutes with Docker Compose.
+
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) & Docker Compose
-- [Node.js 20+](https://nodejs.org/) (for local development)
+- Git
 
-### Docker Compose (Recommended)
+### 1. Clone & Start
 
 ```bash
 # Clone the repository
@@ -82,21 +84,54 @@ cd ordovertex
 # Start all services
 docker-compose up -d
 
-# Access the application
-# Frontend: http://localhost:3000
-# API: http://localhost:3001
-
-# Default login (auto-created on first start):
-# Email: admin@example.com
-# Password: admin123
-# 
-# ⚠️  You will be required to change email and password on first login
-# 
-# Or set custom credentials before starting:
-# ADMIN_EMAIL=your@email.com ADMIN_PASSWORD=yourpass docker-compose up -d
+# Wait for services to be ready (usually 30-60 seconds)
+docker-compose logs -f api
+# When you see "Server running on port 3001", press Ctrl+C to exit logs
 ```
 
-### Manual Setup
+### 2. Access the Application
+
+Open your browser and go to: **http://localhost:3000**
+
+### 3. First Login
+
+| Field | Value |
+|-------|-------|
+| **Email** | `admin@example.com` |
+| **Password** | `admin123` |
+
+> ⚠️ **Security Notice:** You will be required to change your email and password on first login.
+
+### 4. Create Your First Workflow
+
+1. Click **"New Workflow"** on the dashboard
+2. Drag nodes from the left panel to the canvas
+3. Connect nodes by dragging from output to input
+4. Click **"Execute"** to run your workflow
+
+### Custom Credentials (Optional)
+
+To set your own admin credentials instead of defaults:
+
+```bash
+ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=yourpassword docker-compose up -d
+```
+
+### Stopping the Application
+
+```bash
+# Stop all services
+docker-compose down
+
+# Stop and remove all data (fresh start)
+docker-compose down -v
+```
+
+---
+
+### Manual Setup (Without Docker)
+
+For development or custom setups:
 
 ```bash
 # Backend
@@ -113,7 +148,7 @@ npm start
 
 ### Production Deployment
 
-For production deployment with HTTPS, environment configuration, and security hardening, see the **[Deployment Guide](DEPLOYMENT.md)**.
+For production deployment with HTTPS, see the **[Deployment Guide](DEPLOYMENT.md)**.
 
 ## 📦 Available Nodes
 
