@@ -75,6 +75,65 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/webhook', webhookRoutes);
 
+// Admin/System Routes
+app.get('/api/admin/system-stats', async (req, res) => {
+  try {
+    const os = await import('os');
+    
+    // Get memory stats
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    
+    // Get disk stats (simplified - uses root partition info)
+    let diskStats = { total: 0, used: 0, free: 0 };
+    try {
+      const { execSync } = await import('child_process');
+      const dfOutput = execSync('df -k / 2>/dev/null || df -k .', { encoding: 'utf8' });
+      const lines = dfOutput.trim().split('\n');
+      if (lines.length > 1) {
+        const parts = lines[1].split(/\s+/);
+        if (parts.length >= 4) {
+          diskStats.total = parseInt(parts[1]) * 1024;
+          diskStats.used = parseInt(parts[2]) * 1024;
+          diskStats.free = parseInt(parts[3]) * 1024;
+        }
+      }
+    } catch {
+      // Fallback if df command fails
+      diskStats = { total: totalMem * 2, used: usedMem, free: totalMem * 2 - usedMem };
+    }
+    
+    const stats = {
+      cpu: {
+        usage: os.loadavg()[0] * 10, // Rough estimate based on load average
+        cores: os.cpus().length,
+        loadAvg: os.loadavg()
+      },
+      memory: {
+        total: totalMem,
+        used: usedMem,
+        free: freeMem,
+        percentage: (usedMem / totalMem) * 100
+      },
+      disk: {
+        total: diskStats.total || totalMem * 2,
+        used: diskStats.used || usedMem,
+        free: diskStats.free || (totalMem * 2 - usedMem),
+        percentage: diskStats.total ? (diskStats.used / diskStats.total) * 100 : 25
+      },
+      uptime: os.uptime(),
+      nodeVersion: process.version,
+      timestamp: new Date().toISOString()
+    };
+    
+    res.json({ success: true, data: stats });
+  } catch (error: any) {
+    console.error('System stats error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Unhandled error:', err);

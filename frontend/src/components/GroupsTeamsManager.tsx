@@ -122,7 +122,7 @@ export function GroupsTeamsManager() {
   };
 
   const handleDeleteGroup = async (groupId: string) => {
-    if (!confirm('Are you sure you want to delete this group?')) return;
+    if (!window.confirm('Are you sure you want to delete this group?')) return;
 
     try {
       await groupsApi.delete(groupId);
@@ -146,7 +146,7 @@ export function GroupsTeamsManager() {
   };
 
   const handleRemoveMember = async (groupId: string, memberId: string) => {
-    if (!confirm('Remove this member from the group?')) return;
+    if (!window.confirm('Remove this member from the group?')) return;
 
     try {
       await groupsApi.removeMember(groupId, memberId);

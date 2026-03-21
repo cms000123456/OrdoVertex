@@ -23,6 +23,7 @@ import { MFASetup } from './components/MFASetup';
 import { SAMLConfig } from './components/SAMLConfig';
 import { ExecutionLogs } from './components/ExecutionLogs';
 import { GroupsTeamsManager } from './components/GroupsTeamsManager';
+import { PerformanceMonitor } from './components/PerformanceMonitor';
 import { Onboarding } from './components/Onboarding';
 import { WorkspaceManager } from './components/WorkspaceManager';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -203,6 +204,7 @@ function App() {
           <Route path="/admin/saml" element={<SAMLConfig />} />
           <Route path="/admin/execution-logs" element={<ExecutionLogs />} />
           <Route path="/admin/groups" element={<GroupsTeamsManager />} />
+          <Route path="/admin/performance" element={<PerformanceMonitor />} />
           <Route path="/admin/settings" element={<SystemSettings />} />
           <Route path="/workspaces" element={<WorkspaceManager />} />
           <Route path="/workspaces/:id" element={<WorkspaceManager />} />
