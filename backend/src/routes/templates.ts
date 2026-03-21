@@ -447,7 +447,7 @@ return [{ json: { prompt, imageUrl, width, height, seed } }];`
         position: { x: 650, y: 200 },
         parameters: {
           method: 'GET',
-          url: '{{ $json.imageUrl }}'
+          url: 'https://image.pollinations.ai/prompt/a%20beautiful%20sunset%20over%20mountains%20digital%20art?width=512&height=512&nologo=true&seed=12345'
         }
       },
       {
@@ -456,23 +456,20 @@ return [{ json: { prompt, imageUrl, width, height, seed } }];`
         name: 'Format Result',
         position: { x: 950, y: 200 },
         parameters: {
-          code: `const prevData = items[0]?.json || {};
-const response = items[0] || {};
-// Pollinations returns binary image data directly
-// We'll pass through the original URL for display
+          code: `const prompt = 'a beautiful sunset over mountains digital art';
+const imageUrl = 'https://image.pollinations.ai/prompt/a%20beautiful%20sunset%20over%20mountains%20digital%20art?width=512&height=512&nologo=true&seed=12345';
 return [{ json: {
-  prompt: prevData.prompt,
-  imageUrl: prevData.imageUrl,
-  seed: prevData.seed,
-  width: prevData.width,
-  height: prevData.height,
+  prompt: prompt,
+  imageUrl: imageUrl,
+  width: 512,
+  height: 512,
   provider: 'Pollinations.ai',
   apiCalled: true,
   _display: {
     type: 'image',
-    url: prevData.imageUrl,
+    url: imageUrl,
     alt: 'AI Generated',
-    caption: prevData.prompt,
+    caption: prompt,
     maxWidth: '512px'
   }
 } }];`
@@ -484,9 +481,9 @@ return [{ json: {
         name: 'View Image',
         position: { x: 1250, y: 200 },
         parameters: {
-          imageUrl: '{{ $input.imageUrl }}',
+          imageUrl: 'https://image.pollinations.ai/prompt/a%20beautiful%20sunset%20over%20mountains%20digital%20art?width=512&height=512&nologo=true&seed=12345',
           altText: 'AI Generated',
-          caption: '{{ $input.prompt }}',
+          caption: 'a beautiful sunset over mountains digital art',
           maxWidth: '512px'
         }
       }
