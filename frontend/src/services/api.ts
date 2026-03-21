@@ -164,6 +164,20 @@ export const workspacesApi = {
     api.post(`/api/workspaces/${workspaceId}/workflows/${workflowId}`)
 };
 
+// Groups API
+export const groupsApi = {
+  getByWorkspace: (workspaceId: string) => api.get(`/api/groups/workspace/${workspaceId}`),
+  create: (data: any) => api.post('/api/groups', data),
+  update: (id: string, data: any) => api.patch(`/api/groups/${id}`, data),
+  delete: (id: string) => api.delete(`/api/groups/${id}`),
+  
+  // Members
+  addMember: (groupId: string, userId: string) =>
+    api.post(`/api/groups/${groupId}/members`, { userId }),
+  removeMember: (groupId: string, memberId: string) =>
+    api.delete(`/api/groups/${groupId}/members/${memberId}`)
+};
+
 // User API
 export const usersApi = {
   getAll: () => api.get('/api/users'),
