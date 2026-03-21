@@ -198,6 +198,21 @@ model UserGroupMember {
   @@index([userId])
 }
 
+// Group access to workspaces (many-to-many)
+model GroupWorkspaceAccess {
+  id          String    @id @default(uuid())
+  groupId     String
+  group       UserGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  role        WorkspaceRole @default(viewer)
+  addedAt     DateTime  @default(now())
+
+  @@unique([groupId, workspaceId])
+  @@index([groupId])
+  @@index([workspaceId])
+}
+
 model ApiKey {
   id        String   @id @default(uuid())
   name      String

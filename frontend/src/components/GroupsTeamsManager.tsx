@@ -16,12 +16,20 @@ interface GroupMember {
   joinedAt: string;
 }
 
+interface WorkspaceAccess {
+  id: string;
+  workspaceId: string;
+  workspace: { id: string; name: string };
+  role: string;
+}
+
 interface Group {
   id: string;
   name: string;
   description?: string;
   workspaceId: string;
   members: GroupMember[];
+  workspaceAccess?: WorkspaceAccess[];
   _count: { members: number };
   createdAt: string;
 }
@@ -43,13 +51,23 @@ export function GroupsTeamsManager() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [selectedWorkspaces, setSelectedWorkspaces] = useState<string[]>([]);
   const [editingGroup, setEditingGroup] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editWorkspaces, setEditWorkspaces] = useState<string[]>([]);
   
   // Member management
   const [showAddMember, setShowAddMember] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string>('');
+  
+  // Check if user is admin
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    setIsAdmin(user.role === 'admin');
+  }, []);
 
   // Load workspaces on mount
   useEffect(() => {
@@ -94,16 +112,23 @@ export function GroupsTeamsManager() {
 
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newGroupName.trim() || !selectedWorkspace) return;
+    if (!newGroupName.trim()) return;
+    
+    const workspaceIds = selectedWorkspaces.length > 0 ? selectedWorkspaces : [selectedWorkspace];
+    if (workspaceIds.length === 0 || !workspaceIds[0]) {
+      setError('Please select at least one workspace');
+      return;
+    }
 
     try {
       await groupsApi.create({
         name: newGroupName,
         description: newGroupDescription,
-        workspaceId: selectedWorkspace
+        workspaceIds: workspaceIds
       });
       setNewGroupName('');
       setNewGroupDescription('');
+      setSelectedWorkspaces([]);
       setShowCreateForm(false);
       loadGroups(selectedWorkspace);
     } catch (err: any) {
@@ -207,7 +232,7 @@ export function GroupsTeamsManager() {
           <div className="form-row">
             <input
               type="text"
-              placeholder="Group name"
+              placeholder="Group name (e.g., Analytics Team)"
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
               required
@@ -220,6 +245,42 @@ export function GroupsTeamsManager() {
               value={newGroupDescription}
               onChange={(e) => setNewGroupDescription(e.target.value)}
             />
+          </div>
+          <div className="form-row">
+            <label className="form-label">
+              {isAdmin ? 'Select Workspaces (Admin: can select multiple)' : 'Workspace'}
+            </label>
+            {isAdmin ? (
+              <div className="workspace-checkboxes">
+                {workspaces.map(ws => (
+                  <label key={ws.id} className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={selectedWorkspaces.includes(ws.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedWorkspaces([...selectedWorkspaces, ws.id]);
+                        } else {
+                          setSelectedWorkspaces(selectedWorkspaces.filter(id => id !== ws.id));
+                        }
+                      }}
+                    />
+                    {ws.name}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <select 
+                value={selectedWorkspace} 
+                onChange={(e) => setSelectedWorkspace(e.target.value)}
+                required
+              >
+                <option value="">Select a workspace...</option>
+                {workspaces.map(ws => (
+                  <option key={ws.id} value={ws.id}>{ws.name}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="form-actions">
             <button type="submit" className="btn btn-primary">Create</button>
@@ -274,7 +335,14 @@ export function GroupsTeamsManager() {
                     <div className="group-info">
                       <h3>{group.name}</h3>
                       {group.description && <p className="description">{group.description}</p>}
-                      <span className="member-count">{group._count?.members || 0} members</span>
+                      <div className="group-meta">
+                        <span className="member-count">{group._count?.members || 0} members</span>
+                        {group.workspaceAccess && group.workspaceAccess.length > 0 && (
+                          <span className="workspace-access">
+                            Access to: {group.workspaceAccess.map(wa => wa.workspace.name).join(', ')}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="group-actions">
                       <button 
