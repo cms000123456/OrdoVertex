@@ -53,9 +53,8 @@ return [{ json: result }];`
       description: 'Filters Engineering users and adds computed fields',
       position: { x: 700, y: 200 },
       parameters: {
-        code: `// Get input data from previous node
-const inputItems = $input.all();
-const inputData = inputItems[0]?.json || {};
+        code: `// Get input data from previous node (items is already provided)
+const inputData = items[0]?.json || {};
 
 // Filter for Engineering department only
 const engineeringUsers = (inputData.users || []).filter(

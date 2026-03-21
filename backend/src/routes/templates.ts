@@ -51,7 +51,7 @@ return [{ json: {
         description: 'Filters Engineering users and adds computed fields',
         position: { x: 700, y: 200 },
         parameters: {
-          code: `const items = $input.all();
+          code: `// 'items' is already provided as input data
 const data = items[0]?.json || {};
 const engineeringUsers = (data.users || []).filter(u => u.department === 'Engineering');
 const transformed = engineeringUsers.map(user => ({
