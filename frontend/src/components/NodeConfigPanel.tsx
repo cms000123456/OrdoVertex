@@ -70,7 +70,11 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
       
       // First get recent executions
       const executionsRes = await executionsApi.getAll();
-      const executions = executionsRes.data.executions;
+      console.log('Executions API response:', executionsRes.data);
+      
+      // Handle different response structures
+      const executions = executionsRes.data?.executions || executionsRes.data?.data?.executions || [];
+      console.log('Found executions:', executions.length);
       
       // Find the most recent completed execution for this workflow
       const recentExecution = executions.find((e: any) => 
@@ -88,8 +92,12 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
       
       // Get node execution data
       const nodeExecRes = await executionsApi.getNodeExecution(recentExecution.id, node.id);
-      console.log('Node execution data:', nodeExecRes.data);
-      setExecutionData(nodeExecRes.data.nodeExecution);
+      console.log('Node execution raw response:', nodeExecRes.data);
+      
+      // Handle different response structures
+      const nodeExecution = nodeExecRes.data?.nodeExecution || nodeExecRes.data?.data?.nodeExecution || nodeExecRes.data;
+      console.log('Processed node execution:', nodeExecution);
+      setExecutionData(nodeExecution);
     } catch (err: any) {
       console.error('Error loading execution data:', err);
       if (err.response?.status === 404) {
