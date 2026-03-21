@@ -95,6 +95,14 @@
   cursor: not-allowed;
 }
 
+.error-text {
+  color: #dc2626;
+  font-size: 14px;
+  padding: 12px;
+  background: #fee2e2;
+  border-radius: 6px;
+}
+
 .btn-primary {
   background: #6366f1;
   color: white;
@@ -161,6 +169,10 @@
   font-weight: 500;
   color: #374151;
   margin-bottom: 8px;
+}
+
+.form-label .required {
+  color: #ef4444;
 }
 
 .workspace-checkboxes {

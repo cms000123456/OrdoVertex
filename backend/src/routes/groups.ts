@@ -105,14 +105,14 @@ router.post('/', authenticateToken, async (req, res) => {
     const userId = req.user!.id;
     const isAdmin = req.user!.role === 'admin';
 
+    // Always require at least one workspace (schema constraint)
+    if (workspaceIds.length === 0) {
+      return res.status(400).json({ success: false, error: 'At least one workspace is required to create a group' });
+    }
+
     // Require admin to create groups with cross-workspace access
     if (workspaceIds.length > 1 && !isAdmin) {
       return res.status(403).json({ success: false, error: 'Admin required for multi-workspace groups' });
-    }
-
-    // For non-admin, require at least one workspace where they are a member
-    if (!isAdmin && workspaceIds.length === 0) {
-      return res.status(400).json({ success: false, error: 'At least one workspace required' });
     }
 
     // Verify user has access to all workspaces
@@ -131,7 +131,7 @@ router.post('/', authenticateToken, async (req, res) => {
       data: {
         name,
         description,
-        workspaceId: workspaceIds[0] || null as any, // Primary workspace
+        workspaceId: workspaceIds[0], // Primary workspace (required)
         workspaceAccess: workspaceIds.length > 0 ? {
           create: workspaceIds.map((wsId: string) => ({
             workspaceId: wsId,
