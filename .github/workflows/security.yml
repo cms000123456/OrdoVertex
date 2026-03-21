@@ -2,12 +2,12 @@ name: Security Audit
 
 on:
   push:
-    branches: [main, dev]
+    branches: [dev]  # Only run on dev branch during testing
   pull_request:
-    branches: [main, dev]
-  schedule:
-    # Run weekly on Mondays at 9 AM UTC
-    - cron: '0 9 * * 1'
+    branches: [dev]
+  # schedule:
+  #   # Run weekly on Mondays at 9 AM UTC
+  #   - cron: '0 9 * * 1'
 
 jobs:
   # ========================================================================
