@@ -181,6 +181,212 @@ return [{ json: {
     ]
   },
 
+  'demo-cat-fact': {
+    name: '🐱 Demo: Cat Fact + Image',
+    description: 'Get a random cat fact with a cute cat image (free APIs)',
+    category: 'Demo',
+    tags: ['demo', 'fun', 'animals', 'images'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'http-fact',
+        type: 'httpRequest',
+        name: 'Get Cat Fact',
+        position: { x: 350, y: 150 },
+        parameters: {
+          method: 'GET',
+          url: 'https://catfact.ninja/fact'
+        }
+      },
+      {
+        id: 'http-img',
+        type: 'httpRequest',
+        name: 'Get Cat Image',
+        position: { x: 350, y: 300 },
+        parameters: {
+          method: 'GET',
+          url: 'https://cataas.com/cat?json=true'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Combine Results',
+        position: { x: 650, y: 200 },
+        parameters: {
+          code: `const inputs = items.map(i => i?.json || {});
+const factResponse = inputs.find(i => i.body?.fact) || {};
+const imgResponse = inputs.find(i => i.body?.url || i.body?._id) || {};
+const fact = factResponse.body?.fact || 'Cats are awesome!';
+const imgId = imgResponse.body?._id;
+const imgUrl = imgId ? 'https://cataas.com/cat/' + imgId : 'https://cataas.com/cat';
+return [{ json: { fact, imageUrl: imgUrl, imageMarkdown: '![Cat](' + imgUrl + ')' } }];`
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'http-fact' },
+      { source: 'trigger-1', target: 'http-img' },
+      { source: 'http-fact', target: 'code-1' },
+      { source: 'http-img', target: 'code-1' }
+    ]
+  },
+
+  'demo-joke-generator': {
+    name: '😄 Demo: Joke Generator',
+    description: 'Get a random programming joke (free API)',
+    category: 'Demo',
+    tags: ['demo', 'fun', 'entertainment'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Fetch Joke',
+        position: { x: 400, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: 'https://official-joke-api.appspot.com/jokes/programming/random'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Format Joke',
+        position: { x: 700, y: 200 },
+        parameters: {
+          code: `const response = items[0]?.json || {};
+const jokeArray = response.body || [];
+const joke = jokeArray[0] || {};
+return [{ json: {
+  type: joke.type || 'unknown',
+  setup: joke.setup || 'Why did the programmer quit his job?',
+  punchline: joke.punchline || 'Because he did not get arrays.',
+  fullJoke: (joke.setup || '') + '\\n\\n' + (joke.punchline || '')
+} }];`
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'http-1' },
+      { source: 'http-1', target: 'code-1' }
+    ]
+  },
+
+  'demo-ip-location': {
+    name: '🌍 Demo: IP Location',
+    description: 'Get your IP address and location info (free API)',
+    category: 'Demo',
+    tags: ['demo', 'geolocation', 'network'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Get Location',
+        position: { x: 400, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: 'https://ipapi.co/json/'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Format Location',
+        position: { x: 700, y: 200 },
+        parameters: {
+          code: `const response = items[0]?.json || {};
+const data = response.body || {};
+return [{ json: {
+  ip: data.ip || 'unknown',
+  city: data.city || 'unknown',
+  region: data.region || 'unknown',
+  country: data.country_name || 'unknown',
+  countryCode: data.country_code || '??',
+  latitude: data.latitude || 0,
+  longitude: data.longitude || 0,
+  timezone: data.timezone || 'unknown',
+  isp: data.org || 'unknown',
+  location: (data.city || '?') + ', ' + (data.region || '?') + ', ' + (data.country_name || '?')
+} }];`
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'http-1' },
+      { source: 'http-1', target: 'code-1' }
+    ]
+  },
+
+  'demo-dog-image': {
+    name: '🐕 Demo: Random Dog Image',
+    description: 'Get a random dog image (free API)',
+    category: 'Demo',
+    tags: ['demo', 'fun', 'animals', 'images'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Get Dog Image',
+        position: { x: 400, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: 'https://dog.ceo/api/breeds/image/random'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Format Result',
+        position: { x: 700, y: 200 },
+        parameters: {
+          code: `const response = items[0]?.json || {};
+const data = response.body || {};
+const imgUrl = data.message || '';
+// Extract breed from URL
+const breedMatch = imgUrl.match(/breeds\\/([^/]+)/);
+const breed = breedMatch ? breedMatch[1].replace(/-/g, ' ') : 'unknown';
+return [{ json: {
+  imageUrl: imgUrl,
+  breed: breed,
+  status: data.status || 'unknown',
+  imageMarkdown: '![Dog](' + imgUrl + ')'
+} }];`
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'http-1' },
+      { source: 'http-1', target: 'code-1' }
+    ]
+  },
+
   // AI Templates
   ...Object.entries(aiAgentTemplates).reduce((acc, [key, value]) => ({
     ...acc,
