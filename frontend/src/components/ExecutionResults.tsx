@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Play, CheckCircle, XCircle, Clock, ChevronDown, ChevronRight, Database, X } from 'lucide-react';
+import { Play, CheckCircle, XCircle, Clock, ChevronDown, ChevronRight, Database, X, Image } from 'lucide-react';
 import { executionsApi } from '../services/api';
 import { Execution } from '../types';
 import './ExecutionResults.css';
@@ -95,6 +95,91 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString();
+  };
+
+  // Check if a string is an image URL
+  const isImageUrl = (url: string): boolean => {
+    if (typeof url !== 'string') return false;
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
+    const lowerUrl = url.toLowerCase();
+    return imageExtensions.some(ext => lowerUrl.includes(ext)) || 
+           lowerUrl.includes('cataas.com/cat') ||
+           lowerUrl.includes('dog.ceo/api') ||
+           lowerUrl.includes('picsum.photos');
+  };
+
+  // Render JSON data with image support
+  const RenderJsonData: React.FC<{ data: any }> = ({ data }) => {
+    // Check for _display hint (from Image Display node)
+    if (data?._display?.type === 'image' && data._display.url) {
+      return (
+        <div className="image-display">
+          <img 
+            src={data._display.url} 
+            alt={data._display.alt || 'Image'}
+            style={{ maxWidth: data._display.maxWidth || '400px', borderRadius: '8px' }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+          {data._display.caption && (
+            <p className="image-caption">{data._display.caption}</p>
+          )}
+        </div>
+      );
+    }
+
+    // Check for imageUrl field in data
+    if (data?.imageUrl && isImageUrl(data.imageUrl)) {
+      return (
+        <div className="image-display">
+          <img 
+            src={data.imageUrl} 
+            alt={data.altText || data.breed || 'Image'}
+            style={{ maxWidth: data.maxWidth || '400px', borderRadius: '8px' }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+          {data.caption && <p className="image-caption">{data.caption}</p>}
+          <details>
+            <summary>View raw data</summary>
+            <pre className="json-data">{JSON.stringify(data, null, 2)}</pre>
+          </details>
+        </div>
+      );
+    }
+
+    // Check if any value in the data is an image URL
+    const entries = Object.entries(data || {});
+    const imageEntries = entries.filter(([_, value]) => isImageUrl(value as string));
+    
+    if (imageEntries.length > 0) {
+      return (
+        <div className="image-display-wrapper">
+          {imageEntries.map(([key, url]) => (
+            <div key={key} className="image-display">
+              <small className="image-label">{key}:</small>
+              <img 
+                src={url as string} 
+                alt={key}
+                style={{ maxWidth: '400px', borderRadius: '8px', display: 'block', marginTop: '4px' }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </div>
+          ))}
+          <details>
+            <summary>View raw data</summary>
+            <pre className="json-data">{JSON.stringify(data, null, 2)}</pre>
+          </details>
+        </div>
+      );
+    }
+
+    // Default: render as JSON
+    return <pre className="json-data">{JSON.stringify(data, null, 2)}</pre>;
   };
 
   const getStatusIcon = (status: string) => {
@@ -193,17 +278,13 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
                                 {nodeExec.input && (
                                   <div className="data-section">
                                     <h5>Input</h5>
-                                    <pre className="json-data">
-                                      {JSON.stringify(nodeExec.input, null, 2)}
-                                    </pre>
+                                    <RenderJsonData data={nodeExec.input} />
                                   </div>
                                 )}
                                 {nodeExec.output && (
                                   <div className="data-section">
                                     <h5>Output</h5>
-                                    <pre className="json-data">
-                                      {JSON.stringify(nodeExec.output, null, 2)}
-                                    </pre>
+                                    <RenderJsonData data={nodeExec.output} />
                                   </div>
                                 )}
                               </>
