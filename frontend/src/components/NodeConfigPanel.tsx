@@ -134,7 +134,11 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
     if (!property.displayOptions?.show) return true;
     
     return Object.entries(property.displayOptions.show).every(
-      ([key, values]: [string, any]) => values.includes(node.parameters[key])
+      ([key, values]: [string, any]) => {
+        // Get the actual value, considering the parameter might not be set yet (use default)
+        const paramValue = node.parameters[key] ?? nodeType?.properties?.find((p: any) => p.name === key)?.default;
+        return values.includes(paramValue);
+      }
     );
   };
 
