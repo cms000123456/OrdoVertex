@@ -9,6 +9,85 @@ const prisma = new PrismaClient();
 
 // All available templates
 const workflowTemplates = {
+  // Tutorial Template
+  'tutorial-data-flow': {
+    name: '📚 Tutorial: Data Flow Demo',
+    description: 'Learn how data flows between nodes. Click Execute and inspect each node to see Input/Output data!',
+    category: 'Tutorial',
+    tags: ['tutorial', 'learning', 'example'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        description: 'Click Execute to start the workflow',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Generate Sample Data',
+        description: 'Creates sample user data to demonstrate data flow',
+        position: { x: 400, y: 200 },
+        parameters: {
+          code: `const users = [
+  { id: 1, name: 'Alice', role: 'admin', department: 'Engineering' },
+  { id: 2, name: 'Bob', role: 'user', department: 'Marketing' },
+  { id: 3, name: 'Carol', role: 'user', department: 'Engineering' }
+];
+return [{ json: {
+  generatedAt: new Date().toISOString(),
+  count: users.length,
+  users: users,
+  source: 'tutorial-workflow'
+} }];`
+        }
+      },
+      {
+        id: 'code-2',
+        type: 'code',
+        name: 'Transform Data',
+        description: 'Filters Engineering users and adds computed fields',
+        position: { x: 700, y: 200 },
+        parameters: {
+          code: `const items = $input.all();
+const data = items[0]?.json || {};
+const engineeringUsers = (data.users || []).filter(u => u.department === 'Engineering');
+const transformed = engineeringUsers.map(user => ({
+  ...user,
+  email: user.name.toLowerCase() + '@company.com',
+  accessLevel: user.role === 'admin' ? 'full' : 'limited'
+}));
+return [{ json: {
+  originalCount: data.count,
+  filteredCount: transformed.length,
+  department: 'Engineering',
+  users: transformed
+} }];`
+        }
+      },
+      {
+        id: 'set-1',
+        type: 'set',
+        name: 'Final Result',
+        description: 'Formats the final output',
+        position: { x: 1000, y: 200 },
+        parameters: {
+          values: {
+            summary: 'Tutorial workflow completed successfully',
+            timestamp: '{{ $now }}'
+          }
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', sourceHandle: 'default', target: 'code-1', targetHandle: 'input' },
+      { source: 'code-1', sourceHandle: 'default', target: 'code-2', targetHandle: 'input' },
+      { source: 'code-2', sourceHandle: 'default', target: 'set-1', targetHandle: 'input' }
+    ]
+  },
+
   // AI Templates
   ...Object.entries(aiAgentTemplates).reduce((acc, [key, value]) => ({
     ...acc,
