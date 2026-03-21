@@ -225,9 +225,10 @@ function StickyNoteNode({ data, selected, id }: StickyNoteProps) {
         {text}
       </div>
 
-      {/* Resize handle */}
+      {/* Resize handle - nodrag class prevents ReactFlow from dragging the node */}
       {selected && (
         <div
+          className="nodrag"
           onMouseDown={handleResizeStart}
           style={{
             position: 'absolute',
