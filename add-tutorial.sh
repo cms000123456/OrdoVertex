@@ -158,15 +158,16 @@ main()
   });
 EOF
 
-# Copy the script to the API container
+# Copy the script to the API container's /app directory
 echo "📦 Copying script to container..."
-docker cp /tmp/create-tutorial-workflow.js ordovertex-api:/tmp/create-tutorial-workflow.js
+docker cp /tmp/create-tutorial-workflow.js ordovertex-api:/app/create-tutorial-workflow.js
 
-# Run the script inside the container
+# Run the script inside the container (from /app so it can find node_modules)
 echo "🚀 Creating tutorial workflow..."
-docker compose exec -w /app api node /tmp/create-tutorial-workflow.js
+docker compose exec api node /app/create-tutorial-workflow.js
 
-# Cleanup
+# Cleanup (remove from container and local)
+docker compose exec api rm -f /app/create-tutorial-workflow.js
 rm -f /tmp/create-tutorial-workflow.js
 
 echo ""
