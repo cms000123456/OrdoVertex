@@ -713,12 +713,14 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
           font-size: 12px;
           font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
           line-height: 1.5;
-          color: var(--text-primary, #1e293b);
+          color: #1e293b;
+          background: #f1f5f9;
           overflow-x: auto;
           white-space: pre-wrap;
           word-break: break-word;
           max-height: 400px;
           overflow-y: auto;
+          border-radius: 6px;
         }
         
         .tab-header {
@@ -825,7 +827,7 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
         
         .image-caption {
           font-size: 13px;
-          color: var(--text-secondary, #64748b);
+          color: #334155;
           margin: 12px 0 0 0;
           font-style: italic;
           padding: 0 8px;
