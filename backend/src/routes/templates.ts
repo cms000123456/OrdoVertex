@@ -9,322 +9,6 @@ const prisma = new PrismaClient();
 
 // All available templates
 const workflowTemplates = {
-  // Weather API Demo Template
-  'demo-weather-api': {
-    name: '🌤️ Demo: Weather API Integration',
-    description: 'Fetch real weather data from a free API, transform it, and create a formatted report. No API key needed!',
-    category: 'Demo',
-    tags: ['demo', 'weather', 'api', 'http', 'transform'],
-    nodes: [
-      {
-        id: 'trigger-1',
-        type: 'manualTrigger',
-        name: 'Manual Trigger',
-        description: 'Click Execute to fetch weather data',
-        position: { x: 100, y: 200 },
-        parameters: {}
-      },
-      {
-        id: 'set-1',
-        type: 'set',
-        name: 'Set Location',
-        description: 'Define the city to check weather for',
-        position: { x: 350, y: 200 },
-        parameters: {
-          mode: 'manual',
-          values: [
-            { name: 'city', value: 'London' },
-            { name: 'country', value: 'UK' }
-          ]
-        }
-      },
-      {
-        id: 'http-1',
-        type: 'httpRequest',
-        name: 'Fetch Weather Data',
-        description: 'Get weather from wttr.in (free, no API key)',
-        position: { x: 600, y: 200 },
-        parameters: {
-          method: 'GET',
-          url: 'https://wttr.in/{{ $json.city }}?format=j1',
-          headers: {
-            'Accept': 'application/json'
-          }
-        }
-      },
-      {
-        id: 'code-1',
-        type: 'code',
-        name: 'Transform Weather Data',
-        description: 'Extract and format useful weather information',
-        position: { x: 900, y: 200 },
-        parameters: {
-          code: `// Get weather data from HTTP response
-const weather = items[0]?.json || {};
-const current = weather.current_condition?.[0];
-const request = weather.request?.[0];
-
-if (!current) {
-  return [{ json: { error: 'No weather data available' } }];
-}
-
-// Extract and transform useful data
-const transformed = {
-  location: request?.query || 'Unknown',
-  date: new Date().toISOString().split('T')[0],
-  temperature: {
-    celsius: parseInt(current.temp_C),
-    fahrenheit: parseInt(current.temp_F),
-    feelsLike: parseInt(current.FeelsLikeC)
-  },
-  condition: current.weatherDesc?.[0]?.value || 'Unknown',
-  humidity: current.humidity + '%',
-  wind: {
-    speed: current.windspeedKmph + ' km/h',
-    direction: current.winddir16Point
-  },
-  visibility: current.visibility + ' km',
-  pressure: current.pressure + ' hPa',
-  uvIndex: current.uvIndex,
-  // Add helpful recommendations
-  recommendations: []
-};
-
-// Add contextual recommendations
-if (transformed.temperature.celsius > 25) {
-  transformed.recommendations.push('☀️ It\'s hot! Stay hydrated and use sunscreen.');
-} else if (transformed.temperature.celsius < 5) {
-  transformed.recommendations.push('❄️ It\'s cold! Wear warm clothing.');
-}
-
-if (parseInt(current.uvIndex) > 5) {
-  transformed.recommendations.push('😎 High UV index! Wear sunglasses and seek shade.');
-}
-
-if (current.weatherDesc?.[0]?.value?.toLowerCase().includes('rain')) {
-  transformed.recommendations.push('☔ Rain expected! Bring an umbrella.');
-}
-
-// Create a summary
-transformed.summary = `Currently ${transformed.condition.toLowerCase()} with ${transformed.temperature.celsius}C in ${transformed.location}.`;
-
-return [{ json: transformed }];`
-        }
-      },
-      {
-        id: 'code-2',
-        type: 'code',
-        name: 'Format Report',
-        description: 'Create a human-readable weather report',
-        position: { x: 1200, y: 200 },
-        parameters: {
-          code: `const data = items[0]?.json || {};
-
-const report = {
-  title: '🌤️ Weather Report for ' + data.location,
-  generated: new Date().toISOString(),
-  report: `
-📍 Location: ${data.location}
-📅 Date: ${data.date}
-
-🌡️ Temperature: ${data.temperature.celsius}°C (feels like ${data.temperature.feelsLike}°C)
-☁️ Condition: ${data.condition}
-💧 Humidity: ${data.humidity}
-💨 Wind: ${data.wind.speed} from ${data.wind.direction}
-👁️ Visibility: ${data.visibility}
-📊 Pressure: ${data.pressure}
-☀️ UV Index: ${data.uvIndex}
-
-💡 Recommendations:
-${data.recommendations.length > 0 ? data.recommendations.map(r => '  • ' + r).join('\\n') : '  • No special recommendations today!'}
-
-📝 Summary: ${data.summary}
-  `.trim(),
-  raw_data: data
-};
-
-return [{ json: report }];`
-        }
-      },
-      {
-        id: 'set-2',
-        type: 'set',
-        name: 'Final Output',
-        description: 'Add metadata to the output',
-        position: { x: 1500, y: 200 },
-        parameters: {
-          mode: 'manual',
-          values: [
-            { name: 'workflow_name', value: 'Weather API Demo' },
-            { name: 'completed_at', value: '{{ $now }}' },
-            { name: 'source', value: 'wttr.in (Free Weather API)' }
-          ]
-        }
-      }
-    ],
-    connections: [
-      { source: 'trigger-1', target: 'set-1' },
-      { source: 'set-1', target: 'http-1' },
-      { source: 'http-1', target: 'code-1' },
-      { source: 'code-1', target: 'code-2' },
-      { source: 'code-2', target: 'set-2' }
-    ]
-  },
-
-  // Tutorial Template
-  'demo-crypto-prices': {
-    name: '💰 Demo: Crypto Price Tracker',
-    description: 'Fetch real-time cryptocurrency prices and calculate portfolio value. No API key needed!',
-    category: 'Demo',
-    tags: ['demo', 'crypto', 'finance', 'api', 'calculation'],
-    nodes: [
-      {
-        id: 'trigger-1',
-        type: 'manualTrigger',
-        name: 'Manual Trigger',
-        description: 'Click Execute to fetch crypto prices',
-        position: { x: 100, y: 200 },
-        parameters: {}
-      },
-      {
-        id: 'set-1',
-        type: 'set',
-        name: 'Define Holdings',
-        description: 'Set your cryptocurrency holdings',
-        position: { x: 350, y: 200 },
-        parameters: {
-          mode: 'manual',
-          values: [
-            { name: 'portfolio', value: '{"bitcoin": 0.5, "ethereum": 4.2, "cardano": 1500}' }
-          ]
-        }
-      },
-      {
-        id: 'http-1',
-        type: 'httpRequest',
-        name: 'Fetch Crypto Prices',
-        description: 'Get prices from CoinGecko API (free, no key)',
-        position: { x: 600, y: 200 },
-        parameters: {
-          method: 'GET',
-          url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,cardano&vs_currencies=usd,eur&include_24hr_change=true',
-          headers: {
-            'Accept': 'application/json'
-          }
-        }
-      },
-      {
-        id: 'code-1',
-        type: 'code',
-        name: 'Calculate Portfolio Value',
-        description: 'Calculate total value and 24h changes',
-        position: { x: 900, y: 200 },
-        parameters: {
-          code: `// Get data from previous nodes
-const prices = items[0]?.json || {};
-const holdings = JSON.parse(items[0]?.json?.portfolio || '{}');
-
-// Define coin mapping
-const coinMap = {
-  bitcoin: { symbol: 'BTC', name: 'Bitcoin' },
-  ethereum: { symbol: 'ETH', name: 'Ethereum' },
-  cardano: { symbol: 'ADA', name: 'Cardano' }
-};
-
-// Calculate portfolio value
-const portfolio = [];
-let totalUSD = 0;
-let totalEUR = 0;
-
-for (const [coinId, amount] of Object.entries(holdings)) {
-  const priceData = prices[coinId];
-  const coinInfo = coinMap[coinId];
-  
-  if (priceData && coinInfo) {
-    const valueUSD = amount * priceData.usd;
-    const valueEUR = amount * priceData.eur;
-    const change24h = priceData.usd_24h_change || 0;
-    
-    portfolio.push({
-      coin: coinInfo.name,
-      symbol: coinInfo.symbol,
-      amount: amount,
-      priceUSD: priceData.usd,
-      priceEUR: priceData.eur,
-      valueUSD: valueUSD,
-      valueEUR: valueEUR,
-      change24h: change24h.toFixed(2) + '%',
-      trend: change24h >= 0 ? '📈' : '📉'
-    });
-    
-    totalUSD += valueUSD;
-    totalEUR += valueEUR;
-  }
-}
-
-// Sort by value (highest first)
-portfolio.sort((a, b) => b.valueUSD - a.valueUSD);
-
-return [{ json: {
-  portfolio: portfolio,
-  totals: {
-    usd: totalUSD.toFixed(2),
-    eur: totalEUR.toFixed(2)
-  },
-  coinCount: portfolio.length,
-  generatedAt: new Date().toISOString()
-} }];`
-        }
-      },
-      {
-        id: 'code-2',
-        type: 'code',
-        name: 'Format Report',
-        description: 'Create a formatted portfolio report',
-        position: { x: 1200, y: 200 },
-        parameters: {
-          code: `const data = items[0]?.json || {};
-
-// Format each coin
-const coinLines = data.portfolio.map(c => 
-  `${c.trend} ${c.symbol} | ${c.amount} coins | $${c.priceUSD.toLocaleString()} | Value: $${c.valueUSD.toLocaleString()} (${c.change24h})`
-).join('\\n');
-
-const report = {
-  title: '💰 Crypto Portfolio Report',
-  generated: data.generatedAt,
-  summary: `${data.coinCount} coins | Total Value: $${data.totals.usd} / €${data.totals.eur}`,
-  report: `
-═══════════════════════════════════════════════════════════════
-💰 CRYPTO PORTFOLIO REPORT
-Generated: ${new Date(data.generatedAt).toLocaleString()}
-═══════════════════════════════════════════════════════════════
-
-📊 HOLDINGS:
-${coinLines}
-
-💵 TOTAL PORTFOLIO VALUE:
-  USD: $${parseFloat(data.totals.usd).toLocaleString()}
-  EUR: €${parseFloat(data.totals.eur).toLocaleString()}
-
-💡 Tip: Prices are fetched from CoinGecko API in real-time.
-═══════════════════════════════════════════════════════════════
-  `.trim(),
-  raw_data: data
-};
-
-return [{ json: report }];`
-        }
-      }
-    ],
-    connections: [
-      { source: 'trigger-1', target: 'set-1' },
-      { source: 'set-1', target: 'http-1' },
-      { source: 'http-1', target: 'code-1' },
-      { source: 'code-1', target: 'code-2' }
-    ]
-  },
-
   // Tutorial Template
   'tutorial-data-flow': {
     name: '📚 Tutorial: Data Flow Demo',
@@ -402,6 +86,98 @@ return [{ json: {
       { source: 'trigger-1', sourceHandle: 'default', target: 'code-1', targetHandle: 'input' },
       { source: 'code-1', sourceHandle: 'default', target: 'code-2', targetHandle: 'input' },
       { source: 'code-2', sourceHandle: 'default', target: 'set-1', targetHandle: 'input' }
+    ]
+  },
+
+  // Demo Templates
+  'demo-weather-api': {
+    name: '🌤️ Demo: Weather API',
+    description: 'Fetch weather data from free API (no key needed)',
+    category: 'Demo',
+    tags: ['demo', 'weather', 'api'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'set-1',
+        type: 'set',
+        name: 'Set Location',
+        position: { x: 350, y: 200 },
+        parameters: {
+          mode: 'manual',
+          values: [
+            { name: 'city', value: 'London' }
+          ]
+        }
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Fetch Weather',
+        position: { x: 600, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: 'https://wttr.in/{{ $json.city }}?format=j1'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Transform Data',
+        position: { x: 900, y: 200 },
+        parameters: {
+          code: 'const weather = items[0]?.json || {};\nconst current = weather.current_condition?.[0];\nreturn [{ json: {\n  location: weather.request?.[0]?.query || "Unknown",\n  temp: current?.temp_C + "C",\n  condition: current?.weatherDesc?.[0]?.value || "Unknown",\n  humidity: current?.humidity + "%"\n} }];'
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'set-1' },
+      { source: 'set-1', target: 'http-1' },
+      { source: 'http-1', target: 'code-1' }
+    ]
+  },
+
+  'demo-crypto-prices': {
+    name: '💰 Demo: Crypto Prices',
+    description: 'Fetch crypto prices from CoinGecko (free, no key)',
+    category: 'Demo',
+    tags: ['demo', 'crypto', 'finance'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Fetch Prices',
+        position: { x: 400, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Format Prices',
+        position: { x: 700, y: 200 },
+        parameters: {
+          code: 'const prices = items[0]?.json || {};\nreturn [{ json: {\n  bitcoin: "$" + prices.bitcoin?.usd || "N/A",\n  ethereum: "$" + prices.ethereum?.usd || "N/A",\n  timestamp: new Date().toISOString()\n} }];'
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'http-1' },
+      { source: 'http-1', target: 'code-1' }
     ]
   },
 
@@ -561,7 +337,7 @@ return [{ json: {
         name: 'Transform',
         position: { x: 700, y: 200 },
         parameters: {
-          code: `// Transform data for target\nconst rows = items;\nreturn rows.map(r => ({\n  json: {\n    ...r.json,\n    synced_at: new Date().toISOString()\n  }\n}));`
+          code: '// Transform data for target\nconst rows = $input.all();\nreturn rows.map(r => ({\n  json: {\n    ...r.json,\n    synced_at: new Date().toISOString()\n  }\n}));'
         }
       },
       {
@@ -605,10 +381,10 @@ return [{ json: {
         name: 'Format Alert',
         position: { x: 400, y: 200 },
         parameters: {
-          code: `const error = items[0]?.json || {};
-return [{
+          code: `const error = $input.first().json;
+return {
   json: {
-    subject: 'Error: ' + error.service,
+    subject: \`Error: \${error.service}\`,
     body: \`
 Service: \${error.service}
 Time: \${error.timestamp}
@@ -616,7 +392,7 @@ Error: \${error.message}
 Stack: \${error.stack}
     \`.trim()
   }
-}];`
+};`
         }
       },
       {
@@ -665,7 +441,7 @@ Stack: \${error.stack}
         name: 'Parse XML',
         position: { x: 400, y: 200 },
         parameters: {
-          code: `// Parse XML content\nconst xml = items[0]?.json?.content || '';\n// Add XML parsing logic here\nreturn [{ json: { parsed: xml } }];`
+          code: '// Parse XML content\nconst xml = $input.first().json.content;\n// Add XML parsing logic here\nreturn { json: { parsed: xml } };'
         }
       },
       {
@@ -722,7 +498,13 @@ Stack: \${error.stack}
         name: 'Format Users',
         position: { x: 700, y: 200 },
         parameters: {
-          code: `const entries = items[0]?.json?.entries || [];\nconst users = entries.map(e => ({\n  name: e.attributes.cn?.[0],\n  email: e.attributes.mail?.[0],\n  department: e.attributes.department?.[0]\n}));\nreturn [{ json: { users } }];`
+          code: `const entries = $input.first().json.entries;
+const users = entries.map(e => ({
+  name: e.attributes.cn?.[0],
+  email: e.attributes.mail?.[0],
+  department: e.attributes.department?.[0]
+}));
+return { json: { users } };`
         }
       }
     ],
