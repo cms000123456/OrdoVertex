@@ -442,21 +442,26 @@ return [{ json: {
   imageUrl: imageUrl,
   width: width,
   height: height,
-  provider: 'Pollinations.ai',
-  note: 'Copy the imageUrl and open in browser to view',
-  _display: {
-    type: 'image',
-    url: imageUrl,
-    alt: 'AI Generated Image',
-    caption: 'Prompt: ' + prompt,
-    maxWidth: '512px'
-  }
+  provider: 'Pollinations.ai'
 } }];`
+        }
+      },
+      {
+        id: 'display-1',
+        type: 'imageDisplay',
+        name: 'View Image',
+        position: { x: 700, y: 200 },
+        parameters: {
+          imageUrl: '{{ $input.imageUrl }}',
+          altText: 'AI Generated',
+          caption: '{{ $input.prompt }}',
+          maxWidth: '512px'
         }
       }
     ],
     connections: [
-      { source: 'trigger-1', target: 'code-1' }
+      { source: 'trigger-1', target: 'code-1' },
+      { source: 'code-1', target: 'display-1' }
     ]
   },
 
