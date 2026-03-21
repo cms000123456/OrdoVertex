@@ -132,17 +132,12 @@ export function GroupsTeamsManager() {
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGroupName.trim()) return;
-    
-    if (selectedWorkspaces.length === 0) {
-      setError('Please select at least one workspace');
-      return;
-    }
 
     try {
       await groupsApi.create({
         name: newGroupName,
         description: newGroupDescription,
-        workspaceIds: selectedWorkspaces
+        workspaceIds: selectedWorkspaces // Optional - can be empty
       });
       setNewGroupName('');
       setNewGroupDescription('');
@@ -251,10 +246,10 @@ export function GroupsTeamsManager() {
               onChange={(e) => setNewGroupDescription(e.target.value)}
             />
           </div>
-          {workspaces.length > 0 ? (
+          {workspaces.length > 0 && (
             <div className="form-row">
               <label className="form-label">
-                Assign to Workspaces <span className="required">*</span>
+                Assign to Workspaces (optional)
               </label>
               <div className="workspace-checkboxes">
                 {workspaces.map(ws => (
@@ -274,18 +269,14 @@ export function GroupsTeamsManager() {
                   </label>
                 ))}
               </div>
-              <p className="form-hint">Select at least one workspace for this group. Admins can assign multiple workspaces.</p>
-            </div>
-          ) : (
-            <div className="form-row">
-              <div className="error-text">No workspaces available. Create a workspace first.</div>
+              <p className="form-hint">You can assign workspaces now, or do it later from the group details.</p>
             </div>
           )}
           <div className="form-actions">
             <button 
               type="submit" 
               className="btn btn-primary"
-              disabled={!newGroupName.trim() || selectedWorkspaces.length === 0}
+              disabled={!newGroupName.trim()}
             >
               Create
             </button>
