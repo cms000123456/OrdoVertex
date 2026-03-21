@@ -13,6 +13,7 @@
 - **30+ Built-in Nodes**: HTTP, Code, SQL, Email, CSV, AI Agents, LDAP, and more
 - **AI-Powered Workflows**: Multi-provider LLM support (OpenAI, Anthropic, Gemini, Kimi, Ollama)
 - **Multiple Trigger Types**: Webhook, Schedule (Cron), Manual, File Watch
+- **Team Collaboration**: Workspaces for sharing workflows and credentials with role-based access
 - **Enterprise Security**: SAML SSO, MFA/TOTP, Role-based access control
 - **Execution Monitoring**: Full logging, alerting, and audit trails
 - **Scalable Architecture**: Queue-based execution with BullMQ and Redis
@@ -125,6 +126,21 @@ This creates a **"📚 Tutorial: Data Flow Demo"** workflow that:
 - Generates sample user data
 - Transforms/filter the data
 - Shows how to use the Node Inspector to view Input/Output data
+
+### 👥 Team Workspaces (Optional)
+
+OrdoVertex supports team collaboration through Workspaces:
+
+1. **Create a Workspace**: Click your email → "Workspaces" → "Create Workspace"
+2. **Invite Team Members**: Add users by email with roles (Owner, Admin, Editor, Viewer)
+3. **Share Workflows**: Move workflows to the workspace for team access
+4. **Share Credentials**: Securely share API keys and connections
+
+**Workspace Roles:**
+- **Owner** - Full control, can delete workspace
+- **Admin** - Manage members and settings
+- **Editor** - Create/edit workflows and credentials
+- **Viewer** - View-only access
 
 ### Custom Credentials (Optional)
 

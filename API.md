@@ -418,8 +418,35 @@ Test HashiCorp Vault connection.
 
 ## Workspace Routes
 
+Workspaces enable team collaboration by allowing multiple users to share workflows, credentials, and executions.
+
+### Workspace Roles
+- **owner** - Full control, can delete workspace
+- **admin** - Manage members and settings
+- **editor** - Create/edit workflows and credentials
+- **viewer** - View-only access
+
 ### GET /workspaces
-List all workspaces for current user.
+List all workspaces for current user (owned or member).
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Engineering Team",
+      "slug": "engineering-team-abc123",
+      "description": "Shared workflows for engineering",
+      "ownerId": "uuid",
+      "owner": { "id": "uuid", "name": "John", "email": "john@example.com" },
+      "members": [...],
+      "_count": { "workflows": 5, "members": 3 }
+    }
+  ]
+}
+```
 
 ### POST /workspaces
 Create a new workspace.
@@ -427,39 +454,59 @@ Create a new workspace.
 **Request Body:**
 ```json
 {
-  "name": "My Workspace",
-  "description": "Description"
+  "name": "My Team Workspace",
+  "description": "Shared automation workflows"
 }
 ```
 
 ### GET /workspaces/:id
-Get workspace details.
+Get workspace details including members and workflows.
 
 ### PATCH /workspaces/:id
-Update workspace.
-
-### DELETE /workspaces/:id
-Delete workspace.
-
-### POST /workspaces/:id/members
-Add member to workspace.
+Update workspace (requires admin/owner role).
 
 **Request Body:**
 ```json
 {
-  "userId": "uuid",
-  "role": "editor"  // owner, admin, editor, viewer
+  "name": "Updated Name",
+  "description": "Updated description"
 }
 ```
 
+### DELETE /workspaces/:id
+Delete workspace (owner only).
+
+### POST /workspaces/:id/members
+Invite member by email to workspace.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "role": "editor"
+}
+```
+
+**Roles:** `owner`, `admin`, `editor`, `viewer`
+
 ### PATCH /workspaces/:id/members/:memberId
-Update member role.
+Update member role (owner only).
+
+**Request Body:**
+```json
+{
+  "role": "admin"
+}
+```
 
 ### DELETE /workspaces/:id/members/:memberId
 Remove member from workspace.
 
 ### GET /workspaces/:id/workflows
 List workflows in workspace.
+
+### POST /workspaces/:id/workflows/:workflowId
+Add workflow to workspace (requires editor+ role).
 
 ---
 
