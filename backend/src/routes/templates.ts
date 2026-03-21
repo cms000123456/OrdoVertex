@@ -429,20 +429,52 @@ return [{ json: {
       {
         id: 'code-1',
         type: 'code',
-        name: 'Build Image URL',
-        position: { x: 400, y: 200 },
+        name: 'Build Prompt & URL',
+        position: { x: 350, y: 200 },
         parameters: {
           code: `const prompt = 'a beautiful sunset over mountains digital art';
 const width = 512;
 const height = 512;
 const seed = Math.floor(Math.random() * 1000000);
 const imageUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=' + width + '&height=' + height + '&nologo=true&seed=' + seed;
+return [{ json: { prompt, imageUrl, width, height, seed } }];`
+        }
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Call Pollinations API',
+        position: { x: 650, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: '{{ $json.imageUrl }}'
+        }
+      },
+      {
+        id: 'code-2',
+        type: 'code',
+        name: 'Format Result',
+        position: { x: 950, y: 200 },
+        parameters: {
+          code: `const prevData = items[0]?.json || {};
+const response = items[0] || {};
+// Pollinations returns binary image data directly
+// We'll pass through the original URL for display
 return [{ json: {
-  prompt: prompt,
-  imageUrl: imageUrl,
-  width: width,
-  height: height,
-  provider: 'Pollinations.ai'
+  prompt: prevData.prompt,
+  imageUrl: prevData.imageUrl,
+  seed: prevData.seed,
+  width: prevData.width,
+  height: prevData.height,
+  provider: 'Pollinations.ai',
+  apiCalled: true,
+  _display: {
+    type: 'image',
+    url: prevData.imageUrl,
+    alt: 'AI Generated',
+    caption: prevData.prompt,
+    maxWidth: '512px'
+  }
 } }];`
         }
       },
@@ -450,7 +482,7 @@ return [{ json: {
         id: 'display-1',
         type: 'imageDisplay',
         name: 'View Image',
-        position: { x: 700, y: 200 },
+        position: { x: 1250, y: 200 },
         parameters: {
           imageUrl: '{{ $input.imageUrl }}',
           altText: 'AI Generated',
@@ -461,7 +493,9 @@ return [{ json: {
     ],
     connections: [
       { source: 'trigger-1', target: 'code-1' },
-      { source: 'code-1', target: 'display-1' }
+      { source: 'code-1', target: 'http-1' },
+      { source: 'http-1', target: 'code-2' },
+      { source: 'code-2', target: 'display-1' }
     ]
   },
 
