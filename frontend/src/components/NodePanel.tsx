@@ -9,7 +9,7 @@ interface NodePanelProps {
 export function NodePanel({ nodeTypes }: NodePanelProps) {
   const [search, setSearch] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(['Triggers', 'Actions'])
+    new Set(['Triggers', 'Actions', 'Core'])
   );
 
   // Group nodes by category
@@ -99,7 +99,8 @@ export function NodePanel({ nodeTypes }: NodePanelProps) {
                     onDragStart={(e) => onDragStart(e, node.name)}
                   >
                     <div className="node-item-icon">
-                      {node.icon?.includes('trigger') ? '⚡' : 
+                      {node.name === 'stickyNote' ? '📝' :
+                       node.icon?.includes('trigger') ? '⚡' : 
                        node.category === 'Triggers' ? '▶️' : '⚙️'}
                     </div>
                     <div className="node-item-info">

@@ -169,6 +169,14 @@ function Flow() {
 
   const onConnect = useCallback(
     (params: Connection) => {
+      // Prevent connections to/from sticky notes (they're annotations only)
+      const sourceNode = storeNodes.find(n => n.id === params.source);
+      const targetNode = storeNodes.find(n => n.id === params.target);
+      
+      if (sourceNode?.data?.type === 'stickyNote' || targetNode?.data?.type === 'stickyNote') {
+        return; // Don't allow connections to/from sticky notes
+      }
+      
       const newEdge: Edge = {
         id: generateId(),
         source: params.source!,
@@ -191,7 +199,7 @@ function Flow() {
       };
       setStoreConnections([...currentEdges, newConnection]);
     },
-    [setEdges, setStoreConnections]
+    [setEdges, setStoreConnections, storeNodes]
   );
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {

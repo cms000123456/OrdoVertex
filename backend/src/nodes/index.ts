@@ -4,6 +4,7 @@ import { nodeRegistry } from './registry';
 import { manualTriggerNode } from './core/manual-trigger';
 import { webhookNode } from './core/webhook';
 import { scheduleTriggerNode } from './core/schedule';
+import { stickyNoteNode } from './core/sticky-note';
 
 // Trigger nodes (polling-based)
 import { fileWatchTriggerNode } from './triggers/file-watch';
@@ -46,6 +47,7 @@ export function registerAllNodes() {
   nodeRegistry.register(manualTriggerNode);
   nodeRegistry.register(webhookNode);
   nodeRegistry.register(scheduleTriggerNode);
+  nodeRegistry.register(stickyNoteNode);
 
   // Polling-based triggers
   nodeRegistry.register(fileWatchTriggerNode);
