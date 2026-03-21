@@ -43,8 +43,8 @@ services:
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       PORT: 3001
       # Initial admin user (optional - defaults to admin@example.com / admin123)
-      # ADMIN_EMAIL: ${ADMIN_EMAIL:-}
-      # ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
       # Rate limiting (development values - more permissive)
       AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-100}
       AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:-60000}
