@@ -96,6 +96,7 @@ function Flow() {
           label: node.name,
           type: node.type,
           description: node.description,
+          parameters: node.parameters,
           icon: getNodeIcon(node.type),
           category: getNodeCategory(node.type)
         },
@@ -148,17 +149,24 @@ function Flow() {
     );
   }, [selectedNode, setNodes]);
 
-  // Sync description changes from store to ReactFlow nodes
+  // Sync description and parameter changes from store to ReactFlow nodes
   useEffect(() => {
     setNodes((nds) =>
       nds.map((node) => {
         const storeNode = storeNodes.find((n) => n.id === node.id);
-        if (storeNode && storeNode.description !== node.data.description) {
+        if (!storeNode) return node;
+        
+        const needsUpdate = 
+          storeNode.description !== node.data.description ||
+          JSON.stringify(storeNode.parameters) !== JSON.stringify(node.data.parameters);
+        
+        if (needsUpdate) {
           return {
             ...node,
             data: {
               ...node.data,
-              description: storeNode.description
+              description: storeNode.description,
+              parameters: storeNode.parameters
             }
           };
         }
