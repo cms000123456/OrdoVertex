@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Key, Plus, Trash2, Edit2, Eye, EyeOff, X, Database, Globe, Lock, Shield, Box, CheckCircle, Bot, Sparkles } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Credential, CredentialTypeInfo, CredentialField } from '../types';
 import { credentialApi } from '../services/api';
 
@@ -107,6 +108,7 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
   const [formName, setFormName] = useState('');
   const [formType, setFormType] = useState('database');
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [hasLoadedTypes, setHasLoadedTypes] = useState(false);
 
   const fetchCredentials = useCallback(async () => {
     try {
@@ -127,11 +129,14 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
       const response = await credentialApi.getTypes();
       if (response.data?.types) {
         setCredentialTypes(response.data.types);
+        setHasLoadedTypes(true);
       } else if (response.data?.data?.types) {
         setCredentialTypes(response.data.data.types);
+        setHasLoadedTypes(true);
       }
     } catch (err: any) {
       console.error('Failed to load credential types:', err);
+      setError('Failed to load credential types. Please try again.');
     }
   }, []);
 
@@ -162,14 +167,19 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
       setError('Type is required');
       return;
     }
-    if (!formData || Object.keys(formData).length === 0) {
-      setError('Credential data is required');
+    
+    // Check required fields
+    const requiredFields = credentialTypes?.[formType]?.fields?.filter((f: any) => f.required) || [];
+    const missingFields = requiredFields.filter((f: any) => !formData[f.name] || formData[f.name].toString().trim() === '');
+    if (missingFields.length > 0) {
+      setError(`Please fill in required fields: ${missingFields.map((f: any) => f.displayName).join(', ')}`);
       return;
     }
     
     try {
       setError(null);
       setSaving(true);
+      console.log('Creating credential:', { name: formName.trim(), type: formType, data: formData });
       await credentialApi.create({
         name: formName.trim(),
         type: formType,
@@ -178,7 +188,9 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
       resetForm();
       setShowCreateForm(false);
       fetchCredentials();
+      toast.success('Credential created successfully');
     } catch (err: any) {
+      console.error('Credential creation error:', err);
       const errorMsg = err.response?.data?.error || err.message || 'Failed to create credential';
       setError(errorMsg);
     } finally {
@@ -426,18 +438,24 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
 
               <div className="credential-fields">
                 <h4>Configuration</h4>
-                {credentialTypes?.[formType]?.fields?.map((field) => (
-                  <div key={field.name} className="form-group">
-                    <label>
-                      {field.displayName}
-                      {field.required && <span className="required">*</span>}
-                    </label>
-                    {renderFieldInput(field)}
-                  </div>
-                ))}
-                
-                {formType === 'hashicorpVault' && (
-                  <VaultTestButton formData={formData} />
+                {!hasLoadedTypes ? (
+                  <div className="loading-fields">Loading credential fields...</div>
+                ) : (
+                  <>
+                    {credentialTypes?.[formType]?.fields?.map((field) => (
+                      <div key={field.name} className="form-group">
+                        <label>
+                          {field.displayName}
+                          {field.required && <span className="required">*</span>}
+                        </label>
+                        {renderFieldInput(field)}
+                      </div>
+                    ))}
+                    
+                    {formType === 'hashicorpVault' && (
+                      <VaultTestButton formData={formData} />
+                    )}
+                  </>
                 )}
               </div>
 

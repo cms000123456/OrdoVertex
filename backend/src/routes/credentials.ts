@@ -172,7 +172,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     // Validate credential type
-    const validTypes = ['database', 'http', 'oauth2', 'apiKey', 'ssh', 'generic', 'hashicorpVault', 'openai', 'anthropic', 'gemini', 'kimi', 'smtp', 'sftp', 'aws'];
+    const validTypes = ['database', 'http', 'oauth2', 'apiKey', 'ssh', 'generic', 'hashicorpVault', 'openai', 'anthropic', 'gemini', 'kimi', 'smtp', 'sftp', 'aws', 'ldap'];
     if (!validTypes.includes(type)) {
       return errorResponse(res, `Invalid credential type. Must be one of: ${validTypes.join(', ')}`);
     }
@@ -512,7 +512,7 @@ router.get('/types/list', authenticateToken, async (req: AuthRequest, res) => {
         { name: 'port', type: 'number', displayName: 'Port', required: true, default: 22 },
         { name: 'username', type: 'string', displayName: 'Username', required: true },
         { name: 'password', type: 'string', displayName: 'Password', required: false, sensitive: true },
-        { name: 'privateKey', type: 'multiline', displayName: 'Private Key', required: false },
+        { name: 'privateKey', type: 'string', displayName: 'Private Key', required: false, sensitive: true, multiline: true },
         { name: 'passphrase', type: 'string', displayName: 'Key Passphrase', required: false, sensitive: true }
       ]
     },
