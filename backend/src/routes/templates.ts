@@ -131,7 +131,7 @@ return [{ json: {
         name: 'Transform Data',
         position: { x: 900, y: 200 },
         parameters: {
-          code: 'const weather = items[0]?.json || {};\nconst current = weather.current_condition?.[0] || {};\nreturn [{ json: {\n  location: weather.request?.[0]?.query || "Unknown",\n  temp: (current.temp_C || "?") + "C",\n  condition: current.weatherDesc?.[0]?.value || "Unknown",\n  humidity: (current.humidity || "?") + "%"\n} }];'
+          code: 'const data = items[0]?.json || {};\n// wttr.in returns { current_condition: [{ temp_C, humidity, weatherDesc }] }\nconst current = data.current_condition?.[0] || {};\nreturn [{ json: {\n  location: data.request?.[0]?.query || "London",\n  temp: current.temp_C + "C" || "N/A",\n  condition: current.weatherDesc?.[0]?.value || "N/A",\n  humidity: current.humidity + "%" || "N/A",\n  raw: JSON.stringify(data).slice(0, 500)\n} }];'
         }
       }
     ],
