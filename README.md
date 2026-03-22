@@ -11,6 +11,7 @@
 
 - **Visual Workflow Editor**: Drag-and-drop interface built with React Flow
 - **33+ Built-in Nodes**: HTTP, Code (sandboxed), SQL, Email, CSV, AI Agents, LDAP, Text Parser, Image Display, and more
+- **Demo Templates**: Cat/dog images, weather, crypto prices, jokes, AI art - all work without API keys!
 - **AI-Powered Workflows**: Multi-provider LLM support (OpenAI, Anthropic, Gemini, Kimi, Ollama)
 - **Multiple Trigger Types**: Webhook, Schedule (Cron), Manual, File Watch
 - **Team Collaboration**: Workspaces and Groups for sharing workflows and credentials with role-based access
@@ -179,6 +180,23 @@ This creates a **"📚 Tutorial: Data Flow Demo"** workflow that:
 - Generates sample user data
 - Transforms/filter the data
 - Shows how to use the Node Inspector to view Input/Output data
+
+### 🎮 Demo Templates (No API Keys Required!)
+
+Get started instantly with these fun, pre-built demo templates that work without any configuration:
+
+| Template | Description |
+|----------|-------------|
+| 🐱 **Cat Fact + Image** | Get random cat facts with cute cat pictures |
+| 🐕 **Random Dog Image** | Fetch adorable dog photos with breed info |
+| 🌤️ **Weather Lookup** | Current weather for any city (no API key needed) |
+| 💰 **Crypto Prices** | Live Bitcoin & Ethereum prices from CoinGecko |
+| 😄 **Joke Generator** | Random programming jokes |
+| 🌍 **IP Location** | Get location info from IP address |
+| 🎨 **AI Image Gen** | Generate AI art with Stable Diffusion (free) |
+| 📰 **Security News** | Latest cybersecurity news from RSS feeds |
+
+**To use:** Click **Templates** in the left sidebar → Select a demo → Click **Create Workflow**
 
 ### 👥 Team Workspaces (Optional)
 
