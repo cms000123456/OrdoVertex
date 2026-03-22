@@ -1,0 +1,265 @@
+.admin-documentation {
+  padding: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.doc-header {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 32px;
+  background: linear-gradient(135deg, #1e1e2e 0%, #252535 100%);
+  border-radius: 16px;
+  border: 1px solid #3d3d5c;
+}
+
+.doc-header svg {
+  color: #6366f1;
+  margin-bottom: 16px;
+}
+
+.doc-header h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  color: #e2e8f0;
+}
+
+.doc-header p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 16px;
+}
+
+.doc-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.doc-section {
+  background: #1e1e2e;
+  border-radius: 12px;
+  border: 1px solid #3d3d5c;
+  overflow: hidden;
+}
+
+.doc-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.2s;
+}
+
+.doc-section-header:hover {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.doc-section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #2d2d44;
+  border-radius: 8px;
+  color: #6366f1;
+}
+
+.doc-section-title {
+  flex: 1;
+}
+
+.doc-section-toggle {
+  color: #94a3b8;
+}
+
+.doc-section-content {
+  padding: 0 20px 20px 68px;
+  border-top: 1px solid #3d3d5c;
+}
+
+.doc-content {
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.doc-content h4 {
+  color: #e2e8f0;
+  font-size: 16px;
+  margin: 20px 0 12px 0;
+}
+
+.doc-content h4:first-child {
+  margin-top: 16px;
+}
+
+.doc-intro {
+  font-size: 15px;
+  color: #94a3b8;
+  margin-bottom: 16px;
+}
+
+.doc-list {
+  margin: 12px 0;
+  padding-left: 20px;
+}
+
+.doc-list li {
+  margin-bottom: 8px;
+}
+
+.doc-list ul {
+  margin-top: 8px;
+  padding-left: 20px;
+}
+
+.doc-steps {
+  margin: 12px 0;
+  padding-left: 20px;
+}
+
+.doc-steps li {
+  margin-bottom: 12px;
+}
+
+.doc-steps ul {
+  margin-top: 8px;
+  padding-left: 20px;
+}
+
+.doc-alert {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+  font-size: 14px;
+}
+
+.doc-alert svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.doc-alert-info {
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+}
+
+.doc-alert-info svg {
+  color: #6366f1;
+}
+
+.doc-alert-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
+.doc-alert-warning svg {
+  color: #f59e0b;
+}
+
+.doc-alert-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.doc-alert-danger svg {
+  color: #ef4444;
+}
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+}
+
+.doc-table th,
+.doc-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #3d3d5c;
+}
+
+.doc-table th {
+  color: #94a3b8;
+  font-weight: 500;
+  background: #252535;
+}
+
+.doc-table td {
+  color: #cbd5e1;
+}
+
+.doc-code {
+  background: #0f0f1a;
+  border: 1px solid #3d3d5c;
+  border-radius: 8px;
+  padding: 16px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 13px;
+  color: #a5b4fc;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.log-level {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.log-level.debug {
+  background: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+}
+
+.log-level.info {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
+
+.log-level.warn {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+
+.log-level.error {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .admin-documentation {
+    padding: 16px;
+  }
+  
+  .doc-section-content {
+    padding: 0 16px 16px 16px;
+  }
+  
+  .doc-header {
+    padding: 24px 16px;
+  }
+  
+  .doc-header h1 {
+    font-size: 24px;
+  }
+}
