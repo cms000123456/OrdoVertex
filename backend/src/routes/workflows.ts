@@ -6,6 +6,7 @@ import { successResponse, errorResponse } from '../utils/response';
 import { executeWorkflow } from '../engine/executor';
 import { queueWorkflowExecution } from '../engine/queue';
 import { scheduler } from '../engine/scheduler';
+import { workflowContainsCodeNodes } from '../utils/code-sandbox';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -109,6 +110,23 @@ router.post(
         return errorResponse(res, 'User not found. Please log out and log in again.', 401);
       }
 
+      // Security: Check for code nodes
+      const hasCodeNodes = workflowContainsCodeNodes({ nodes });
+      if (hasCodeNodes && process.env.CODE_NODE_REQUIRE_ADMIN === 'true') {
+        // Check if user is admin
+        const user = await prisma.user.findUnique({
+          where: { id: req.user!.id },
+          select: { role: true }
+        });
+        if (user?.role !== 'admin') {
+          return errorResponse(
+            res, 
+            'Workflows containing Code nodes require admin approval. Contact your administrator.', 
+            403
+          );
+        }
+      }
+
       const workflow = await prisma.workflow.create({
         data: {
           name,
@@ -146,6 +164,24 @@ router.patch(
 
       if (!existing) {
         return errorResponse(res, 'Workflow not found', 404);
+      }
+
+      // Security: Check for code nodes on update
+      if (nodes) {
+        const hasCodeNodes = workflowContainsCodeNodes({ nodes });
+        if (hasCodeNodes && process.env.CODE_NODE_REQUIRE_ADMIN === 'true') {
+          const user = await prisma.user.findUnique({
+            where: { id: req.user!.id },
+            select: { role: true }
+          });
+          if (user?.role !== 'admin') {
+            return errorResponse(
+              res, 
+              'Workflows containing Code nodes require admin approval. Contact your administrator.', 
+              403
+            );
+          }
+        }
       }
 
       const workflow = await prisma.workflow.update({
