@@ -1,11 +1,13 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { PrismaClient } from '@prisma/client';
 
 import { registerAllNodes } from './nodes';
 import { scheduler } from './engine/scheduler';
 import { rateLimit } from './utils/rate-limit';
 import logger, { logStream } from './utils/logger';
+import { errorSanitizerMiddleware, sanitizedErrorHandler } from './utils/security';
 
 import authRoutes from './routes/auth';
 import authExtendedRoutes from './routes/auth-extended';
@@ -38,8 +40,37 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
 };
 app.use(cors(corsOptions));
+
+// Security headers with Helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Needed for some frontend functionality
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"], // Prevent clickjacking
+      upgradeInsecureRequests: [],
+    },
+  },
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
+  xContentTypeOptions: true, // Prevent MIME sniffing
+  xFrameOptions: { action: 'deny' }, // Clickjacking protection
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+}));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Sanitize error messages in production
+app.use(errorSanitizerMiddleware);
 
 // Apply rate limiting to all API routes
 app.use('/api/', rateLimit({
@@ -315,16 +346,8 @@ app.get('/api/admin/system-stats', authenticateToken, async (req, res) => {
   }
 });
 
-// Error handling
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('Unhandled error', { error: err.message, stack: err.stack });
-  res.status(500).json({
-    success: false,
-    error: {
-      message: 'Internal server error'
-    }
-  });
-});
+// Error handling with sanitization for production
+app.use(sanitizedErrorHandler);
 
 // 404 handler
 app.use((req, res) => {

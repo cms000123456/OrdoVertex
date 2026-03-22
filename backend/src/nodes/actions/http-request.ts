@@ -2,6 +2,7 @@ import axios, { AxiosRequestConfig, Method } from 'axios';
 import { PrismaClient } from '@prisma/client';
 import { NodeType } from '../../types';
 import { decryptJSON } from '../../utils/encryption';
+import { isInternalUrl } from '../../utils/security';
 
 const prisma = new PrismaClient();
 
@@ -244,38 +245,8 @@ export const httpRequestNode: NodeType = {
       console.log(`[HTTP Request] ${method} ${url}`);
 
       // SSRF Protection - Block internal URLs
-      const parsedUrl = new URL(url);
-      const hostname = parsedUrl.hostname.toLowerCase();
-      
-      // Block internal IP ranges and localhost
-      const blockedPatterns = [
-        /^localhost$/,
-        /^127\./,
-        /^10\./,
-        /^172\.(1[6-9]|2[0-9]|3[01])\./,
-        /^192\.168\./,
-        /^169\.254\./,  // Link-local
-        /^0\./,
-        /^::1$/,
-        /^fc00:/i,  // IPv6 private
-        /^fe80:/i,  // IPv6 link-local
-      ];
-      
-      if (blockedPatterns.some(pattern => pattern.test(hostname))) {
-        throw new Error('Access to internal addresses is not allowed');
-      }
-      
-      // Block common internal services
-      const blockedHosts = [
-        'metadata.google.internal',
-        'metadata.google.com',
-        '169.254.169.254',  // AWS/Azure/GCP metadata
-        'instance-data',
-        'localhost.localdomain',
-      ];
-      
-      if (blockedHosts.some(host => hostname === host || hostname.endsWith('.' + host))) {
-        throw new Error('Access to this host is not allowed');
+      if (isInternalUrl(url)) {
+        throw new Error('Access to internal addresses and cloud metadata services is not allowed');
       }
 
       const config: AxiosRequestConfig = {
