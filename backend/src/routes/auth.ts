@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
+import crypto from 'crypto';
 import { hashPassword, verifyPassword, generateToken, authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { authRateLimit } from '../utils/rate-limit';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email';
+import { getSecuritySettings } from './system';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -38,22 +41,63 @@ router.post(
         return errorResponse(res, 'User already exists', 409);
       }
 
+      // Check if email verification is required
+      const securitySettings = getSecuritySettings();
+      const requireEmailVerification = securitySettings.requireEmailVerification;
+
       // Create user
       const hashedPassword = await hashPassword(password);
       const user = await prisma.user.create({
         data: {
           email,
           password: hashedPassword,
-          name
+          name,
+          emailVerified: !requireEmailVerification // Auto-verify if not required
         },
         select: {
           id: true,
           email: true,
           name: true,
           role: true,
+          emailVerified: true,
           createdAt: true
         }
       });
+
+      // Send verification email if required
+      if (requireEmailVerification) {
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours expiry
+
+        await prisma.verificationToken.create({
+          data: {
+            email,
+            token: verificationToken,
+            expiresAt
+          }
+        });
+
+        // Send verification email
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const emailResult = await sendVerificationEmail(
+          email,
+          name || email,
+          verificationToken,
+          baseUrl
+        );
+
+        if (!emailResult.success) {
+          console.error('[Auth] Failed to send verification email:', emailResult.error);
+        }
+
+        return successResponse(res, {
+          user,
+          message: 'Registration successful. Please check your email to verify your account.',
+          verificationSent: emailResult.success,
+          requiresVerification: true
+        }, 201);
+      }
 
       const token = generateToken(user.id, user.email);
 
@@ -135,6 +179,15 @@ router.post(
         });
       }
 
+      // Check if email verification is required
+      const securitySettings = getSecuritySettings();
+      if (securitySettings.requireEmailVerification && !user.emailVerified) {
+        return errorResponse(res, 'Please verify your email before logging in. Check your inbox for the verification link.', 403, {
+          code: 'EMAIL_NOT_VERIFIED',
+          email: user.email
+        });
+      }
+
       const token = generateToken(user.id, user.email, user.role);
 
       return successResponse(res, {
@@ -144,6 +197,7 @@ router.post(
           name: user.name,
           role: user.role,
           mfaEnabled: user.mfaEnabled,
+          emailVerified: user.emailVerified,
           onboardingCompleted: user.onboardingCompleted
         },
         token
@@ -225,6 +279,9 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
         email: true,
         name: true,
         role: true,
+        emailVerified: true,
+        mfaEnabled: true,
+        onboardingCompleted: true,
         createdAt: true
       }
     });
@@ -237,6 +294,141 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
   } catch (error: any) {
     console.error('Get user error:', error);
     return errorResponse(res, 'Failed to get user', 500);
+  }
+});
+
+// Verify email with token
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return errorResponse(res, 'Verification token is required', 400);
+    }
+
+    // Find the verification token
+    const verificationToken = await prisma.verificationToken.findUnique({
+      where: { token }
+    });
+
+    if (!verificationToken) {
+      return errorResponse(res, 'Invalid or expired verification token', 400);
+    }
+
+    // Check if token has expired
+    if (new Date() > verificationToken.expiresAt) {
+      // Delete expired token
+      await prisma.verificationToken.delete({
+        where: { id: verificationToken.id }
+      });
+      return errorResponse(res, 'Verification token has expired. Please request a new one.', 400);
+    }
+
+    // Find the user
+    const user = await prisma.user.findUnique({
+      where: { email: verificationToken.email }
+    });
+
+    if (!user) {
+      return errorResponse(res, 'User not found', 404);
+    }
+
+    // Mark email as verified
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerified: true }
+    });
+
+    // Delete the verification token
+    await prisma.verificationToken.delete({
+      where: { id: verificationToken.id }
+    });
+
+    // Generate auth token for automatic login
+    const authToken = generateToken(user.id, user.email, user.role);
+
+    return successResponse(res, {
+      message: 'Email verified successfully',
+      token: authToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        emailVerified: true
+      }
+    });
+  } catch (error: any) {
+    console.error('Email verification error:', error);
+    return errorResponse(res, 'Failed to verify email', 500);
+  }
+});
+
+// Resend verification email
+router.post('/resend-verification', authRateLimit(), async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return errorResponse(res, 'Email is required', 400);
+    }
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      // Don't reveal if user exists
+      return successResponse(res, {
+        message: 'If an account exists with this email, a verification link has been sent.'
+      });
+    }
+
+    // Check if already verified
+    if (user.emailVerified) {
+      return successResponse(res, {
+        message: 'If an account exists with this email, a verification link has been sent.'
+      });
+    }
+
+    // Delete any existing tokens for this email
+    await prisma.verificationToken.deleteMany({
+      where: { email }
+    });
+
+    // Generate new token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
+
+    await prisma.verificationToken.create({
+      data: {
+        email,
+        token: verificationToken,
+        expiresAt
+      }
+    });
+
+    // Send verification email
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const emailResult = await sendVerificationEmail(
+      email,
+      user.name || email,
+      verificationToken,
+      baseUrl
+    );
+
+    if (!emailResult.success) {
+      console.error('[Auth] Failed to send verification email:', emailResult.error);
+    }
+
+    return successResponse(res, {
+      message: 'If an account exists with this email, a verification link has been sent.'
+    });
+  } catch (error: any) {
+    console.error('Resend verification error:', error);
+    return errorResponse(res, 'Failed to resend verification email', 500);
   }
 });
 
