@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import cron from 'node-cron';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
+import { sendTestEmail, verifyEmailConfig, clearEmailTransporter } from '../services/email';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -510,6 +511,9 @@ router.patch('/email', authMiddleware, adminMiddleware, async (req, res) => {
 
     console.log(`[Email] Settings updated. Enabled: ${emailSettings.enabled}, Host: ${emailSettings.smtpHost}`);
 
+    // Clear transporter cache so new settings take effect
+    clearEmailTransporter();
+
     // Return safe settings (masked password)
     const safeSettings = {
       ...emailSettings,
@@ -539,20 +543,24 @@ router.post('/email/test', authMiddleware, adminMiddleware, async (req, res) => 
       return errorResponse(res, 'Email settings are incomplete. Please configure SMTP host, user, and password.', 400);
     }
 
-    // Here you would actually send a test email using nodemailer
-    // For now, we'll just simulate it
-    console.log(`[Email] Test email would be sent to: ${testEmail}`);
-    console.log(`[Email] Using SMTP: ${emailSettings.smtpHost}:${emailSettings.smtpPort}`);
+    // First verify the configuration
+    const verifyResult = await verifyEmailConfig();
+    if (!verifyResult.valid) {
+      return errorResponse(res, `Email configuration error: ${verifyResult.error}`, 400);
+    }
 
-    // TODO: Implement actual email sending with nodemailer
-    // const nodemailer = require('nodemailer');
-    // const transporter = nodemailer.createTransporter({...});
-    // await transporter.sendMail({...});
+    // Send actual test email
+    const result = await sendTestEmail(testEmail);
+    
+    if (!result.success) {
+      return errorResponse(res, `Failed to send test email: ${result.error}`, 500);
+    }
 
     res.json({
       success: true,
       data: {
-        message: 'Test email configuration is valid (simulated)',
+        message: 'Test email sent successfully',
+        messageId: result.messageId,
         recipient: testEmail,
         timestamp: new Date().toISOString()
       }
