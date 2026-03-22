@@ -18,8 +18,22 @@ const DEFAULT_MAINTENANCE_SETTINGS = {
   nextPurgeRun: null
 };
 
+// Default security settings
+const DEFAULT_SECURITY_SETTINGS = {
+  requireCodeNodeApproval: false,  // Require admin approval for code nodes
+  sessionTimeout: 60,              // minutes
+  maxLoginAttempts: 5,
+  requireEmailVerification: false
+};
+
 let maintenanceSettings = { ...DEFAULT_MAINTENANCE_SETTINGS };
+let securitySettings = { ...DEFAULT_SECURITY_SETTINGS };
 let scheduledPurgeTask: cron.ScheduledTask | null = null;
+
+// Export function to check if code nodes require admin approval
+export function isCodeNodeApprovalRequired(): boolean {
+  return securitySettings.requireCodeNodeApproval;
+}
 
 // Middleware to check admin
 function adminMiddleware(req: AuthRequest, res: any, next: any) {
@@ -348,5 +362,65 @@ function isValidCron(cron: string): boolean {
 if (maintenanceSettings.enableAutoPurge) {
   scheduleAutoPurge();
 }
+
+// ========================================================================
+// Security Settings Routes
+// ========================================================================
+
+// Get security settings
+router.get('/security', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: securitySettings
+    });
+  } catch (error: any) {
+    console.error('Get security settings error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Update security settings
+router.patch('/security', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const {
+      requireCodeNodeApproval,
+      sessionTimeout,
+      maxLoginAttempts,
+      requireEmailVerification
+    } = req.body;
+
+    if (requireCodeNodeApproval !== undefined) {
+      securitySettings.requireCodeNodeApproval = Boolean(requireCodeNodeApproval);
+      console.log(`[Security] Code node approval requirement set to: ${securitySettings.requireCodeNodeApproval}`);
+    }
+
+    if (sessionTimeout !== undefined) {
+      if (sessionTimeout < 5 || sessionTimeout > 480) {
+        return errorResponse(res, 'Session timeout must be between 5 and 480 minutes', 400);
+      }
+      securitySettings.sessionTimeout = sessionTimeout;
+    }
+
+    if (maxLoginAttempts !== undefined) {
+      if (maxLoginAttempts < 3 || maxLoginAttempts > 10) {
+        return errorResponse(res, 'Max login attempts must be between 3 and 10', 400);
+      }
+      securitySettings.maxLoginAttempts = maxLoginAttempts;
+    }
+
+    if (requireEmailVerification !== undefined) {
+      securitySettings.requireEmailVerification = Boolean(requireEmailVerification);
+    }
+
+    res.json({
+      success: true,
+      data: securitySettings
+    });
+  } catch (error: any) {
+    console.error('Update security settings error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 export default router;

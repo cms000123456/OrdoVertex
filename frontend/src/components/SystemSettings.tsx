@@ -31,7 +31,8 @@ export function SystemSettings() {
   const [securitySettings, setSecuritySettings] = useState({
     sessionTimeout: 60,
     requireEmailVerification: false,
-    maxLoginAttempts: 5
+    maxLoginAttempts: 5,
+    requireCodeNodeApproval: false
   });
 
   const [maintenanceSettings, setMaintenanceSettings] = useState({
@@ -56,6 +57,7 @@ export function SystemSettings() {
   useEffect(() => {
     loadSystemStatus();
     loadMaintenanceSettings();
+    loadSecuritySettings();
     loadPurgePreview();
   }, []);
 
@@ -86,6 +88,15 @@ export function SystemSettings() {
       setMaintenanceSettings(response.data.data);
     } catch (error) {
       console.error('Failed to load maintenance settings');
+    }
+  };
+
+  const loadSecuritySettings = async () => {
+    try {
+      const response = await systemApi.getSecuritySettings();
+      setSecuritySettings(response.data.data);
+    } catch (error) {
+      console.error('Failed to load security settings');
     }
   };
 
@@ -132,6 +143,20 @@ export function SystemSettings() {
 
   const handleSaveSettings = async (settingType: string) => {
     toast.success(`${settingType} settings saved successfully`);
+  };
+
+  const handleSaveSecurity = async () => {
+    try {
+      await systemApi.updateSecuritySettings({
+        requireCodeNodeApproval: securitySettings.requireCodeNodeApproval,
+        sessionTimeout: securitySettings.sessionTimeout,
+        maxLoginAttempts: securitySettings.maxLoginAttempts,
+        requireEmailVerification: securitySettings.requireEmailVerification
+      });
+      toast.success('Security settings saved');
+    } catch (error) {
+      toast.error('Failed to save security settings');
+    }
   };
 
   const renderGeneralSettings = () => (
@@ -192,6 +217,21 @@ export function SystemSettings() {
     <div className="settings-section">
       <h3>Security Settings</h3>
       
+      <div className="setting-item checkbox">
+        <label>
+          <input
+            type="checkbox"
+            checked={securitySettings.requireCodeNodeApproval}
+            onChange={(e) => setSecuritySettings({ ...securitySettings, requireCodeNodeApproval: e.target.checked })}
+          />
+          Require Admin Approval for Code Nodes
+        </label>
+        <p className="setting-help">
+          Only administrators can create or modify workflows containing JavaScript/Python Code nodes.
+          This prevents unauthorized users from executing custom code.
+        </p>
+      </div>
+
       <div className="setting-item">
         <label>Session Timeout (minutes)</label>
         <input
@@ -230,7 +270,7 @@ export function SystemSettings() {
 
       <button
         className="btn btn-primary"
-        onClick={() => handleSaveSettings('Security')}
+        onClick={handleSaveSecurity}
       >
         <Save size={16} />
         Save Changes

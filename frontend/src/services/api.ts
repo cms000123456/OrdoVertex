@@ -223,7 +223,9 @@ export const systemApi = {
   getMaintenanceSettings: () => api.get('/api/system/maintenance'),
   updateMaintenanceSettings: (settings: any) => api.patch('/api/system/maintenance', settings),
   getPurgePreview: () => api.get('/api/system/maintenance/purge-preview'),
-  runManualPurge: () => api.post('/api/system/maintenance/purge')
+  runManualPurge: () => api.post('/api/system/maintenance/purge'),
+  getSecuritySettings: () => api.get('/api/system/security'),
+  updateSecuritySettings: (settings: any) => api.patch('/api/system/security', settings)
 };
 
 // Templates API

@@ -7,6 +7,7 @@ import { executeWorkflow } from '../engine/executor';
 import { queueWorkflowExecution } from '../engine/queue';
 import { scheduler } from '../engine/scheduler';
 import { workflowContainsCodeNodes } from '../utils/code-sandbox';
+import { isCodeNodeApprovalRequired } from './system';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -112,7 +113,7 @@ router.post(
 
       // Security: Check for code nodes
       const hasCodeNodes = workflowContainsCodeNodes({ nodes });
-      if (hasCodeNodes && process.env.CODE_NODE_REQUIRE_ADMIN === 'true') {
+      if (hasCodeNodes && isCodeNodeApprovalRequired()) {
         // Check if user is admin
         const user = await prisma.user.findUnique({
           where: { id: req.user!.id },
@@ -169,7 +170,7 @@ router.patch(
       // Security: Check for code nodes on update
       if (nodes) {
         const hasCodeNodes = workflowContainsCodeNodes({ nodes });
-        if (hasCodeNodes && process.env.CODE_NODE_REQUIRE_ADMIN === 'true') {
+        if (hasCodeNodes && isCodeNodeApprovalRequired()) {
           const user = await prisma.user.findUnique({
             where: { id: req.user!.id },
             select: { role: true }

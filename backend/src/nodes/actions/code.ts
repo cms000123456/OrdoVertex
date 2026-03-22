@@ -154,13 +154,9 @@ results`,
       const timeout = context.getNodeParameter('timeout', 30000) as number;
       const items = context.getInputData();
 
-      // Security: Check if user has permission to execute code
-      // In production, only admins or users with 'code:execute' permission can run code
-      if (process.env.CODE_NODE_REQUIRE_ADMIN === 'true') {
-        // This would check user permissions in a real implementation
-        // For now, we log the attempt
-        console.log(`[Security] Code execution attempt by user ${context.userId || 'unknown'}`);
-      }
+      // Note: Code execution is sandboxed and safe.
+      // Workflow creation/update with code nodes is controlled by system settings.
+      console.log(`[Security] Code execution by user ${context.userId || 'unknown'}`);
 
       let result: { success: boolean; output: any[]; error?: string };
 
