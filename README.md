@@ -92,11 +92,11 @@ The intuitive drag-and-drop interface for building automation workflows:
 
 | Layer | Features |
 |:------|:---------|
-| **1. Network** | • CORS (configurable origins)<br>• Security Headers (Helmet.js: CSP, HSTS, X-Frame-Options)<br>• Rate Limiting (120 req/min API, 5/15min auth) |
-| **2. Authentication** | • JWT (24h expiry, configurable)<br>• bcrypt (password hashing)<br>• MFA/TOTP support<br>• SAML 2.0 SSO |
-| **3. Authorization** | • Role-based access (Admin/User)<br>• Workspace-level permissions<br>• Code node admin approval (optional) |
-| **4. Data Protection** | • AES-256-GCM credential encryption<br>• SQL injection prevention (parameterized queries)<br>• SSRF protection (internal IPs blocked) |
-| **5. Execution Sandboxing** | • JavaScript: vm module (no Node.js APIs)<br>• Python: import whitelist (25 modules)<br>• Static analysis (dangerous pattern blocking)<br>• Timeouts & output limits |
+| **1. Network** | CORS (configurable origins), Security Headers (Helmet.js: CSP, HSTS, X-Frame-Options), Rate Limiting (120 req/min API, 5/15min auth) |
+| **2. Authentication** | JWT (24h expiry, configurable), bcrypt (password hashing), MFA/TOTP support, SAML 2.0 SSO |
+| **3. Authorization** | Role-based access (Admin/User), Workspace-level permissions, Code node admin approval (optional) |
+| **4. Data Protection** | AES-256-GCM credential encryption, SQL injection prevention (parameterized queries), SSRF protection (internal IPs blocked) |
+| **5. Execution Sandboxing** | JavaScript: vm module (no Node.js APIs), Python: import whitelist (25 modules), Static analysis (dangerous pattern blocking), Timeouts & output limits |
 
 ## 🚀 Quick Start
 
