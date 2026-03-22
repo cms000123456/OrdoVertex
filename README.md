@@ -45,6 +45,10 @@ The intuitive drag-and-drop interface for building automation workflows:
 
 ![AI Nodes](.screenshots/ai.png)
 
+**Templates** - Pre-built workflow templates to get started quickly:
+
+![Templates](.screenshots/templates.png)
+
 ## 🏗️ Architecture
 
 ```
