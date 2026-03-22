@@ -49,6 +49,10 @@ The intuitive drag-and-drop interface for building automation workflows:
 
 ![Templates](.screenshots/templates.png)
 
+**Admin Menu** - System administration and management features:
+
+![Admin Menu](.screenshots/admin_menu.png)
+
 ## 🏗️ Architecture
 
 ```
