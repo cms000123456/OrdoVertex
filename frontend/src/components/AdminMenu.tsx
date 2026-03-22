@@ -115,7 +115,7 @@ export function AdminMenu() {
             onClick={() => setIsExpanded(false)}
           >
             <FileText size={16} />
-            <span>Docker Logs</span>
+            <span>App Logs</span>
           </NavLink>
 
           <NavLink

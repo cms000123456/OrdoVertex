@@ -153,7 +153,7 @@ export function LogViewer() {
         <div className="log-viewer-title">
           <Terminal size={28} />
           <div>
-            <h1>Log Viewer</h1>
+            <h1>App Logs</h1>
             <p>View application logs for troubleshooting</p>
           </div>
         </div>

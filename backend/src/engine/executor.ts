@@ -11,6 +11,32 @@ import {
 
 const prisma = new PrismaClient();
 
+// Helper to write execution logs
+async function writeExecutionLog(
+  executionId: string,
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  nodeId?: string,
+  nodeName?: string,
+  details?: any
+) {
+  try {
+    await prisma.executionLog.create({
+      data: {
+        executionId,
+        level,
+        message,
+        nodeId,
+        nodeName,
+        details: details ? JSON.stringify(details) : undefined,
+        timestamp: new Date()
+      }
+    });
+  } catch (err) {
+    console.error('Failed to write execution log:', err);
+  }
+}
+
 // Resolve template expressions like {{ $json.field }} or {{ $json["field-with-dash"] }}
 function resolveExpression(value: any, items: any[]): any {
   if (typeof value !== 'string') {
@@ -75,6 +101,16 @@ export class WorkflowExecutor {
   async execute(): Promise<{ success: boolean; output?: any; error?: string }> {
     const startTime = Date.now();
     
+    // Log workflow start
+    await writeExecutionLog(
+      this.executionId,
+      'info',
+      `Workflow execution started: ${this.workflow.name}`,
+      undefined,
+      undefined,
+      { workflowId: this.workflow.id, nodeCount: this.workflow.nodes.length }
+    );
+    
     try {
       // Find trigger nodes (nodes with no inputs or trigger-type nodes)
       const triggerNodes = this.findTriggerNodes();
@@ -103,6 +139,16 @@ export class WorkflowExecutor {
 
       const duration = Date.now() - startTime;
       console.log(`✅ Workflow ${this.workflow.id} executed successfully in ${duration}ms`);
+      
+      // Log workflow success
+      await writeExecutionLog(
+        this.executionId,
+        'info',
+        `Workflow execution completed successfully (${duration}ms)`,
+        undefined,
+        undefined,
+        { duration, nodeCount: this.workflow.nodes.length }
+      );
 
       return {
         success: true,
@@ -111,6 +157,16 @@ export class WorkflowExecutor {
 
     } catch (error: any) {
       console.error(`❌ Workflow execution failed:`, error);
+      
+      // Log workflow failure
+      await writeExecutionLog(
+        this.executionId,
+        'error',
+        `Workflow execution failed: ${error.message}`,
+        undefined,
+        undefined,
+        { error: error.message, stack: error.stack }
+      );
 
       await prisma.workflowExecution.update({
         where: { id: this.executionId },
@@ -151,6 +207,16 @@ export class WorkflowExecutor {
     }
 
     console.log(`▶️ Executing node: ${node.name} (${node.type})`);
+    
+    // Write execution log
+    await writeExecutionLog(
+      this.executionId,
+      'info',
+      `Executing node: ${node.name} (${node.type})`,
+      node.id,
+      node.name,
+      { inputCount: inputItems.length }
+    );
 
     // Create node execution record
     const nodeExecution = await prisma.nodeExecution.create({
@@ -212,6 +278,16 @@ export class WorkflowExecutor {
 
       const duration = Date.now() - startTime;
       console.log(`✅ Node ${node.name} completed in ${duration}ms`);
+      
+      // Write success log
+      await writeExecutionLog(
+        this.executionId,
+        'info',
+        `Node ${node.name} completed successfully (${duration}ms)`,
+        node.id,
+        node.name,
+        { duration, outputCount: output.length }
+      );
 
       // Find and execute connected nodes
       const connectedNodes = this.findConnectedNodes(node);
@@ -223,6 +299,16 @@ export class WorkflowExecutor {
 
     } catch (error: any) {
       console.error(`❌ Node ${node.name} failed:`, error);
+      
+      // Write error log
+      await writeExecutionLog(
+        this.executionId,
+        'error',
+        `Node ${node.name} failed: ${error.message}`,
+        node.id,
+        node.name,
+        { error: error.message, stack: error.stack }
+      );
 
       await prisma.nodeExecution.update({
         where: { id: nodeExecution.id },
