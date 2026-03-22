@@ -90,13 +90,32 @@ The intuitive drag-and-drop interface for building automation workflows:
 
 ## Security Architecture
 
-| Layer | Features |
-|:------|:---------|
-| **1. Network** | CORS (configurable origins), Security Headers (Helmet.js: CSP, HSTS, X-Frame-Options), Rate Limiting (120 req/min API, 5/15min auth) |
-| **2. Authentication** | JWT (24h expiry, configurable), bcrypt (password hashing), MFA/TOTP support, SAML 2.0 SSO |
-| **3. Authorization** | Role-based access (Admin/User), Workspace-level permissions, Code node admin approval (optional) |
-| **4. Data Protection** | AES-256-GCM credential encryption, SQL injection prevention (parameterized queries), SSRF protection (internal IPs blocked) |
-| **5. Execution Sandboxing** | JavaScript: vm module (no Node.js APIs), Python: import whitelist (25 modules), Static analysis (dangerous pattern blocking), Timeouts & output limits |
+### Layer 1: Network Security
+- **CORS** - Configurable origin restrictions
+- **Security Headers** - Helmet.js (CSP, HSTS, X-Frame-Options)
+- **Rate Limiting** - 120 req/min (API), 5/15min (auth)
+
+### Layer 2: Authentication
+- **JWT** - 24h expiry, configurable
+- **bcrypt** - Password hashing
+- **MFA/TOTP** - Time-based one-time passwords
+- **SAML 2.0** - SSO support (Okta, Azure AD, etc.)
+
+### Layer 3: Authorization
+- **RBAC** - Role-based access (Admin/User)
+- **Workspaces** - Workspace-level permissions
+- **Code Approval** - Optional admin approval for code nodes
+
+### Layer 4: Data Protection
+- **AES-256-GCM** - Credential encryption
+- **SQL Injection Prevention** - Parameterized queries
+- **SSRF Protection** - Internal IPs and cloud metadata blocked
+
+### Layer 5: Execution Sandboxing
+- **JavaScript** - vm module (no Node.js APIs)
+- **Python** - Import whitelist (25 modules)
+- **Static Analysis** - Dangerous pattern blocking
+- **Resource Limits** - Timeouts & output limits
 
 ## 🚀 Quick Start
 
