@@ -217,6 +217,15 @@ export const logsApi = {
   clearLogs: (logName: string) => api.delete(`/api/logs/${logName}`)
 };
 
+// System API
+export const systemApi = {
+  getSystemStats: () => api.get('/api/system/stats'),
+  getMaintenanceSettings: () => api.get('/api/system/maintenance'),
+  updateMaintenanceSettings: (settings: any) => api.patch('/api/system/maintenance', settings),
+  getPurgePreview: () => api.get('/api/system/maintenance/purge-preview'),
+  runManualPurge: () => api.post('/api/system/maintenance/purge')
+};
+
 // Templates API
 export const templatesApi = {
   getAll: (params?: any) => api.get('/api/templates', { params }),

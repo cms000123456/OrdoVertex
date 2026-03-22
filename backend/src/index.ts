@@ -22,6 +22,7 @@ import executionLogRoutes from './routes/execution-logs';
 import alertRoutes from './routes/alerts';
 import templateRoutes from './routes/templates';
 import logsRoutes from './routes/logs';
+import systemRoutes from './routes/system';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -81,6 +82,7 @@ app.use('/api/execution-logs', executionLogRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/logs', logsRoutes);
+app.use('/api/system', systemRoutes);
 app.use('/webhook', webhookRoutes);
 
 // Admin/System Routes
