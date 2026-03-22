@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
+import cron from 'node-cron';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
-import { scheduler } from '../engine/scheduler';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -19,6 +19,7 @@ const DEFAULT_MAINTENANCE_SETTINGS = {
 };
 
 let maintenanceSettings = { ...DEFAULT_MAINTENANCE_SETTINGS };
+let scheduledPurgeTask: cron.ScheduledTask | null = null;
 
 // Middleware to check admin
 function adminMiddleware(req: AuthRequest, res: any, next: any) {
@@ -136,7 +137,11 @@ router.patch('/maintenance', authMiddleware, adminMiddleware, async (req, res) =
       if (enableAutoPurge) {
         scheduleAutoPurge();
       } else {
-        scheduler.removeScheduledTask('maintenance-purge');
+        if (scheduledPurgeTask) {
+          scheduledPurgeTask.stop();
+          scheduledPurgeTask = null;
+        }
+        maintenanceSettings.nextPurgeRun = null;
       }
     }
 
@@ -295,24 +300,31 @@ async function runPurge() {
 
 // Schedule auto-purge
 function scheduleAutoPurge() {
-  scheduler.removeScheduledTask('maintenance-purge');
+  // Stop existing task if any
+  if (scheduledPurgeTask) {
+    scheduledPurgeTask.stop();
+    scheduledPurgeTask = null;
+  }
   
-  scheduler.scheduleWorkflow('maintenance-purge', {
-    id: 'maintenance-purge',
-    name: 'Database Maintenance Purge',
-    nodes: [],
-    connections: [],
-    trigger: {
-      type: 'schedule',
-      cron: maintenanceSettings.purgeSchedule
-    }
-  }, async () => {
-    console.log('[Maintenance] Running scheduled purge...');
-    const results = await runPurge();
-    console.log('[Maintenance] Purge completed:', results);
-  });
+  // Validate cron expression
+  if (!cron.validate(maintenanceSettings.purgeSchedule)) {
+    console.error('[Maintenance] Invalid cron expression:', maintenanceSettings.purgeSchedule);
+    return;
+  }
+  
+  // Schedule new task
+  scheduledPurgeTask = cron.schedule(
+    maintenanceSettings.purgeSchedule,
+    async () => {
+      console.log('[Maintenance] Running scheduled purge...');
+      const results = await runPurge();
+      console.log('[Maintenance] Purge completed:', results);
+    },
+    { scheduled: true }
+  );
 
   maintenanceSettings.nextPurgeRun = calculateNextRun(maintenanceSettings.purgeSchedule);
+  console.log('[Maintenance] Auto-purge scheduled:', maintenanceSettings.purgeSchedule);
 }
 
 // Calculate next run time from cron
