@@ -11,6 +11,31 @@ import {
 
 const prisma = new PrismaClient();
 
+// Helper to truncate large objects for logging
+function truncateForLog(obj: any, maxDepth = 3, maxLength = 1000): any {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'string') {
+    return obj.length > maxLength ? obj.substring(0, maxLength) + '...' : obj;
+  }
+  if (typeof obj !== 'object') return obj;
+  if (maxDepth <= 0) return '[Object]';
+  
+  if (Array.isArray(obj)) {
+    return obj.slice(0, 10).map(item => truncateForLog(item, maxDepth - 1, maxLength));
+  }
+  
+  const result: Record<string, any> = {};
+  let count = 0;
+  for (const [key, value] of Object.entries(obj)) {
+    if (count++ >= 20) { // Limit to 20 keys
+      result['...'] = '[truncated]';
+      break;
+    }
+    result[key] = truncateForLog(value, maxDepth - 1, maxLength);
+  }
+  return result;
+}
+
 // Helper to write execution logs
 async function writeExecutionLog(
   executionId: string,
@@ -21,6 +46,9 @@ async function writeExecutionLog(
   details?: any
 ) {
   try {
+    // Truncate large details
+    const truncatedDetails = truncateForLog(details);
+    
     await prisma.executionLog.create({
       data: {
         executionId,
@@ -28,7 +56,7 @@ async function writeExecutionLog(
         message,
         nodeId,
         nodeName,
-        details: details ? JSON.stringify(details) : undefined,
+        details: truncatedDetails,
         timestamp: new Date()
       }
     });
@@ -208,14 +236,29 @@ export class WorkflowExecutor {
 
     console.log(`▶️ Executing node: ${node.name} (${node.type})`);
     
-    // Write execution log
+    // Log node parameters (resolved)
+    const resolvedParams: Record<string, any> = {};
+    for (const [key, value] of Object.entries(node.parameters || {})) {
+      if (typeof value === 'string' && (value.includes('{{') || value.includes('\n'))) {
+        // Skip large/multiline values for brevity
+        resolvedParams[key] = value.substring(0, 100) + (value.length > 100 ? '...' : '');
+      } else {
+        resolvedParams[key] = value;
+      }
+    }
+    
+    // Write execution log with input data
     await writeExecutionLog(
       this.executionId,
       'info',
       `Executing node: ${node.name} (${node.type})`,
       node.id,
       node.name,
-      { inputCount: inputItems.length }
+      { 
+        inputCount: inputItems.length,
+        input: inputItems.slice(0, 3).map(item => item.json), // First 3 items
+        parameters: resolvedParams
+      }
     );
 
     // Create node execution record
@@ -279,14 +322,18 @@ export class WorkflowExecutor {
       const duration = Date.now() - startTime;
       console.log(`✅ Node ${node.name} completed in ${duration}ms`);
       
-      // Write success log
+      // Write success log with output data
       await writeExecutionLog(
         this.executionId,
         'info',
         `Node ${node.name} completed successfully (${duration}ms)`,
         node.id,
         node.name,
-        { duration, outputCount: output.length }
+        { 
+          duration, 
+          outputCount: output.length,
+          output: output.slice(0, 3).map(item => item.json) // First 3 items
+        }
       );
 
       // Find and execute connected nodes
@@ -300,14 +347,19 @@ export class WorkflowExecutor {
     } catch (error: any) {
       console.error(`❌ Node ${node.name} failed:`, error);
       
-      // Write error log
+      // Write error log with input data for debugging
       await writeExecutionLog(
         this.executionId,
         'error',
         `Node ${node.name} failed: ${error.message}`,
         node.id,
         node.name,
-        { error: error.message, stack: error.stack }
+        { 
+          error: error.message, 
+          stack: error.stack,
+          input: inputItems.slice(0, 3).map(item => item.json),
+          parameters: node.parameters
+        }
       );
 
       await prisma.nodeExecution.update({
