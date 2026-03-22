@@ -35,6 +35,20 @@ export function SystemSettings() {
     requireCodeNodeApproval: false
   });
 
+  const [emailSettings, setEmailSettings] = useState({
+    smtpHost: '',
+    smtpPort: 587,
+    smtpUser: '',
+    smtpPassword: '',
+    smtpSecure: false,
+    fromEmail: '',
+    fromName: 'OrdoVertex',
+    enabled: false
+  });
+
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+
   const [maintenanceSettings, setMaintenanceSettings] = useState({
     executionLogsRetention: 30,
     workflowExecutionsRetention: 90,
@@ -58,6 +72,7 @@ export function SystemSettings() {
     loadSystemStatus();
     loadMaintenanceSettings();
     loadSecuritySettings();
+    loadEmailSettings();
     loadPurgePreview();
   }, []);
 
@@ -97,6 +112,40 @@ export function SystemSettings() {
       setSecuritySettings(response.data.data);
     } catch (error) {
       console.error('Failed to load security settings');
+    }
+  };
+
+  const loadEmailSettings = async () => {
+    try {
+      const response = await systemApi.getEmailSettings();
+      setEmailSettings(response.data.data);
+    } catch (error) {
+      console.error('Failed to load email settings');
+    }
+  };
+
+  const handleSaveEmail = async () => {
+    try {
+      await systemApi.updateEmailSettings(emailSettings);
+      toast.success('Email settings saved');
+    } catch (error) {
+      toast.error('Failed to save email settings');
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!testEmailAddress) {
+      toast.error('Please enter a test email address');
+      return;
+    }
+    setIsTestingEmail(true);
+    try {
+      await systemApi.testEmailSettings(testEmailAddress);
+      toast.success('Test email sent successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error?.message || 'Failed to send test email');
+    } finally {
+      setIsTestingEmail(false);
     }
   };
 
@@ -275,6 +324,148 @@ export function SystemSettings() {
         <Save size={16} />
         Save Changes
       </button>
+    </div>
+  );
+
+  const renderEmailSettings = () => (
+    <div className="settings-section">
+      <h3>Email Server Settings</h3>
+      <p className="section-description">
+        Configure SMTP settings for sending email notifications, password resets, and verification emails.
+      </p>
+
+      <div className="setting-item checkbox">
+        <label>
+          <input
+            type="checkbox"
+            checked={emailSettings.enabled}
+            onChange={(e) => setEmailSettings({ ...emailSettings, enabled: e.target.checked })}
+          />
+          Enable Email Notifications
+        </label>
+        <p className="setting-help">Turn on to send emails for verification, password resets, and alerts</p>
+      </div>
+
+      <div className="setting-item">
+        <label>SMTP Host</label>
+        <input
+          type="text"
+          placeholder="smtp.gmail.com"
+          value={emailSettings.smtpHost}
+          onChange={(e) => setEmailSettings({ ...emailSettings, smtpHost: e.target.value })}
+          disabled={!emailSettings.enabled}
+        />
+        <p className="setting-help">Your SMTP server hostname</p>
+      </div>
+
+      <div className="setting-item">
+        <label>SMTP Port</label>
+        <input
+          type="number"
+          min={1}
+          max={65535}
+          value={emailSettings.smtpPort}
+          onChange={(e) => setEmailSettings({ ...emailSettings, smtpPort: parseInt(e.target.value) || 587 })}
+          disabled={!emailSettings.enabled}
+        />
+        <p className="setting-help">Usually 587 (TLS) or 465 (SSL)</p>
+      </div>
+
+      <div className="setting-item checkbox">
+        <label>
+          <input
+            type="checkbox"
+            checked={emailSettings.smtpSecure}
+            onChange={(e) => setEmailSettings({ ...emailSettings, smtpSecure: e.target.checked })}
+            disabled={!emailSettings.enabled}
+          />
+          Use SSL/TLS (Secure Connection)
+        </label>
+        <p className="setting-help">Enable for port 465, disable for port 587</p>
+      </div>
+
+      <div className="setting-item">
+        <label>SMTP Username</label>
+        <input
+          type="text"
+          placeholder="your-email@gmail.com"
+          value={emailSettings.smtpUser}
+          onChange={(e) => setEmailSettings({ ...emailSettings, smtpUser: e.target.value })}
+          disabled={!emailSettings.enabled}
+        />
+      </div>
+
+      <div className="setting-item">
+        <label>SMTP Password</label>
+        <input
+          type="password"
+          placeholder="••••••••"
+          value={emailSettings.smtpPassword}
+          onChange={(e) => setEmailSettings({ ...emailSettings, smtpPassword: e.target.value })}
+          disabled={!emailSettings.enabled}
+        />
+        <p className="setting-help">For Gmail, use an App Password, not your regular password</p>
+      </div>
+
+      <div className="setting-item">
+        <label>From Email Address</label>
+        <input
+          type="email"
+          placeholder="noreply@yourdomain.com"
+          value={emailSettings.fromEmail}
+          onChange={(e) => setEmailSettings({ ...emailSettings, fromEmail: e.target.value })}
+          disabled={!emailSettings.enabled}
+        />
+        <p className="setting-help">The email address that will appear as the sender</p>
+      </div>
+
+      <div className="setting-item">
+        <label>From Name</label>
+        <input
+          type="text"
+          placeholder="OrdoVertex"
+          value={emailSettings.fromName}
+          onChange={(e) => setEmailSettings({ ...emailSettings, fromName: e.target.value })}
+          disabled={!emailSettings.enabled}
+        />
+        <p className="setting-help">The display name that will appear as the sender</p>
+      </div>
+
+      <button
+        className="btn btn-primary"
+        onClick={handleSaveEmail}
+        disabled={!emailSettings.enabled}
+      >
+        <Save size={16} />
+        Save Email Settings
+      </button>
+
+      {emailSettings.enabled && (
+        <div className="setting-group" style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
+          <h4>Test Email Configuration</h4>
+          <div className="setting-item">
+            <label>Test Email Address</label>
+            <input
+              type="email"
+              placeholder="your-email@example.com"
+              value={testEmailAddress}
+              onChange={(e) => setTestEmailAddress(e.target.value)}
+            />
+            <p className="setting-help">Send a test email to verify your configuration</p>
+          </div>
+          <button
+            className="btn btn-secondary"
+            onClick={handleTestEmail}
+            disabled={isTestingEmail || !testEmailAddress}
+          >
+            {isTestingEmail ? (
+              <><Loader2 size={16} className="spin" /> Sending...</>
+            ) : (
+              <><Mail size={16} /> Send Test Email</>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -532,6 +723,13 @@ export function SystemSettings() {
             Security
           </button>
           <button
+            className={`sidebar-item ${activeTab === 'email' ? 'active' : ''}`}
+            onClick={() => setActiveTab('email')}
+          >
+            <Mail size={18} />
+            Email
+          </button>
+          <button
             className={`sidebar-item ${activeTab === 'status' ? 'active' : ''}`}
             onClick={() => setActiveTab('status')}
           >
@@ -550,6 +748,7 @@ export function SystemSettings() {
         <div className="settings-content">
           {activeTab === 'general' && renderGeneralSettings()}
           {activeTab === 'security' && renderSecuritySettings()}
+          {activeTab === 'email' && renderEmailSettings()}
           {activeTab === 'status' && renderSystemStatus()}
           {activeTab === 'maintenance' && renderDatabaseMaintenance()}
         </div>

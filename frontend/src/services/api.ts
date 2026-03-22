@@ -225,7 +225,10 @@ export const systemApi = {
   getPurgePreview: () => api.get('/api/system/maintenance/purge-preview'),
   runManualPurge: () => api.post('/api/system/maintenance/purge'),
   getSecuritySettings: () => api.get('/api/system/security'),
-  updateSecuritySettings: (settings: any) => api.patch('/api/system/security', settings)
+  updateSecuritySettings: (settings: any) => api.patch('/api/system/security', settings),
+  getEmailSettings: () => api.get('/api/system/email'),
+  updateEmailSettings: (settings: any) => api.patch('/api/system/email', settings),
+  testEmailSettings: (testEmail: string) => api.post('/api/system/email/test', { testEmail })
 };
 
 // Templates API

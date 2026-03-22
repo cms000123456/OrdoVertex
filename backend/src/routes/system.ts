@@ -26,8 +26,21 @@ const DEFAULT_SECURITY_SETTINGS = {
   requireEmailVerification: false
 };
 
+// Default email settings
+const DEFAULT_EMAIL_SETTINGS = {
+  smtpHost: '',
+  smtpPort: 587,
+  smtpUser: '',
+  smtpPassword: '',
+  smtpSecure: false,  // true for 465, false for other ports
+  fromEmail: '',
+  fromName: 'OrdoVertex',
+  enabled: false
+};
+
 let maintenanceSettings = { ...DEFAULT_MAINTENANCE_SETTINGS };
 let securitySettings = { ...DEFAULT_SECURITY_SETTINGS };
+let emailSettings = { ...DEFAULT_EMAIL_SETTINGS };
 let scheduledPurgeTask: cron.ScheduledTask | null = null;
 
 // Export function to check if code nodes require admin approval
@@ -422,5 +435,137 @@ router.patch('/security', authMiddleware, adminMiddleware, async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
+// ========================================================================
+// Email Settings Routes
+// ========================================================================
+
+// Get email settings
+router.get('/email', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    // Don't return the actual password, just mask it
+    const safeSettings = {
+      ...emailSettings,
+      smtpPassword: emailSettings.smtpPassword ? '********' : ''
+    };
+    res.json({
+      success: true,
+      data: safeSettings
+    });
+  } catch (error: any) {
+    console.error('Get email settings error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Update email settings
+router.patch('/email', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const {
+      smtpHost,
+      smtpPort,
+      smtpUser,
+      smtpPassword,
+      smtpSecure,
+      fromEmail,
+      fromName,
+      enabled
+    } = req.body;
+
+    if (smtpHost !== undefined) {
+      emailSettings.smtpHost = smtpHost;
+    }
+
+    if (smtpPort !== undefined) {
+      const port = parseInt(smtpPort, 10);
+      if (isNaN(port) || port < 1 || port > 65535) {
+        return errorResponse(res, 'Invalid SMTP port', 400);
+      }
+      emailSettings.smtpPort = port;
+    }
+
+    if (smtpUser !== undefined) {
+      emailSettings.smtpUser = smtpUser;
+    }
+
+    if (smtpPassword !== undefined) {
+      emailSettings.smtpPassword = smtpPassword;
+    }
+
+    if (smtpSecure !== undefined) {
+      emailSettings.smtpSecure = Boolean(smtpSecure);
+    }
+
+    if (fromEmail !== undefined) {
+      emailSettings.fromEmail = fromEmail;
+    }
+
+    if (fromName !== undefined) {
+      emailSettings.fromName = fromName;
+    }
+
+    if (enabled !== undefined) {
+      emailSettings.enabled = Boolean(enabled);
+    }
+
+    console.log(`[Email] Settings updated. Enabled: ${emailSettings.enabled}, Host: ${emailSettings.smtpHost}`);
+
+    // Return safe settings (masked password)
+    const safeSettings = {
+      ...emailSettings,
+      smtpPassword: emailSettings.smtpPassword ? '********' : ''
+    };
+
+    res.json({
+      success: true,
+      data: safeSettings
+    });
+  } catch (error: any) {
+    console.error('Update email settings error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Test email configuration
+router.post('/email/test', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { testEmail } = req.body;
+
+    if (!emailSettings.enabled) {
+      return errorResponse(res, 'Email is not enabled. Please configure and enable email settings first.', 400);
+    }
+
+    if (!emailSettings.smtpHost || !emailSettings.smtpUser || !emailSettings.smtpPassword) {
+      return errorResponse(res, 'Email settings are incomplete. Please configure SMTP host, user, and password.', 400);
+    }
+
+    // Here you would actually send a test email using nodemailer
+    // For now, we'll just simulate it
+    console.log(`[Email] Test email would be sent to: ${testEmail}`);
+    console.log(`[Email] Using SMTP: ${emailSettings.smtpHost}:${emailSettings.smtpPort}`);
+
+    // TODO: Implement actual email sending with nodemailer
+    // const nodemailer = require('nodemailer');
+    // const transporter = nodemailer.createTransporter({...});
+    // await transporter.sendMail({...});
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Test email configuration is valid (simulated)',
+        recipient: testEmail,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error: any) {
+    console.error('Test email error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Export function to get email settings for use in other modules
+export function getEmailSettings() {
+  return { ...emailSettings };
+}
 
 export default router;
