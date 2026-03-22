@@ -119,7 +119,7 @@ The intuitive drag-and-drop interface for building automation workflows:
 
 ---
 
-# 🚀 Quick Start
+## 🚀 Quick Start
 
 Get OrdoVertex running in under 5 minutes with Docker Compose.
 
@@ -397,6 +397,25 @@ ordovertex/
 └── docker-compose.yml
 ```
 
+### Adding New Nodes
+
+1. Create a new file in `backend/src/nodes/` (triggers, actions, or ai)
+2. Define the node using the `NodeType` interface
+3. Register it in `backend/src/nodes/index.ts`
+
+```typescript
+export const myNode: NodeType = {
+  name: 'myNode',
+  displayName: 'My Node',
+  category: 'Actions',
+  // ... other properties
+  execute: async (context) => {
+    // Your logic here
+    return { success: true, output: [] };
+  }
+};
+```
+
 ## 🛠️ System Administration
 
 ### System Settings (Admin Only)
@@ -424,27 +443,6 @@ Configure automatic cleanup of old logs:
 - Workflow executions retention (default: 90 days)
 - API request logs retention (default: 7 days)
 - Auto-purge schedule (default: Daily at 2 AM)
-
----
-
-### Adding New Nodes
-
-1. Create a new file in `backend/src/nodes/` (core or actions)
-2. Define the node using the `NodeType` interface
-3. Register it in `backend/src/nodes/index.ts`
-
-```typescript
-export const myNode: NodeType = {
-  name: 'myNode',
-  displayName: 'My Node',
-  category: 'Actions',
-  // ... other properties
-  execute: async (context) => {
-    // Your logic here
-    return { success: true, output: [] };
-  }
-};
-```
 
 ## 🧪 Testing
 
