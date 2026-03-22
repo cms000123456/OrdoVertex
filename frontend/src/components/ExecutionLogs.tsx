@@ -12,11 +12,46 @@ import {
   ChevronDown,
   ChevronUp,
   Terminal,
-  Trash2
+  Trash2,
+  Copy,
+  X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { executionLogsApi, executionsApi } from '../services/api';
 import './ExecutionLogs.css';
+
+// Syntax highlighting component for JSON
+function SyntaxHighlight({ json }: { json: any }) {
+  const jsonString = JSON.stringify(json, null, 2);
+  
+  const highlightSyntax = (str: string) => {
+    return str.split('\n').map((line, i) => {
+      // Highlight keys
+      line = line.replace(/"([^"]+)":/g, '<span class="json-key">"$1"</span>:');
+      // Highlight strings
+      line = line.replace(/: "([^"]*)"/g, ': <span class="json-string">"$1"</span>');
+      // Highlight numbers
+      line = line.replace(/: (\d+)(,?)$/g, ': <span class="json-number">$1</span>$2');
+      // Highlight booleans
+      line = line.replace(/: (true|false)(,?)$/g, ': <span class="json-boolean">$1</span>$2');
+      // Highlight null
+      line = line.replace(/: (null)(,?)$/g, ': <span class="json-null">$1</span>$2');
+      
+      return (
+        <div key={i} className="code-line">
+          <span className="line-number">{(i + 1).toString().padStart(3, ' ')}</span>
+          <span className="line-content" dangerouslySetInnerHTML={{ __html: line }} />
+        </div>
+      );
+    });
+  };
+  
+  return (
+    <pre className="syntax-highlight">
+      {highlightSyntax(jsonString)}
+    </pre>
+  );
+}
 
 interface ExecutionLog {
   id: string;
@@ -357,16 +392,56 @@ export function ExecutionLogs() {
                     
                     {expandedLogs.has(log.id) && (log.details || log.metadata) && (
                       <div className="log-details">
+                        <div className="log-details-header">
+                          <span className="log-timestamp">
+                            {new Date(log.timestamp).toLocaleString()}
+                          </span>
+                          {log.nodeName && (
+                            <span className="log-node-tag">
+                              Node: {log.nodeName}
+                            </span>
+                          )}
+                        </div>
+                        
                         {log.details && (
                           <div className="details-section">
-                            <h4>Details</h4>
-                            <pre>{JSON.stringify(log.details, null, 2)}</pre>
+                            <div className="details-header">
+                              <h4>Details</h4>
+                              <button 
+                                className="copy-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(JSON.stringify(log.details, null, 2));
+                                  toast.success('Copied to clipboard');
+                                }}
+                              >
+                                Copy
+                              </button>
+                            </div>
+                            <div className="code-block">
+                              <SyntaxHighlight json={log.details} />
+                            </div>
                           </div>
                         )}
+                        
                         {log.metadata && (
                           <div className="details-section">
-                            <h4>Metadata</h4>
-                            <pre>{JSON.stringify(log.metadata, null, 2)}</pre>
+                            <div className="details-header">
+                              <h4>Metadata</h4>
+                              <button 
+                                className="copy-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(JSON.stringify(log.metadata, null, 2));
+                                  toast.success('Copied to clipboard');
+                                }}
+                              >
+                                Copy
+                              </button>
+                            </div>
+                            <div className="code-block">
+                              <SyntaxHighlight json={log.metadata} />
+                            </div>
                           </div>
                         )}
                       </div>
