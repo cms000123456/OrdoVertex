@@ -164,6 +164,46 @@ Check MFA status.
 ### POST /auth/mfa/backup
 Verify backup code during login.
 
+### GET /auth/saml/config
+Get SAML SSO configuration (admin only).
+
+### POST /auth/saml/config
+Create SAML SSO configuration (admin only).
+
+**Request Body:**
+```json
+{
+  "name": "Okta",
+  "entryPoint": "https://company.okta.com/app/...",
+  "issuer": "ordovertex",
+  "cert": "-----BEGIN CERTIFICATE-----...",
+  "enabled": true
+}
+```
+
+### PATCH /auth/saml/config/:id
+Update SAML configuration (admin only).
+
+### DELETE /auth/saml/config/:id
+Delete SAML configuration (admin only).
+
+### GET /auth/saml/providers
+Get list of enabled SAML providers (public).
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Okta",
+      "enabled": true
+    }
+  ]
+}
+```
+
 ---
 
 ## Workflow Routes
@@ -260,6 +300,42 @@ Import workflow from JSON.
 {
   "workflow": { /* workflow object */ },
   "name": "Imported Workflow Name"  // Optional
+}
+```
+
+### POST /workflows/import/validate
+Validate workflow import without saving.
+
+**Request Body:** Same as import.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "valid": true,
+    "errors": [],
+    "warnings": ["Node 'X' has no connection"]
+  }
+}
+```
+
+### POST /workflows/:id/move
+Move workflow to a different workspace (or personal).
+
+**Request Body:**
+```json
+{
+  "workspaceId": "workspace-uuid"  // null to move to personal
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Workflow moved to workspace",
+  "data": { /* updated workflow */ }
 }
 ```
 
@@ -401,6 +477,11 @@ Create a new credential.
   "workspaceId": "uuid"  // Optional
 }
 ```
+
+### PUT /credentials/:id
+Update a credential.
+
+**Request Body:** Same as POST /credentials.
 
 ### DELETE /credentials/:id
 Delete a credential.
@@ -708,6 +789,224 @@ curl -X POST http://localhost:3001/api/workflows \
 curl -X POST http://localhost:3001/api/workflows/WORKFLOW_ID/execute \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
+
+---
+
+## Groups
+
+Groups allow organizing users and assigning permissions across multiple workspaces.
+
+### GET /groups
+List all groups accessible to the current user.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Engineering Team",
+      "description": "Engineering department users",
+      "workspaceId": null,
+      "workspaces": [{ "id": "uuid", "name": "Workspace Name" }],
+      "members": [{ "userId": "uuid", "role": "member" }],
+      "createdAt": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+### POST /groups
+Create a new group.
+
+**Request Body:**
+```json
+{
+  "name": "Engineering Team",
+  "description": "Engineering department users",
+  "workspaceIds": ["uuid1", "uuid2"],
+  "memberIds": ["user-uuid1", "user-uuid2"]
+}
+```
+
+### GET /groups/workspace/:workspaceId
+Get groups for a specific workspace.
+
+### PATCH /groups/:id
+Update group details.
+
+### DELETE /groups/:id
+Delete a group.
+
+### POST /groups/:id/members
+Add a member to a group.
+
+**Request Body:**
+```json
+{
+  "userId": "user-uuid",
+  "role": "member"
+}
+```
+
+### DELETE /groups/:id/members/:memberId
+Remove a member from a group.
+
+### POST /groups/:id/workspaces
+Add workspace access to a group.
+
+**Request Body:**
+```json
+{
+  "workspaceId": "workspace-uuid",
+  "role": "editor"
+}
+```
+
+---
+
+## System (Admin Only)
+
+System administration endpoints. Requires admin role.
+
+### GET /system/stats
+Get system statistics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "counts": {
+      "workflows": 150,
+      "executions": 5000,
+      "users": 25,
+      "executionLogs": 10000,
+      "nodeExecutions": 25000
+    },
+    "database": {
+      "size": "1.2 GB",
+      "tables": [...]
+    }
+  }
+}
+```
+
+### GET /system/maintenance
+Get database maintenance settings.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "executionLogsRetention": 30,
+    "workflowExecutionsRetention": 90,
+    "apiRequestLogsRetention": 7,
+    "enableAutoPurge": true,
+    "purgeSchedule": "0 2 * * *",
+    "lastPurgeRun": "2024-01-01T02:00:00Z",
+    "nextPurgeRun": "2024-01-02T02:00:00Z"
+  }
+}
+```
+
+### PATCH /system/maintenance
+Update maintenance settings.
+
+**Request Body:**
+```json
+{
+  "executionLogsRetention": 30,
+  "workflowExecutionsRetention": 90,
+  "apiRequestLogsRetention": 7,
+  "enableAutoPurge": true,
+  "purgeSchedule": "0 2 * * *"
+}
+```
+
+### POST /system/maintenance/purge
+Manually trigger database purge.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Purge completed successfully",
+    "results": {
+      "executionLogs": 1500,
+      "workflowExecutions": 300,
+      "nodeExecutions": 900
+    },
+    "timestamp": "2024-01-01T12:00:00Z"
+  }
+}
+```
+
+### GET /system/security
+Get security settings.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "requireCodeNodeApproval": false,
+    "sessionTimeout": 60,
+    "maxLoginAttempts": 5,
+    "requireEmailVerification": false
+  }
+}
+```
+
+### PATCH /system/security
+Update security settings.
+
+**Request Body:**
+```json
+{
+  "requireCodeNodeApproval": true,
+  "sessionTimeout": 60,
+  "maxLoginAttempts": 5,
+  "requireEmailVerification": false
+}
+```
+
+---
+
+## App Logs (Admin Only)
+
+View application log files for troubleshooting.
+
+### GET /logs
+List available log files.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "files": [
+      {
+        "name": "api.log",
+        "size": 1024000,
+        "modified": "2024-01-01T12:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+### GET /logs/:logName
+View log file content.
+
+**Query Parameters:**
+- `lines` - Number of lines to return (default: 100, max: 1000)
+
+### GET /logs/:logName/download
+Download log file.
 
 ---
 
