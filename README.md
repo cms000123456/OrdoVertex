@@ -10,12 +10,14 @@
 ## 🌟 Features
 
 - **Visual Workflow Editor**: Drag-and-drop interface built with React Flow
-- **32+ Built-in Nodes**: HTTP, Code, SQL, Email, CSV, AI Agents, LDAP, Text Parser, Image Display, and more
+- **33+ Built-in Nodes**: HTTP, Code (sandboxed), SQL, Email, CSV, AI Agents, LDAP, Text Parser, Image Display, and more
 - **AI-Powered Workflows**: Multi-provider LLM support (OpenAI, Anthropic, Gemini, Kimi, Ollama)
 - **Multiple Trigger Types**: Webhook, Schedule (Cron), Manual, File Watch
-- **Team Collaboration**: Workspaces for sharing workflows and credentials with role-based access
-- **Enterprise Security**: SAML SSO, MFA/TOTP, Role-based access control
-- **Execution Monitoring**: Full logging, alerting, and audit trails
+- **Team Collaboration**: Workspaces and Groups for sharing workflows and credentials with role-based access
+- **Enterprise Security**: SAML SSO, MFA/TOTP, RBAC, Code Sandboxing, Admin Controls
+- **Execution Monitoring**: Full logging with input/output data, alerting, and audit trails
+- **Database Maintenance**: Automated log purging with configurable retention policies
+- **Admin Tools**: System settings, app logs viewer, workflow management
 - **Scalable Architecture**: Queue-based execution with BullMQ and Redis
 - **Export/Import**: Share workflows as JSON files
 - **Docker Ready**: Complete Docker Compose stack for easy deployment
@@ -56,22 +58,71 @@ The intuitive drag-and-drop interface for building automation workflows:
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Frontend      │────▶│   API Server    │────▶│   PostgreSQL    │
-│   (React)       │     │   (Express)     │     │   (Database)    │
-└─────────────────┘     └────────┬────────┘     └─────────────────┘
-                                 │
-                                 ▼
-                        ┌─────────────────┐
-                        │      Redis      │
-                        │   (Queue/Cache) │
-                        └────────┬────────┘
-                                 │
-                                 ▼
-                        ┌─────────────────┐
-                        │  Worker Process │
-                        │  (BullMQ)       │
-                        └─────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              OrdoVertex Platform                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐       │
+│  │   Frontend      │────▶│   API Server    │────▶│   PostgreSQL    │       │
+│  │   (React)       │     │   (Express)     │     │   (Database)    │       │
+│  │                 │◀────│                 │     │                 │       │
+│  │ - React Flow    │     │ - REST API      │     │ - Prisma ORM    │       │
+│  │ - Zustand       │     │ - Auth/JWT      │     │ - Workflows     │       │
+│  │ - React Query   │     │ - Rate Limiting │     │ - Credentials   │       │
+│  └─────────────────┘     └────────┬────────┘     └─────────────────┘       │
+│                                   │                                         │
+│                                   ▼                                         │
+│                          ┌─────────────────┐                                │
+│                          │      Redis      │                                │
+│                          │   (Queue/Cache) │                                │
+│                          └────────┬────────┘                                │
+│                                   │                                         │
+│                                   ▼                                         │
+│                          ┌─────────────────┐                                │
+│                          │  Worker Process │                                │
+│                          │  (BullMQ)       │                                │
+│                          │                 │                                │
+│                          │ - Job Queue     │                                │
+│                          │ - Scheduling    │                                │
+│                          └─────────────────┘                                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+## Security Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Security Layers                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Layer 1: Network                                               │
+│  ├── CORS (configurable origins)                               │
+│  ├── Security Headers (Helmet.js: CSP, HSTS, X-Frame-Options)  │
+│  └── Rate Limiting (120 req/min API, 5/15min auth)             │
+│                                                                 │
+│  Layer 2: Authentication                                        │
+│  ├── JWT (24h expiry, configurable)                            │
+│  ├── bcrypt (password hashing)                                 │
+│  ├── MFA/TOTP support                                          │
+│  └── SAML 2.0 SSO                                              │
+│                                                                 │
+│  Layer 3: Authorization                                         │
+│  ├── Role-based access (Admin/User)                            │
+│  ├── Workspace-level permissions                               │
+│  └── Code node admin approval (optional)                       │
+│                                                                 │
+│  Layer 4: Data Protection                                       │
+│  ├── AES-256-GCM credential encryption                         │
+│  ├── SQL injection prevention (parameterized queries)          │
+│  └── SSRF protection (internal IPs blocked)                    │
+│                                                                 │
+│  Layer 5: Execution Sandboxing                                  │
+│  ├── JavaScript: vm module (no Node.js APIs)                   │
+│  ├── Python: import whitelist (25 modules)                     │
+│  ├── Static analysis (dangerous pattern blocking)              │
+│  └── Timeouts & output limits                                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## 🚀 Quick Start
@@ -227,11 +278,20 @@ See [AI Workflow Guide](AI_WORKFLOW_GUIDE.md) for detailed documentation.
 - ✅ **RBAC** - Role-based access control (Admin, User)
 - ✅ **API Keys** - Secure programmatic access
 - ✅ **Credential Encryption** - AES-256-GCM for sensitive data
-- ✅ **Audit Logging** - Full execution history
-- ✅ **SSRF Protection** - Blocked internal IP ranges
+- ✅ **Audit Logging** - Full execution history with input/output data
+- ✅ **Security Headers** - CSP, HSTS, X-Frame-Options via Helmet.js
+- ✅ **SSRF Protection** - Internal IPs and cloud metadata blocked
 - ✅ **SQL Injection Prevention** - Parameterized queries only
+- ✅ **Code Sandboxing** - Isolated JavaScript/Python execution
+- ✅ **Admin Controls** - Optional approval required for code nodes
 
-See [Security Audit Report](SECURITY_AUDIT.md) for details.
+### Security Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Security Policy](SECURITY.md) | Current security posture and measures |
+| [Security Audit](SECURITY_AUDIT.md) | Detailed security assessment |
+| [Penetration Testing Guide](SECURITY.md#penetration-testing-guide) | Security testing commands |
 
 ## 📚 API Documentation
 
@@ -261,6 +321,31 @@ GET  /api/templates/:id
 POST /api/templates/:id/create
 ```
 
+### System (Admin)
+```http
+GET    /api/system/stats
+GET    /api/system/maintenance
+PATCH  /api/system/maintenance
+POST   /api/system/maintenance/purge
+GET    /api/system/maintenance/purge-preview
+GET    /api/system/security          # Get security settings
+PATCH  /api/system/security          # Update security settings
+```
+
+### Admin Workflows
+```http
+GET    /api/admin/workflows          # List all workflows
+POST   /api/admin/workflows/:id/move # Move between workspaces
+PATCH  /api/admin/workflows/:id/toggle # Enable/disable
+GET    /api/admin/system-stats       # System statistics
+```
+
+### App Logs
+```http
+GET /api/logs/files                  # List log files
+GET /api/logs/files/:filename        # View log content
+```
+
 ### Webhooks
 ```http
 POST /webhook/:workflowId/:path?
@@ -276,31 +361,77 @@ POST /webhook/:workflowId/:path?
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
 | `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
 
+### Security & Features
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CODE_NODE_REQUIRE_ADMIN` | Require admin approval for code nodes | `false` |
+| `CODE_EXEC_TIMEOUT` | Code execution timeout (ms) | `30000` |
+| `JWT_EXPIRES_IN` | JWT token lifetime | `24h` |
+| `CORS_ORIGIN` | Allowed CORS origins (comma-separated) | `*` (dev) / none (prod) |
+
 ### Optional
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `CORS_ORIGIN` | Allowed CORS origins (comma-separated) | `*` (dev) / none (prod) |
 | `NODE_ENV` | Environment mode | `development` |
 | `PORT` | API server port | `3001` |
+| `ALLOWED_WATCH_DIRECTORIES` | Allowed directories for File Watch | `/data` |
 
 ## 🛠️ Development
 
 ### Project Structure
 ```
 ordovertex/
-├── backend/           # Express.js API
+├── backend/                    # Express.js API
 │   ├── src/
-│   │   ├── nodes/     # Node implementations
-│   │   ├── routes/    # API routes
-│   │   ├── engine/    # Workflow execution engine
-│   │   └── utils/     # Utilities
-│   └── prisma/        # Database schema
-├── frontend/          # React SPA
+│   │   ├── nodes/              # Node implementations (33 nodes)
+│   │   │   ├── triggers/       # Trigger nodes (webhook, schedule, etc.)
+│   │   │   ├── actions/        # Action nodes (HTTP, Code, Email, etc.)
+│   │   │   └── ai/             # AI nodes (AI Agent, Embeddings, etc.)
+│   │   ├── routes/             # API routes
+│   │   ├── engine/             # Workflow execution engine
+│   │   ├── utils/              # Security, encryption, sandboxing
+│   │   └── services/           # External service integrations
+│   └── prisma/                 # Database schema
+├── frontend/                   # React SPA
 │   └── src/
-│       ├── components/
-│       └── store/     # State management
+│       ├── components/         # React components
+│       │   └── nodes/          # Node UI components
+│       ├── store/              # Zustand state management
+│       └── services/           # API service layer
+├── SECURITY.md                 # Security documentation
+├── SECURITY_AUDIT.md           # Security audit report
 └── docker-compose.yml
 ```
+
+## 🛠️ System Administration
+
+### System Settings (Admin Only)
+
+Administrators can configure platform-wide settings:
+
+| Section | Settings |
+|---------|----------|
+| **General** | Site name, theme, registration, default role |
+| **Security** | Code node approval, session timeout, login attempts, email verification |
+| **Maintenance** | Log retention, auto-purge schedule, manual purge |
+| **System Status** | Database stats, table sizes, counts |
+
+### Security Settings
+
+**Require Admin Approval for Code Nodes**
+- When enabled, only administrators can create or modify workflows containing Code nodes
+- Prevents unauthorized code execution
+- Toggle in: System Settings → Security
+
+### Database Maintenance
+
+Configure automatic cleanup of old logs:
+- Execution logs retention (default: 30 days)
+- Workflow executions retention (default: 90 days)
+- API request logs retention (default: 7 days)
+- Auto-purge schedule (default: Daily at 2 AM)
+
+---
 
 ### Adding New Nodes
 
@@ -341,10 +472,11 @@ npm test
 | [Node Development Guide](NODE_DEVELOPMENT_GUIDE.md) | Create custom nodes |
 | [API Documentation](API.md) | Full REST API reference |
 | [Deployment Guide](DEPLOYMENT.md) | Production deployment instructions |
-| [Security Policy](SECURITY.md) | Reporting vulnerabilities |
-| [Security Audit](SECURITY_AUDIT.md) | Security assessment and fixes |
+| [Security Policy](SECURITY.md) | Current security posture and measures |
+| [Security Audit](SECURITY_AUDIT.md) | Detailed security assessment and fixes |
 | [Route Coverage](ROUTE_COVERAGE.md) | API to GUI coverage report |
 | [Test Scheme](TEST_SCHEME.md) | Testing architecture and plan |
+| [CHANGELOG](CHANGELOG.md) | Version history and changes |
 
 ## 📄 License
 
