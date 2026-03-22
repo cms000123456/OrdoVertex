@@ -200,6 +200,14 @@ export const apiKeysApi = {
   delete: (id: string) => api.delete(`/api/api-keys/${id}`)
 };
 
+// Admin API
+export const adminApi = {
+  getAllWorkflows: () => api.get('/api/admin/workflows'),
+  deleteWorkflow: (id: string) => api.delete(`/api/admin/workflows/${id}`),
+  toggleWorkflow: (id: string) => api.patch(`/api/admin/workflows/${id}/toggle`),
+  moveWorkflow: (id: string, workspaceId: string | null) => api.post(`/api/admin/workflows/${id}/move`, { workspaceId })
+};
+
 // Templates API
 export const templatesApi = {
   getAll: (params?: any) => api.get('/api/templates', { params }),

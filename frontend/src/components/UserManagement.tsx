@@ -11,7 +11,7 @@ interface User {
   role: 'user' | 'admin';
   createdAt: string;
   updatedAt: string;
-  _count: {
+  _count?: {
     workflows: number;
   };
 }
@@ -102,7 +102,11 @@ export function UserManagement() {
         role: newUser.role
       });
       toast.success('User created successfully');
-      setUsers([response.data.data.user, ...users]);
+      const newUserWithCount = {
+        ...response.data.data.user,
+        _count: { workflows: 0 }
+      };
+      setUsers([newUserWithCount, ...users]);
       setShowAddModal(false);
       setNewUser({ email: '', name: '', password: '', role: 'user' });
     } catch (error: any) {
@@ -234,7 +238,7 @@ export function UserManagement() {
                     </div>
                   </td>
                   <td className="workflows-count">
-                    {user._count.workflows}
+                    {user._count?.workflows ?? 0}
                   </td>
                   <td className="date-cell">
                     {formatDate(user.createdAt)}

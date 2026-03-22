@@ -23,6 +23,8 @@ import { MFASetup } from './components/MFASetup';
 import { SAMLConfig } from './components/SAMLConfig';
 import { ExecutionLogs } from './components/ExecutionLogs';
 import { GroupsTeamsManager } from './components/GroupsTeamsManager';
+import { WorkspaceManagement } from './components/WorkspaceManagement';
+import { AdminWorkflows } from './components/AdminWorkflows';
 import { PerformanceMonitor } from './components/PerformanceMonitor';
 import { Onboarding } from './components/Onboarding';
 import { WorkspaceManager } from './components/WorkspaceManager';
@@ -199,10 +201,11 @@ function App() {
           <Route path="/workflows/:id" element={<WorkflowEditorWithData />} />
           {/* Admin routes */}
           <Route path="/admin/users" element={<UserManagement />} />
-          <Route path="/admin/workflows" element={<div style={{ padding: 40, textAlign: 'center' }}><h2>All Workflows</h2><p>Admin page placeholder - Coming soon</p></div>} />
+          <Route path="/admin/workflows" element={<AdminWorkflows />} />
           <Route path="/admin/api-keys" element={<ApiKeyManagement />} />
           <Route path="/admin/saml" element={<SAMLConfig />} />
           <Route path="/admin/execution-logs" element={<ExecutionLogs />} />
+          <Route path="/admin/workspaces" element={<WorkspaceManagement />} />
           <Route path="/admin/groups" element={<GroupsTeamsManager />} />
           <Route path="/admin/performance" element={<PerformanceMonitor />} />
           <Route path="/admin/settings" element={<SystemSettings />} />

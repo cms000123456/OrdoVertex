@@ -11,6 +11,46 @@ import {
 
 const prisma = new PrismaClient();
 
+// Resolve template expressions like {{ $json.field }} or {{ $json["field-with-dash"] }}
+function resolveExpression(value: any, items: any[]): any {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  // Check if entire value is an expression
+  const fullMatch = value.match(/^\s*\{\{\s*(.+?)\s*\}\}\s*$/);
+  if (fullMatch) {
+    const expr = fullMatch[1].trim();
+    const result = evaluateExpression(expr, items);
+    return result !== undefined ? result : value;
+  }
+
+  // Replace expressions within string
+  return value.replace(/\{\{\s*(.+?)\s*\}\}/g, (match, expr) => {
+    const result = evaluateExpression(expr.trim(), items);
+    return result !== undefined ? String(result) : match;
+  });
+}
+
+// Evaluate expression like $json.field or $json["field"]
+function evaluateExpression(expr: string, items: any[]): any {
+  // Handle $json accessor
+  const jsonMatch = expr.match(/^\$json(?:\.(\w+)|\[(['"`])(.+?)\2\])?/);
+  if (jsonMatch) {
+    const item = items[0] || { json: {} };
+    const dotField = jsonMatch[1];
+    const bracketField = jsonMatch[3];
+    const field = dotField || bracketField;
+    
+    if (field) {
+      return item.json?.[field];
+    }
+    return item.json;
+  }
+  
+  return undefined;
+}
+
 export class WorkflowExecutor {
   private context: ExecutionContext;
   private executionId: string;
@@ -139,7 +179,8 @@ export class WorkflowExecutor {
         userId: this.context.userId,
         getInputData: () => inputItems,
         getNodeParameter: (name: string, fallback?: any) => {
-          return node.parameters?.[name] ?? fallback;
+          const rawValue = node.parameters?.[name] ?? fallback;
+          return resolveExpression(rawValue, inputItems);
         },
         continueOnFail: () => false
       };

@@ -239,6 +239,9 @@ export const httpRequestNode: NodeType = {
       if (!url) {
         throw new Error('URL is required');
       }
+      
+      // Log the actual URL being called for debugging
+      console.log(`[HTTP Request] ${method} ${url}`);
 
       // SSRF Protection - Block internal URLs
       const parsedUrl = new URL(url);
@@ -278,9 +281,17 @@ export const httpRequestNode: NodeType = {
       const config: AxiosRequestConfig = {
         method: method as Method,
         url,
-        ...options,
-        httpsAgent: allowUnauthorizedCerts ? { rejectUnauthorized: false } : undefined
+        httpsAgent: allowUnauthorizedCerts ? { rejectUnauthorized: false } : undefined,
+        // Default to text response to handle various APIs
+        responseType: 'text',
+        // Apply user options
+        ...options
       };
+      
+      // Ensure headers are merged properly
+      if (options.headers) {
+        config.headers = { ...config.headers, ...options.headers };
+      }
 
       // Load credential if enabled
       let credentialData: Record<string, any> | null = null;
@@ -389,6 +400,36 @@ export const httpRequestNode: NodeType = {
       }
 
       const response = await axios(config);
+      
+      let responseBody = response.data;
+      
+      // Try to parse JSON if response is a string that looks like JSON
+      if (typeof responseBody === 'string') {
+        const contentType = response.headers['content-type'] || '';
+        if (contentType.includes('json') || responseBody.trim().startsWith('{') || responseBody.trim().startsWith('[')) {
+          try {
+            responseBody = JSON.parse(responseBody);
+          } catch (e) {
+            // Keep as string if parsing fails
+          }
+        }
+      }
+      
+      // Handle empty responses
+      if (!responseBody || (typeof responseBody === 'string' && responseBody.trim() === '')) {
+        return {
+          success: true,
+          output: [{
+            json: {
+              statusCode: response.status,
+              statusMessage: response.statusText,
+              headers: response.headers,
+              body: null,
+              warning: 'Empty response received'
+            }
+          }]
+        };
+      }
 
       return {
         success: true,
@@ -396,8 +437,9 @@ export const httpRequestNode: NodeType = {
           json: {
             statusCode: response.status,
             statusMessage: response.statusText,
+            url: url,
             headers: response.headers,
-            body: response.data
+            body: responseBody
           }
         }]
       };

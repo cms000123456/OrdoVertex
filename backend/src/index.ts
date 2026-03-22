@@ -79,6 +79,169 @@ app.use('/webhook', webhookRoutes);
 import { authMiddleware } from './utils/auth';
 const authenticateToken = authMiddleware;
 
+// Get all workflows (admin only)
+app.get('/api/admin/workflows', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Admin access required' });
+    }
+    
+    const workflows = await prisma.workflow.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        active: true,
+        userId: true,
+        workspaceId: true,
+        createdAt: true,
+        updatedAt: true,
+        user: {
+          select: { id: true, email: true, name: true }
+        },
+        workspace: {
+          select: { id: true, name: true }
+        },
+        _count: {
+          select: { executions: true }
+        }
+      },
+      orderBy: { updatedAt: 'desc' }
+    });
+    
+    res.json({ success: true, data: workflows });
+  } catch (error: any) {
+    console.error('Admin workflows error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete any workflow (admin only)
+app.delete('/api/admin/workflows/:id', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Admin access required' });
+    }
+    
+    const { id } = req.params;
+    
+    await prisma.workflow.delete({
+      where: { id }
+    });
+    
+    res.json({ success: true, message: 'Workflow deleted' });
+  } catch (error: any) {
+    console.error('Admin delete workflow error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Move workflow to different workspace (admin only)
+app.post('/api/admin/workflows/:id/move', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Admin access required' });
+    }
+    
+    const { id } = req.params;
+    const { workspaceId } = req.body;
+    
+    // If workspaceId is provided, verify workspace exists
+    if (workspaceId) {
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId }
+      });
+      if (!workspace) {
+        return res.status(404).json({ success: false, error: 'Workspace not found' });
+      }
+    }
+    
+    const updated = await prisma.workflow.update({
+      where: { id },
+      data: { workspaceId: workspaceId || null },
+      select: {
+        id: true,
+        name: true,
+        active: true,
+        userId: true,
+        workspaceId: true,
+        createdAt: true,
+        updatedAt: true,
+        user: {
+          select: { id: true, email: true, name: true }
+        },
+        workspace: {
+          select: { id: true, name: true }
+        },
+        _count: {
+          select: { executions: true }
+        }
+      }
+    });
+    
+    res.json({ 
+      success: true, 
+      message: workspaceId ? 'Workflow moved to workspace' : 'Workflow moved to personal',
+      data: updated 
+    });
+  } catch (error: any) {
+    console.error('Admin move workflow error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Toggle workflow active state (admin only)
+app.patch('/api/admin/workflows/:id/toggle', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Admin access required' });
+    }
+    
+    const { id } = req.params;
+    
+    const workflow = await prisma.workflow.findUnique({
+      where: { id },
+      select: { active: true }
+    });
+    
+    if (!workflow) {
+      return res.status(404).json({ success: false, error: 'Workflow not found' });
+    }
+    
+    const updated = await prisma.workflow.update({
+      where: { id },
+      data: { active: !workflow.active },
+      select: {
+        id: true,
+        name: true,
+        active: true,
+        userId: true,
+        workspaceId: true,
+        createdAt: true,
+        updatedAt: true,
+        user: {
+          select: { id: true, email: true, name: true }
+        },
+        workspace: {
+          select: { id: true, name: true }
+        },
+        _count: {
+          select: { executions: true }
+        }
+      }
+    });
+    
+    res.json({ success: true, data: updated });
+  } catch (error: any) {
+    console.error('Admin toggle workflow error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.get('/api/admin/system-stats', authenticateToken, async (req, res) => {
   try {
     // Check if user is admin

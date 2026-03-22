@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, Plus, X, Trash2, Edit2, Save, UserPlus, Loader2 } from 'lucide-react';
-import { groupsApi, workspacesApi } from '../services/api';
+import { Users, Plus, X, Trash2, Edit2, Save, UserPlus, Loader2, Building2, Link2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { groupsApi, workspacesApi, usersApi } from '../services/api';
 import './GroupsTeamsManager.css';
 
 interface User {
@@ -61,8 +62,15 @@ export function GroupsTeamsManager() {
   const [showAddMember, setShowAddMember] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string>('');
   
+  // Workspace assignment
+  const [showAssignWorkspace, setShowAssignWorkspace] = useState<string | null>(null);
+  const [selectedWorkspaceForGroup, setSelectedWorkspaceForGroup] = useState<string>('');
+  
   // Check if user is admin
   const [isAdmin, setIsAdmin] = useState(false);
+  
+  // All users for member selection (groups can be standalone)
+  const [allUsers, setAllUsers] = useState<{ id: string; email: string; name?: string }[]>([]);
   
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -73,7 +81,18 @@ export function GroupsTeamsManager() {
   useEffect(() => {
     loadWorkspaces();
     loadAllGroups();
+    loadAllUsers();
   }, []);
+
+  const loadAllUsers = async () => {
+    try {
+      const response = await usersApi.getAll();
+      const users = response.data?.data?.users || [];
+      setAllUsers(users.map((u: any) => ({ id: u.id, email: u.email, name: u.name })));
+    } catch (err) {
+      console.error('Failed to load users:', err);
+    }
+  };
 
   const loadWorkspaces = async () => {
     try {
@@ -197,10 +216,22 @@ export function GroupsTeamsManager() {
     }
   };
 
-  const currentWorkspace = workspaces.find(w => w.id === selectedWorkspace);
-  const availableUsers = currentWorkspace?.members.filter(
-    wm => !groups.find(g => g.id === showAddMember)?.members.some(m => m.userId === wm.userId)
-  ) || [];
+  // Get available users based on group context
+  const currentGroup = groups.find(g => g.id === showAddMember);
+  const groupWorkspaceIds = currentGroup?.workspaceAccess?.map(wa => wa.workspaceId) || [];
+  
+  // If group has workspace access, show users from those workspaces
+  // Otherwise (standalone group), show all users
+  const availableUsers = groupWorkspaceIds.length > 0
+    ? workspaces
+        .filter(w => groupWorkspaceIds.includes(w.id))
+        .flatMap(w => w.members)
+        .filter(wm => !currentGroup?.members.some(m => m.userId === wm.userId))
+        // Remove duplicates
+        .filter((wm, idx, arr) => arr.findIndex(x => x.userId === wm.userId) === idx)
+    : allUsers
+        .filter(u => !currentGroup?.members.some(m => m.userId === u.id))
+        .map(u => ({ userId: u.id, user: u }));
 
   return (
     <div className="groups-manager">
@@ -363,6 +394,123 @@ export function GroupsTeamsManager() {
                   </>
                 )}
               </div>
+
+              {/* Workspace Access Section */}
+              {isAdmin && (
+                <div className="group-workspaces" style={{ 
+                  padding: '12px 16px', 
+                  borderTop: '1px solid #3d3d5c',
+                  background: '#252535'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h4 style={{ margin: 0, fontSize: '13px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Building2 size={14} />
+                      Workspace Access
+                    </h4>
+                    <button 
+                      className="btn btn-sm"
+                      onClick={() => setShowAssignWorkspace(showAssignWorkspace === group.id ? null : group.id)}
+                    >
+                      <Link2 size={14} />
+                      Assign
+                    </button>
+                  </div>
+                  
+                  {showAssignWorkspace === group.id && (
+                    <div className="assign-workspace-form" style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                      <select 
+                        value={selectedWorkspaceForGroup} 
+                        onChange={(e) => setSelectedWorkspaceForGroup(e.target.value)}
+                        style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #3d3d5c', background: '#2d2d44', color: '#e2e8f0' }}
+                      >
+                        <option value="">Select workspace...</option>
+                        {workspaces
+                          .filter(w => !group.workspaceAccess?.some((wa: any) => wa.workspaceId === w.id))
+                          .map(w => (
+                            <option key={w.id} value={w.id}>{w.name}</option>
+                          ))}
+                      </select>
+                      <button 
+                        className="btn btn-primary btn-sm"
+                        onClick={async () => {
+                          if (!selectedWorkspaceForGroup) return;
+                          try {
+                            await groupsApi.addWorkspaceAccess(group.id, selectedWorkspaceForGroup, 'viewer');
+                            toast.success('Workspace assigned successfully');
+                            setShowAssignWorkspace(null);
+                            setSelectedWorkspaceForGroup('');
+                            loadAllGroups();
+                          } catch (err: any) {
+                            toast.error(err.response?.data?.error || 'Failed to assign workspace');
+                          }
+                        }}
+                        disabled={!selectedWorkspaceForGroup}
+                      >
+                        Add
+                      </button>
+                      <button 
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          setShowAssignWorkspace(null);
+                          setSelectedWorkspaceForGroup('');
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                  
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {group.workspaceAccess && group.workspaceAccess.length > 0 ? (
+                      group.workspaceAccess.map((wa: any) => (
+                        <span 
+                          key={wa.id} 
+                          style={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            gap: '4px',
+                            padding: '4px 10px', 
+                            background: '#6366f1', 
+                            borderRadius: '12px', 
+                            fontSize: '12px',
+                            color: 'white'
+                          }}
+                        >
+                          {wa.workspace.name}
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm(`Remove access to ${wa.workspace.name}?`)) return;
+                              try {
+                                await groupsApi.removeWorkspaceAccess(group.id, wa.id);
+                                toast.success('Workspace access removed');
+                                loadAllGroups();
+                              } catch (err: any) {
+                                toast.error(err.response?.data?.error || 'Failed to remove access');
+                              }
+                            }}
+                            style={{ 
+                              background: 'none', 
+                              border: 'none', 
+                              color: 'white', 
+                              cursor: 'pointer',
+                              padding: '0',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                            title="Remove access"
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))
+                    ) : (
+                      <span style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>
+                        No workspace access (standalone group)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="group-members">
                 <div className="members-header">

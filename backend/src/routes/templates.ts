@@ -116,20 +116,35 @@ return [{ json: {
         }
       },
       {
+        id: 'code-encode',
+        type: 'code',
+        name: 'Build URL',
+        position: { x: 600, y: 200 },
+        parameters: {
+          code: '// Build the full URL with encoded city\nconst city = items[0]?.json?.city || "London";\nconst encoded = encodeURIComponent(city);\nconst url = `https://wttr.in/${encoded}?format=j1`;\nreturn [{ json: { city, url } }];'
+        }
+      },
+      {
         id: 'http-1',
         type: 'httpRequest',
         name: 'Fetch Weather',
-        position: { x: 600, y: 200 },
+        position: { x: 900, y: 200 },
         parameters: {
           method: 'GET',
-          url: 'https://wttr.in/{{ $json.city }}?format=j1'
+          url: '{{ $json.url }}',
+          options: {
+            timeout: 30000,
+            headers: {
+              'User-Agent': 'curl/7.64.1'
+            }
+          }
         }
       },
       {
         id: 'code-1',
         type: 'code',
         name: 'Transform Data',
-        position: { x: 900, y: 200 },
+        position: { x: 1200, y: 200 },
         parameters: {
           code: 'const response = items[0]?.json || {};\nconst data = response.body || {};\nconst current = data.current_condition?.[0] || {};\nreturn [{ json: {\n  location: data.request?.[0]?.query || "Unknown",\n  temp: (current.temp_C || "?") + "C",\n  condition: current.weatherDesc?.[0]?.value || "N/A",\n  humidity: (current.humidity || "?") + "%"\n} }];'
         }
@@ -137,7 +152,8 @@ return [{ json: {
     ],
     connections: [
       { source: 'trigger-1', target: 'set-1' },
-      { source: 'set-1', target: 'http-1' },
+      { source: 'set-1', target: 'code-encode' },
+      { source: 'code-encode', target: 'http-1' },
       { source: 'http-1', target: 'code-1' }
     ]
   },

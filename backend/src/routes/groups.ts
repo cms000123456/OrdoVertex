@@ -284,10 +284,12 @@ router.post('/:id/members', authenticateToken, async (req, res) => {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
-    // Check if target user is workspace member
-    const targetIsMember = group.workspace?.members?.some((m: any) => m.userId === memberUserId);
-    if (!targetIsMember) {
-      return res.status(400).json({ success: false, error: 'User must be workspace member first' });
+    // Check if target user is workspace member (only if group has a workspace)
+    if (group.workspace) {
+      const targetIsMember = group.workspace.members?.some((m: any) => m.userId === memberUserId);
+      if (!targetIsMember) {
+        return res.status(400).json({ success: false, error: 'User must be workspace member first' });
+      }
     }
 
     const existing = await prisma.userGroupMember.findFirst({

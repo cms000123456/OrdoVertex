@@ -14,6 +14,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
+    role?: string;
   };
 }
 
@@ -49,7 +50,11 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
     const token = authHeader.substring(7);
     const decoded = verifyToken(token);
     
-    req.user = decoded;
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role
+    };
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token' });
