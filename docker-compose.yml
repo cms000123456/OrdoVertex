@@ -49,8 +49,11 @@ services:
       # Rate limiting (development values - more permissive)
       AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-100}
       AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:-60000}
+      # Logging
+      LOGS_DIR: /app/logs
     volumes:
       - ./backend:/app
+      - ./.data/logs:/app/logs
     ports:
       - "3001:3001"
     depends_on:
@@ -71,8 +74,10 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-this-is-a-32-char-dev-key-change-me!}
+      LOGS_DIR: /app/logs
     volumes:
       - ./backend:/app
+      - ./.data/logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy

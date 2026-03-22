@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Shield, Users, Settings, ChevronDown, Workflow, Key, Lock, Terminal, UsersRound, Activity, Building2, BookOpen } from 'lucide-react';
+import { Shield, Users, Settings, ChevronDown, Workflow, Key, Lock, Terminal, UsersRound, Activity, Building2, BookOpen, FileText } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import './AdminMenu.css';
 
@@ -105,6 +105,17 @@ export function AdminMenu() {
           >
             <Terminal size={16} />
             <span>Execution Logs</span>
+          </NavLink>
+
+          <NavLink
+            to="/admin/logs"
+            className={({ isActive }) =>
+              `admin-menu-item ${isActive ? 'active' : ''}`
+            }
+            onClick={() => setIsExpanded(false)}
+          >
+            <FileText size={16} />
+            <span>Docker Logs</span>
           </NavLink>
 
           <NavLink

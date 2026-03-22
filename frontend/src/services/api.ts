@@ -208,6 +208,15 @@ export const adminApi = {
   moveWorkflow: (id: string, workspaceId: string | null) => api.post(`/api/admin/workflows/${id}/move`, { workspaceId })
 };
 
+// Logs API
+export const logsApi = {
+  getLogFiles: () => api.get('/api/logs'),
+  getLogs: (logName: string, lines: number, search?: string) => 
+    api.get(`/api/logs/${logName}?lines=${lines}${search ? `&search=${encodeURIComponent(search)}` : ''}`),
+  downloadLogs: (logName: string) => api.get(`/api/logs/${logName}/download`, { responseType: 'blob' }),
+  clearLogs: (logName: string) => api.delete(`/api/logs/${logName}`)
+};
+
 // Templates API
 export const templatesApi = {
   getAll: (params?: any) => api.get('/api/templates', { params }),

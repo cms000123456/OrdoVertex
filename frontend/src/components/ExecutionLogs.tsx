@@ -69,8 +69,11 @@ export function ExecutionLogs() {
   useEffect(() => {
     loadStats();
     loadExecutions();
+  }, []);
+
+  useEffect(() => {
     loadLogs();
-  }, [filters, pagination.page]);
+  }, [filters, pagination.page, selectedExecution]);
 
   const loadStats = async () => {
     try {
@@ -212,7 +215,10 @@ export function ExecutionLogs() {
           <div className="executions-list">
             <button 
               className={`execution-item ${!selectedExecution ? 'active' : ''}`}
-              onClick={() => setSelectedExecution(null)}
+              onClick={() => {
+                setSelectedExecution(null);
+                setPagination(prev => ({ ...prev, page: 1 }));
+              }}
             >
               <span className="execution-name">All Executions</span>
             </button>
@@ -223,7 +229,10 @@ export function ExecutionLogs() {
               >
                 <button
                   className="execution-content"
-                  onClick={() => setSelectedExecution(exec.id)}
+                  onClick={() => {
+                    setSelectedExecution(exec.id);
+                    setPagination(prev => ({ ...prev, page: 1 }));
+                  }}
                 >
                   {getStatusIcon(exec.status)}
                   <div className="execution-info">

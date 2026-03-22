@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { registerAllNodes } from './nodes';
 import { scheduler } from './engine/scheduler';
 import { rateLimit } from './utils/rate-limit';
+import logger, { logStream } from './utils/logger';
 
 import authRoutes from './routes/auth';
 import authExtendedRoutes from './routes/auth-extended';
@@ -20,6 +21,7 @@ import groupRoutes from './routes/groups';
 import executionLogRoutes from './routes/execution-logs';
 import alertRoutes from './routes/alerts';
 import templateRoutes from './routes/templates';
+import logsRoutes from './routes/logs';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -46,7 +48,12 @@ app.use('/api/', rateLimit({
 
 // Request logging
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+  logger.info(`${req.method} ${req.path}`, {
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+    userAgent: req.get('user-agent')
+  });
   next();
 });
 
@@ -73,6 +80,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/execution-logs', executionLogRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/logs', logsRoutes);
 app.use('/webhook', webhookRoutes);
 
 // Admin/System Routes
@@ -307,7 +315,7 @@ app.get('/api/admin/system-stats', authenticateToken, async (req, res) => {
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled error:', err);
+  logger.error('Unhandled error', { error: err.message, stack: err.stack });
   res.status(500).json({
     success: false,
     error: {

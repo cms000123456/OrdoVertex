@@ -26,6 +26,7 @@ import { GroupsTeamsManager } from './components/GroupsTeamsManager';
 import { WorkspaceManagement } from './components/WorkspaceManagement';
 import { AdminWorkflows } from './components/AdminWorkflows';
 import { AdminDocumentation } from './components/AdminDocumentation';
+import { LogViewer } from './components/LogViewer';
 import { PerformanceMonitor } from './components/PerformanceMonitor';
 import { Onboarding } from './components/Onboarding';
 import { WorkspaceManager } from './components/WorkspaceManager';
@@ -209,6 +210,7 @@ function App() {
           <Route path="/admin/workspaces" element={<WorkspaceManagement />} />
           <Route path="/admin/groups" element={<GroupsTeamsManager />} />
           <Route path="/admin/performance" element={<PerformanceMonitor />} />
+          <Route path="/admin/logs" element={<LogViewer />} />
           <Route path="/admin/documentation" element={<AdminDocumentation />} />
           <Route path="/admin/settings" element={<SystemSettings />} />
           <Route path="/workspaces" element={<WorkspaceManager />} />
