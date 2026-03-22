@@ -117,7 +117,9 @@ The intuitive drag-and-drop interface for building automation workflows:
 - **Static Analysis** - Dangerous pattern blocking
 - **Resource Limits** - Timeouts & output limits
 
-## 🚀 Quick Start
+---
+
+# 🚀 Quick Start
 
 Get OrdoVertex running in under 5 minutes with Docker Compose.
 
