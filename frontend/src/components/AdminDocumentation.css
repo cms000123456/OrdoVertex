@@ -10,23 +10,23 @@
   padding: 32px;
   background: linear-gradient(135deg, #1e1e2e 0%, #252535 100%);
   border-radius: 16px;
-  border: 1px solid #3d3d5c;
+  border: 1px solid #4b4b6b;
 }
 
 .doc-header svg {
-  color: #6366f1;
+  color: #818cf8;
   margin-bottom: 16px;
 }
 
 .doc-header h1 {
   margin: 0 0 8px 0;
   font-size: 28px;
-  color: #e2e8f0;
+  color: #ffffff;
 }
 
 .doc-header p {
   margin: 0;
-  color: #94a3b8;
+  color: #e2e8f0;
   font-size: 16px;
 }
 
@@ -39,7 +39,7 @@
 .doc-section {
   background: #1e1e2e;
   border-radius: 12px;
-  border: 1px solid #3d3d5c;
+  border: 1px solid #4b4b6b;
   overflow: hidden;
 }
 
@@ -50,7 +50,7 @@
   padding: 16px 20px;
   background: transparent;
   border: none;
-  color: #e2e8f0;
+  color: #ffffff;
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
@@ -60,7 +60,7 @@
 }
 
 .doc-section-header:hover {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(99, 102, 241, 0.15);
 }
 
 .doc-section-icon {
@@ -69,9 +69,9 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: #2d2d44;
+  background: #3d3d5c;
   border-radius: 8px;
-  color: #6366f1;
+  color: #818cf8;
 }
 
 .doc-section-title {
@@ -79,21 +79,21 @@
 }
 
 .doc-section-toggle {
-  color: #94a3b8;
+  color: #e2e8f0;
 }
 
 .doc-section-content {
   padding: 0 20px 20px 68px;
-  border-top: 1px solid #3d3d5c;
+  border-top: 1px solid #4b4b6b;
 }
 
 .doc-content {
-  color: #cbd5e1;
+  color: #ffffff;
   line-height: 1.6;
 }
 
 .doc-content h4 {
-  color: #e2e8f0;
+  color: #ffffff;
   font-size: 16px;
   margin: 20px 0 12px 0;
 }
@@ -104,7 +104,7 @@
 
 .doc-intro {
   font-size: 15px;
-  color: #94a3b8;
+  color: #e2e8f0;
   margin-bottom: 16px;
 }
 
@@ -115,6 +115,7 @@
 
 .doc-list li {
   margin-bottom: 8px;
+  color: #ffffff;
 }
 
 .doc-list ul {
@@ -129,6 +130,7 @@
 
 .doc-steps li {
   margin-bottom: 12px;
+  color: #ffffff;
 }
 
 .doc-steps ul {
@@ -151,33 +153,33 @@
 }
 
 .doc-alert-info {
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.6);
+  color: #ffffff;
 }
 
 .doc-alert-info svg {
-  color: #6366f1;
+  color: #818cf8;
 }
 
 .doc-alert-warning {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  color: #ffffff;
 }
 
 .doc-alert-warning svg {
-  color: #f59e0b;
+  color: #fbbf24;
 }
 
 .doc-alert-danger {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  color: #ffffff;
 }
 
 .doc-alert-danger svg {
-  color: #ef4444;
+  color: #f87171;
 }
 
 .doc-table {
@@ -191,27 +193,27 @@
 .doc-table td {
   padding: 12px;
   text-align: left;
-  border-bottom: 1px solid #3d3d5c;
+  border-bottom: 1px solid #4b4b6b;
 }
 
 .doc-table th {
-  color: #94a3b8;
-  font-weight: 500;
-  background: #252535;
+  color: #ffffff;
+  font-weight: 600;
+  background: #2d2d44;
 }
 
 .doc-table td {
-  color: #cbd5e1;
+  color: #ffffff;
 }
 
 .doc-code {
   background: #0f0f1a;
-  border: 1px solid #3d3d5c;
+  border: 1px solid #5b5b7b;
   border-radius: 8px;
   padding: 16px;
   font-family: 'Monaco', 'Menlo', monospace;
   font-size: 13px;
-  color: #a5b4fc;
+  color: #ffffff;
   overflow-x: auto;
   margin: 12px 0;
 }
@@ -221,28 +223,43 @@
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   margin-right: 8px;
 }
 
 .log-level.debug {
-  background: rgba(100, 116, 139, 0.2);
-  color: #94a3b8;
+  background: rgba(100, 116, 139, 0.3);
+  color: #ffffff;
 }
 
 .log-level.info {
-  background: rgba(99, 102, 241, 0.2);
-  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.3);
+  color: #ffffff;
 }
 
 .log-level.warn {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.3);
+  color: #ffffff;
 }
 
 .log-level.error {
-  background: rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
+}
+
+/* Strong and emphasis */
+.doc-content strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.doc-content code {
+  background: #2d2d44;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 13px;
+  color: #fbbf24;
 }
 
 /* Responsive */
