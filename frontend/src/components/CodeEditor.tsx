@@ -10,32 +10,35 @@ interface CodeEditorProps {
   readOnly?: boolean;
 }
 
-// Simple syntax highlighting patterns
-const syntaxPatterns: Record<string, Array<{ pattern: RegExp; color: string }>> = {
+// Simple syntax highlighting patterns - using string patterns to avoid regex escaping issues
+const syntaxPatterns: Record<string, Array<{ pattern: string; flags: string; color: string }>> = {
   javascript: [
-    { pattern: /\\b(const|let|var|function|return|if|else|for|while|switch|case|break|try|catch|throw|new|this|class|extends|import|export|from|async|await)\\b/g, color: '#c678dd' }, // Keywords
-    { pattern: /\\b(console|Math|Date|JSON|Object|Array|String|Number|Boolean|Promise|Set|Map|RegExp|Error)\\b/g, color: '#e5c07b' }, // Built-ins
-    { pattern: /"[^"]*"|'[^']*'|`[^`]*`/g, color: '#98c379' }, // Strings
-    { pattern: /\\b\\d+\\b/g, color: '#d19a66' }, // Numbers
-    { pattern: /\\b(true|false|null|undefined)\\b/g, color: '#d19a66' }, // Booleans/Null
-    { pattern: /\\b([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*(?=\\()/g, color: '#61afef' }, // Functions
-    { pattern: /\\/\\/.*$/gm, color: '#5c6370' }, // Comments
-    { pattern: /\\/\\*[\\s\\S]*?\\*\\//g, color: '#5c6370' }, // Block comments
+    { pattern: '\\\\b(const|let|var|function|return|if|else|for|while|switch|case|break|try|catch|throw|new|this|class|extends|import|export|from|async|await)\\\\b', flags: 'g', color: '#c678dd' },
+    { pattern: '\\\\b(console|Math|Date|JSON|Object|Array|String|Number|Boolean|Promise|Set|Map|RegExp|Error)\\\\b', flags: 'g', color: '#e5c07b' },
+    { pattern: '"[^"]*"', flags: 'g', color: '#98c379' },
+    { pattern: "'[^']*'", flags: 'g', color: '#98c379' },
+    { pattern: '`[^`]*`', flags: 'g', color: '#98c379' },
+    { pattern: '\\\\b\\d+\\\\b', flags: 'g', color: '#d19a66' },
+    { pattern: '\\\\b(true|false|null|undefined)\\\\b', flags: 'g', color: '#d19a66' },
+    { pattern: '\\\\b([a-zA-Z_$][a-zA-Z0-9_$]*)\\\\s*(?=\\()', flags: 'g', color: '#61afef' },
+    { pattern: '//.*$', flags: 'gm', color: '#5c6370' },
+    { pattern: '/\\*[\\s\\S]*?\\*/', flags: 'g', color: '#5c6370' },
   ],
   python: [
-    { pattern: /\\b(def|class|if|elif|else|for|while|try|except|finally|with|import|from|as|return|yield|pass|break|continue|raise|assert|lambda|global|nonlocal|del)\\b/g, color: '#c678dd' }, // Keywords
-    { pattern: /\\b(True|False|None|and|or|not|in|is)\\b/g, color: '#c678dd' }, // Booleans/Operators
-    { pattern: /\\b(print|len|range|enumerate|zip|map|filter|sum|min|max|abs|round|int|float|str|list|dict|tuple|set|open|type|isinstance|hasattr|getattr)\\b/g, color: '#61afef' }, // Built-ins
-    { pattern: /"[^"]*"|'[^']*'/g, color: '#98c379' }, // Strings
-    { pattern: /\\b\\d+\\b/g, color: '#d19a66' }, // Numbers
-    { pattern: /#.*/g, color: '#5c6370' }, // Comments
-    { pattern: /\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()/g, color: '#61afef' }, // Functions
+    { pattern: '\\\\b(def|class|if|elif|else|for|while|try|except|finally|with|import|from|as|return|yield|pass|break|continue|raise|assert|lambda|global|nonlocal|del)\\\\b', flags: 'g', color: '#c678dd' },
+    { pattern: '\\\\b(True|False|None|and|or|not|in|is)\\\\b', flags: 'g', color: '#c678dd' },
+    { pattern: '\\\\b(print|len|range|enumerate|zip|map|filter|sum|min|max|abs|round|int|float|str|list|dict|tuple|set|open|type|isinstance|hasattr|getattr)\\\\b', flags: 'g', color: '#61afef' },
+    { pattern: '"[^"]*"', flags: 'g', color: '#98c379' },
+    { pattern: "'[^']*'", flags: 'g', color: '#98c379' },
+    { pattern: '\\\\b\\d+\\\\b', flags: 'g', color: '#d19a66' },
+    { pattern: '#.*', flags: 'g', color: '#5c6370' },
+    { pattern: '\\\\b([a-zA-Z_][a-zA-Z0-9_]*)\\\\s*(?=\\()', flags: 'g', color: '#61afef' },
   ],
   json: [
-    { pattern: /"[^"]*":/g, color: '#e06c75' }, // Keys
-    { pattern: /"[^"]*"/g, color: '#98c379' }, // Strings
-    { pattern: /\\b(true|false|null)\\b/g, color: '#d19a66' }, // Booleans/Null
-    { pattern: /\\b\\d+(\\.\\d+)?\\b/g, color: '#d19a66' }, // Numbers
+    { pattern: '"[^"]*":', flags: 'g', color: '#e06c75' },
+    { pattern: '"[^"]*"', flags: 'g', color: '#98c379' },
+    { pattern: '\\\\b(true|false|null)\\\\b', flags: 'g', color: '#d19a66' },
+    { pattern: '\\\\b\\d+(\\.\\d+)?\\\\b', flags: 'g', color: '#d19a66' },
   ],
   plaintext: [],
 };
@@ -47,30 +50,32 @@ const highlightCode = (code: string, language: string): string => {
     return escapeHtml(code);
   }
 
-  let highlighted = escapeHtml(code);
-  
   // Store replacements to avoid overlapping matches
   const replacements: Array<{ start: number; end: number; html: string }> = [];
   
-  patterns.forEach(({ pattern, color }) => {
-    let match;
-    const localPattern = new RegExp(pattern.source, pattern.flags);
-    while ((match = localPattern.exec(code)) !== null) {
-      const start = match.index;
-      const end = start + match[0].length;
-      const escaped = escapeHtml(match[0]);
-      replacements.push({ start, end, html: `<span style="color: ${color}">${escaped}</span>` });
+  patterns.forEach(({ pattern, flags, color }) => {
+    try {
+      const regex = new RegExp(pattern, flags);
+      let match;
+      while ((match = regex.exec(code)) !== null) {
+        const start = match.index;
+        const end = start + match[0].length;
+        // Prevent infinite loops on zero-width matches
+        if (match[0].length === 0) {
+          regex.lastIndex++;
+          continue;
+        }
+        const escaped = escapeHtml(match[0]);
+        replacements.push({ start, end, html: `<span style="color: ${color}">${escaped}</span>` });
+      }
+    } catch (e) {
+      console.error('Regex error:', e);
     }
   });
   
-  // Sort by position and apply (simplified - may have issues with overlapping)
-  if (replacements.length === 0) return highlighted;
+  if (replacements.length === 0) return escapeHtml(code);
   
-  // Simple approach: rebuild string character by character
-  let result = '';
-  let lastIndex = 0;
-  
-  // Group replacements by start position and pick the longest match
+  // Sort by position and filter out overlapping matches
   const sortedReplacements = replacements.sort((a, b) => a.start - b.start);
   const filteredReplacements: typeof replacements = [];
   
@@ -80,6 +85,10 @@ const highlightCode = (code: string, language: string): string => {
       filteredReplacements.push(rep);
     }
   }
+  
+  // Rebuild string
+  let result = '';
+  let lastIndex = 0;
   
   for (const rep of filteredReplacements) {
     result += escapeHtml(code.slice(lastIndex, rep.start));
@@ -182,7 +191,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           >
             <code 
               dangerouslySetInnerHTML={{ 
-                __html: highlightedCode + '<span class="caret"></span>' 
+                __html: highlightedCode + '\n' 
               }} 
             />
           </pre>
