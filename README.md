@@ -40,6 +40,10 @@ The intuitive drag-and-drop interface for building automation workflows:
 
 ![Actions](.screenshots/actions.png)
 
+**Code Editor** - Built-in code editor with syntax highlighting for JavaScript and Python:
+
+![Code Editor](.screenshots/code_editor.png)
+
 **Transform** - Data manipulation and processing nodes:
 
 ![Transform](.screenshots/transform.png)
