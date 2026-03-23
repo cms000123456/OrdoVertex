@@ -49,7 +49,7 @@ function Flow() {
   const [showCredentials, setShowCredentials] = useState(false);
   
   // Config panel resize state
-  const [configPanelWidth, setConfigPanelWidth] = useState(320);
+  const [configPanelWidth, setConfigPanelWidth] = useState(800);
   const [isResizing, setIsResizing] = useState(false);
 
   const {
