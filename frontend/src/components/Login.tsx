@@ -20,6 +20,9 @@ export function Login() {
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [backupCodeMode, setBackupCodeMode] = useState(false);
+  const [verificationRequired, setVerificationRequired] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [verificationMessage, setVerificationMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +45,15 @@ export function Login() {
           formData.password,
           formData.name
         );
+        
+        // Check if verification is required after registration
+        if (response.data.data?.requiresVerification) {
+          setVerificationRequired(true);
+          setRegisteredEmail(formData.email);
+          setVerificationMessage(response.data.message || 'Registration successful! Please check your email to verify your account.');
+          setIsLoading(false);
+          return;
+        }
       }
 
       const { user, token } = response.data.data;
@@ -215,13 +227,48 @@ export function Login() {
                 </button>
               </form>
 
+              {/* Verification Required Message */}
+              {verificationRequired && (
+                <div style={{
+                  marginTop: '24px',
+                  padding: '16px',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.2)',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <p style={{
+                    color: '#3b82f6',
+                    fontSize: '14px',
+                    margin: '0 0 12px',
+                    lineHeight: 1.5
+                  }}>
+                    {verificationMessage}
+                  </p>
+                  <Link
+                    to="/resend-verification"
+                    style={{
+                      color: '#3b82f6',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      textDecoration: 'none'
+                    }}
+                  >
+                    Didn't receive the email? Click here to resend
+                  </Link>
+                </div>
+              )}
+
               <div className="auth-footer">
                 <p>
                   {isLogin ? "Don't have an account?" : 'Already have an account?'}
                   <button
                     type="button"
                     className="toggle-auth"
-                    onClick={() => setIsLogin(!isLogin)}
+                    onClick={() => {
+                      setIsLogin(!isLogin);
+                      setVerificationRequired(false);
+                    }}
                   >
                     {isLogin ? 'Create one' : 'Sign in'}
                   </button>

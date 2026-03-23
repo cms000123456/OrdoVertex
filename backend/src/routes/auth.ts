@@ -6,7 +6,7 @@ import { hashPassword, verifyPassword, generateToken, authMiddleware, AuthReques
 import { successResponse, errorResponse } from '../utils/response';
 import { authRateLimit } from '../utils/rate-limit';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email';
-import { getSecuritySettings } from './system';
+import { getSecuritySettings, getBaseUrl } from './system';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -79,7 +79,7 @@ router.post(
         });
 
         // Send verification email
-        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const baseUrl = getBaseUrl();
         const emailResult = await sendVerificationEmail(
           email,
           name || email,
@@ -411,7 +411,7 @@ router.post('/resend-verification', authRateLimit(), async (req, res) => {
     });
 
     // Send verification email
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl();
     const emailResult = await sendVerificationEmail(
       email,
       user.name || email,

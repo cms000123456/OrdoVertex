@@ -30,6 +30,8 @@ import { LogViewer } from './components/LogViewer';
 import { PerformanceMonitor } from './components/PerformanceMonitor';
 import { Onboarding } from './components/Onboarding';
 import { WorkspaceManager } from './components/WorkspaceManager';
+import { VerifyEmail } from './components/VerifyEmail';
+import { ResendVerification } from './components/ResendVerification';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAuthSession } from './hooks/useAuthSession';
 import './App.css';
@@ -186,6 +188,15 @@ function App() {
           element={
             <PublicRoute>
               <Login />
+            </PublicRoute>
+          }
+        />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route
+          path="/resend-verification"
+          element={
+            <PublicRoute>
+              <ResendVerification />
             </PublicRoute>
           }
         />

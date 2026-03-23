@@ -24,6 +24,7 @@ export function SystemSettings() {
   // Settings form states
   const [generalSettings, setGeneralSettings] = useState({
     siteName: 'OrdoVertex',
+    baseUrl: 'http://localhost:3000',
     allowRegistration: true,
     defaultUserRole: 'user'
   });
@@ -70,6 +71,7 @@ export function SystemSettings() {
 
   useEffect(() => {
     loadSystemStatus();
+    loadGeneralSettings();
     loadMaintenanceSettings();
     loadSecuritySettings();
     loadEmailSettings();
@@ -94,6 +96,24 @@ export function SystemSettings() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadGeneralSettings = async () => {
+    try {
+      const response = await systemApi.getGeneralSettings();
+      setGeneralSettings(response.data.data);
+    } catch (error) {
+      console.error('Failed to load general settings');
+    }
+  };
+
+  const handleSaveGeneral = async () => {
+    try {
+      await systemApi.updateGeneralSettings(generalSettings);
+      toast.success('General settings saved');
+    } catch (error) {
+      toast.error('Failed to save general settings');
     }
   };
 
@@ -221,6 +241,20 @@ export function SystemSettings() {
         />
       </div>
 
+      <div className="setting-item">
+        <label>Base URL (FQDN)</label>
+        <input
+          type="url"
+          placeholder="https://ordovertex.yourdomain.com"
+          value={generalSettings.baseUrl}
+          onChange={(e) => setGeneralSettings({ ...generalSettings, baseUrl: e.target.value })}
+        />
+        <p className="setting-help">
+          The full URL of your OrdoVertex instance. Used for email links and verification emails.
+          Example: https://ordovertex.yourdomain.com or http://192.168.1.100:3000
+        </p>
+      </div>
+
       <div className="setting-item theme-setting">
         <label>
           <Palette size={16} />
@@ -254,7 +288,7 @@ export function SystemSettings() {
 
       <button
         className="btn btn-primary"
-        onClick={() => handleSaveSettings('General')}
+        onClick={handleSaveGeneral}
       >
         <Save size={16} />
         Save Changes

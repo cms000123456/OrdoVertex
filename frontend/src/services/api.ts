@@ -82,7 +82,11 @@ export const authApi = {
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post('/api/auth/change-password', { currentPassword, newPassword }),
   completeOnboarding: (email: string, password: string) =>
-    api.post('/api/auth/onboarding', { email, password })
+    api.post('/api/auth/onboarding', { email, password }),
+  verifyEmail: (token: string) =>
+    api.post('/api/auth/verify-email', { token }),
+  resendVerification: (email: string) =>
+    api.post('/api/auth/resend-verification', { email })
 };
 
 // Workflow API
@@ -228,7 +232,9 @@ export const systemApi = {
   updateSecuritySettings: (settings: any) => api.patch('/api/system/security', settings),
   getEmailSettings: () => api.get('/api/system/email'),
   updateEmailSettings: (settings: any) => api.patch('/api/system/email', settings),
-  testEmailSettings: (testEmail: string) => api.post('/api/system/email/test', { testEmail })
+  testEmailSettings: (testEmail: string) => api.post('/api/system/email/test', { testEmail }),
+  getGeneralSettings: () => api.get('/api/system/general'),
+  updateGeneralSettings: (settings: any) => api.patch('/api/system/general', settings)
 };
 
 // Templates API

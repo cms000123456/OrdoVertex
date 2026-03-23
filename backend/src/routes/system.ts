@@ -39,14 +39,33 @@ const DEFAULT_EMAIL_SETTINGS = {
   enabled: false
 };
 
+// Default general settings
+const DEFAULT_GENERAL_SETTINGS = {
+  siteName: 'OrdoVertex',
+  baseUrl: process.env.FRONTEND_URL || 'http://localhost:3000',  // Used for email links
+  allowRegistration: true,
+  defaultUserRole: 'user'
+};
+
 let maintenanceSettings = { ...DEFAULT_MAINTENANCE_SETTINGS };
 let securitySettings = { ...DEFAULT_SECURITY_SETTINGS };
 let emailSettings = { ...DEFAULT_EMAIL_SETTINGS };
+let generalSettings = { ...DEFAULT_GENERAL_SETTINGS };
 let scheduledPurgeTask: cron.ScheduledTask | null = null;
 
 // Export function to check if code nodes require admin approval
 export function isCodeNodeApprovalRequired(): boolean {
   return securitySettings.requireCodeNodeApproval;
+}
+
+// Export function to get base URL for email links
+export function getBaseUrl(): string {
+  return generalSettings.baseUrl || process.env.FRONTEND_URL || 'http://localhost:3000';
+}
+
+// Export function to get security settings
+export function getSecuritySettings() {
+  return { ...securitySettings };
 }
 
 // Middleware to check admin
@@ -575,5 +594,69 @@ router.post('/email/test', authMiddleware, adminMiddleware, async (req, res) => 
 export function getEmailSettings() {
   return { ...emailSettings };
 }
+
+// ========================================================================
+// General Settings Routes
+// ========================================================================
+
+// Get general settings
+router.get('/general', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: generalSettings
+    });
+  } catch (error: any) {
+    console.error('Get general settings error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Update general settings
+router.patch('/general', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const {
+      siteName,
+      baseUrl,
+      allowRegistration,
+      defaultUserRole
+    } = req.body;
+
+    if (siteName !== undefined) {
+      generalSettings.siteName = siteName;
+    }
+
+    if (baseUrl !== undefined) {
+      // Validate URL format
+      try {
+        new URL(baseUrl);
+        generalSettings.baseUrl = baseUrl;
+      } catch {
+        return errorResponse(res, 'Invalid base URL format. Must be a valid URL like https://example.com', 400);
+      }
+    }
+
+    if (allowRegistration !== undefined) {
+      generalSettings.allowRegistration = Boolean(allowRegistration);
+    }
+
+    if (defaultUserRole !== undefined) {
+      if (!['user', 'admin'].includes(defaultUserRole)) {
+        return errorResponse(res, 'Default user role must be "user" or "admin"', 400);
+      }
+      generalSettings.defaultUserRole = defaultUserRole;
+    }
+
+    console.log(`[General] Settings updated. Base URL: ${generalSettings.baseUrl}`);
+
+    res.json({
+      success: true,
+      data: generalSettings
+    });
+  } catch (error: any) {
+    console.error('Update general settings error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 export default router;
