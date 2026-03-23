@@ -4,6 +4,7 @@ import { useWorkflowStore } from '../store/workflowStore';
 import { credentialApi, executionsApi } from '../services/api';
 import { Credential } from '../types';
 import { AITips } from './AITips';
+import { CodeEditor } from './CodeEditor';
 
 // Check if a string is an image URL
 const isImageUrl = (url: string): boolean => {
@@ -323,7 +324,35 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
         );
 
       case 'multiline':
-      case 'json':
+      case 'json': {
+        // Determine if this is a code field that should use the code editor
+        const isCodeField = node.type === 'code' && 
+          (property.name === 'code' || property.name === 'pythonCode');
+        
+        // Determine language for syntax highlighting
+        let codeLanguage: 'javascript' | 'python' | 'json' | 'plaintext' = 'plaintext';
+        if (property.type === 'json') {
+          codeLanguage = 'json';
+        } else if (node.type === 'code') {
+          const languageParam = node.parameters['language'] || 'javascript';
+          codeLanguage = property.name === 'pythonCode' || languageParam === 'python' 
+            ? 'python' 
+            : 'javascript';
+        }
+        
+        // Use CodeEditor for code fields, otherwise use textarea
+        if (isCodeField) {
+          return (
+            <CodeEditor
+              value={typeof value === 'object' ? JSON.stringify(value, null, 2) : value || ''}
+              onChange={(newValue) => onParameterChange(property.name, newValue)}
+              language={codeLanguage}
+              placeholder={property.placeholder}
+              rows={12}
+            />
+          );
+        }
+        
         return (
           <textarea
             value={typeof value === 'object' ? JSON.stringify(value, null, 2) : value || ''}
@@ -343,6 +372,7 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
             rows={5}
           />
         );
+      }
 
       default:
         return (

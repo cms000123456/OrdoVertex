@@ -1,0 +1,228 @@
+/* Code Editor Styles */
+.code-editor {
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-code, #1e2227);
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.code-editor.focused {
+  border-color: var(--accent-color, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.code-editor.readonly {
+  opacity: 0.8;
+}
+
+/* Header */
+.code-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-code-header, #252a30);
+  border-bottom: 1px solid var(--border-color, #334155);
+}
+
+.code-editor-language {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.code-editor-readonly-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text-tertiary, #64748b);
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Container */
+.code-editor-container {
+  display: flex;
+  position: relative;
+  min-height: 150px;
+  max-height: 500px;
+}
+
+/* Line Numbers */
+.code-editor-line-numbers {
+  flex-shrink: 0;
+  padding: 12px 8px 12px 12px;
+  background: var(--bg-code-gutter, #252a30);
+  border-right: 1px solid var(--border-color, #334155);
+  text-align: right;
+  user-select: none;
+  overflow: hidden;
+}
+
+.line-number {
+  color: var(--text-tertiary, #4b5563);
+  font-size: 13px;
+  line-height: 1.6;
+  min-height: calc(13px * 1.6);
+}
+
+/* Wrapper */
+.code-editor-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+}
+
+/* Textarea and Highlight Layer */
+.code-editor-textarea,
+.code-editor-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-height: 100%;
+  padding: 12px 16px;
+  margin: 0;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre;
+  word-wrap: normal;
+  overflow-wrap: normal;
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+
+/* Syntax Highlight Layer */
+.code-editor-highlight {
+  pointer-events: none;
+  z-index: 1;
+  color: var(--text-primary, #abb2bf);
+  background: transparent;
+}
+
+.code-editor-highlight code {
+  display: block;
+}
+
+/* Textarea */
+.code-editor-textarea {
+  z-index: 2;
+  resize: none;
+  outline: none;
+  color: transparent;
+  background: transparent;
+  caret-color: var(--caret-color, #528bff);
+}
+
+.code-editor-textarea::placeholder {
+  color: var(--text-tertiary, #4b5563);
+}
+
+.code-editor-textarea::selection {
+  background: rgba(59, 130, 246, 0.3);
+  color: transparent;
+}
+
+/* Scrollbar styling */
+.code-editor-wrapper::-webkit-scrollbar,
+.code-editor-container::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.code-editor-wrapper::-webkit-scrollbar-track,
+.code-editor-container::-webkit-scrollbar-track {
+  background: var(--bg-code, #1e2227);
+}
+
+.code-editor-wrapper::-webkit-scrollbar-thumb,
+.code-editor-container::-webkit-scrollbar-thumb {
+  background: var(--border-color, #475569);
+  border-radius: 5px;
+  border: 2px solid var(--bg-code, #1e2227);
+}
+
+.code-editor-wrapper::-webkit-scrollbar-thumb:hover,
+.code-editor-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary, #64748b);
+}
+
+/* Caret animation for end of content */
+.caret {
+  display: inline-block;
+  width: 0;
+}
+
+/* Syntax Highlighting Colors (One Dark Theme) */
+.code-editor .keyword {
+  color: #c678dd;
+}
+
+.code-editor .string {
+  color: #98c379;
+}
+
+.code-editor .number {
+  color: #d19a66;
+}
+
+.code-editor .function {
+  color: #61afef;
+}
+
+.code-editor .builtin {
+  color: #e5c07b;
+}
+
+.code-editor .comment {
+  color: #5c6370;
+  font-style: italic;
+}
+
+.code-editor .operator {
+  color: #56b6c2;
+}
+
+/* Dark/Light theme adjustments */
+[data-theme="light"] .code-editor {
+  --bg-code: #fafafa;
+  --bg-code-header: #f0f0f0;
+  --bg-code-gutter: #f0f0f0;
+  --border-color: #e0e0e0;
+  --text-primary: #383a42;
+  --text-secondary: #696c77;
+  --text-tertiary: #a0a1a7;
+  --caret-color: #526fff;
+}
+
+[data-theme="light"] .code-editor .keyword {
+  color: #a626a4;
+}
+
+[data-theme="light"] .code-editor .string {
+  color: #50a14f;
+}
+
+[data-theme="light"] .code-editor .number {
+  color: #986801;
+}
+
+[data-theme="light"] .code-editor .function {
+  color: #4078f2;
+}
+
+[data-theme="light"] .code-editor .builtin {
+  color: #c18401;
+}
+
+[data-theme="light"] .code-editor .comment {
+  color: #a0a1a7;
+}
