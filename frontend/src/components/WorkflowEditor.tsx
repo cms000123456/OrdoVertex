@@ -47,6 +47,10 @@ function Flow() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
+  
+  // Config panel resize state
+  const [configPanelWidth, setConfigPanelWidth] = useState(320);
+  const [isResizing, setIsResizing] = useState(false);
 
   const {
     currentWorkflow,
@@ -363,6 +367,40 @@ function Flow() {
     }
   };
 
+  // Config panel resize handlers
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  const handleResizeMove = useCallback((e: MouseEvent) => {
+    if (!isResizing) return;
+    
+    // Calculate new width based on mouse position from right edge
+    const newWidth = Math.max(280, Math.min(800, window.innerWidth - e.clientX));
+    setConfigPanelWidth(newWidth);
+  }, [isResizing]);
+
+  const handleResizeEnd = useCallback(() => {
+    setIsResizing(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, []);
+
+  // Add/remove resize event listeners
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleResizeMove);
+      window.addEventListener('mouseup', handleResizeEnd);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleResizeMove);
+      window.removeEventListener('mouseup', handleResizeEnd);
+    };
+  }, [isResizing, handleResizeMove, handleResizeEnd]);
+
   // Listen for credential manager open event
   useEffect(() => {
     const handleOpenCredentials = () => setShowCredentials(true);
@@ -463,10 +501,20 @@ function Flow() {
         </div>
 
         {selectedNode && !showResults && (
-          <NodeConfigPanel
-            nodeId={selectedNode}
-            onParameterChange={handleParameterChange}
-          />
+          <div 
+            className="config-panel-wrapper"
+            style={{ width: configPanelWidth }}
+          >
+            <div 
+              className={`resize-handle ${isResizing ? 'resizing' : ''}`}
+              onMouseDown={handleResizeStart}
+              title="Drag to resize"
+            />
+            <NodeConfigPanel
+              nodeId={selectedNode}
+              onParameterChange={handleParameterChange}
+            />
+          </div>
         )}
 
         {showResults && currentWorkflow && (
