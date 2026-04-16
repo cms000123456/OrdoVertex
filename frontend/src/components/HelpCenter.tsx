@@ -465,6 +465,83 @@ return [{ json: {
             <p>Match the <em>Image Aspect Ratio</em> to the image's natural dimensions to prevent Google Chat from cropping it. Common values: <code>1</code> (square), <code>1.3333</code> (4:3), <code>1.7778</code> (16:9).</p>
           </div>
         </div>
+
+        <div className="node-doc">
+          <h4><FileText size={18} style={{display: 'inline', marginRight: '6px'}} />Send Image &amp; Message → Google Chat (Template)</h4>
+          <p>
+            The <strong>🖼️ Send Image &amp; Message → Google Chat</strong> template lets you browse for a local image and type a custom message, then post it as a card to Google Chat — all from a simple HTML form on your computer.
+          </p>
+          <div className="node-config">
+            <strong>How it works:</strong>
+            <ol>
+              <li>Load the template from the Templates panel</li>
+              <li>In the <strong>Post to Google Chat</strong> node, select your saved webhook (or paste one)</li>
+              <li>Activate the workflow — note the webhook path shown on the trigger node (e.g. <code>send-image-to-chat</code>)</li>
+              <li>Save the HTML form below to your computer and open it in a browser</li>
+              <li>Enter your OrdoVertex webhook URL, browse for an image, type your message, and click <strong>Send</strong></li>
+            </ol>
+            <p className="note">
+              Because Google Chat requires a publicly accessible image URL, the form uploads your image to <strong>imgbb.com</strong> (free, no account needed for the API key tier — get a free API key at imgbb.com) and passes the returned URL to the workflow.
+            </p>
+            <strong>HTML Form — save as <code>send-to-chat.html</code>:</strong>
+            <pre><code>{`<!DOCTYPE html>
+<html>
+<head><title>Send Image to Google Chat</title></head>
+<body style="font-family:sans-serif;max-width:480px;margin:40px auto;padding:0 16px">
+  <h2>📸 Send Image to Google Chat</h2>
+  <label>OrdoVertex Webhook URL<br>
+    <input id="webhookUrl" type="url" style="width:100%;margin:4px 0 12px"
+      placeholder="https://your-ordovertex/api/webhooks/send-image-to-chat" />
+  </label><br>
+  <label>imgbb API Key (<a href="https://api.imgbb.com" target="_blank">get one free</a>)<br>
+    <input id="imgbbKey" type="text" style="width:100%;margin:4px 0 12px"
+      placeholder="your_imgbb_api_key" />
+  </label><br>
+  <label>Image<br>
+    <input id="imageFile" type="file" accept="image/*" style="margin:4px 0 12px" />
+  </label><br>
+  <label>Message<br>
+    <textarea id="message" rows="3" style="width:100%;margin:4px 0 12px"
+      placeholder="Type your message here..."></textarea>
+  </label><br>
+  <button onclick="send()" style="padding:8px 20px">Send to Google Chat</button>
+  <p id="status"></p>
+  <script>
+    async function send() {
+      const status = document.getElementById('status');
+      const file = document.getElementById('imageFile').files[0];
+      const message = document.getElementById('message').value.trim();
+      const webhookUrl = document.getElementById('webhookUrl').value.trim();
+      const imgbbKey = document.getElementById('imgbbKey').value.trim();
+      if (!file || !message || !webhookUrl || !imgbbKey) {
+        return status.textContent = '⚠️ Please fill in all fields.';
+      }
+      status.textContent = 'Uploading image...';
+      // Upload image to imgbb
+      const form = new FormData();
+      form.append('image', file);
+      const upload = await fetch('https://api.imgbb.com/1/upload?key=' + imgbbKey, {
+        method: 'POST', body: form
+      });
+      const uploadData = await upload.json();
+      if (!uploadData.success) {
+        return status.textContent = '❌ Image upload failed: ' + uploadData.error?.message;
+      }
+      const imageUrl = uploadData.data.url;
+      status.textContent = 'Sending to Google Chat...';
+      // POST to OrdoVertex webhook
+      const res = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, imageUrl })
+      });
+      status.textContent = res.ok ? '✅ Sent!' : '❌ Webhook error: ' + res.status;
+    }
+  </script>
+</body>
+</html>`}</code></pre>
+          </div>
+        </div>
       </div>
     )
   },

@@ -1139,6 +1139,62 @@ return [{ json: { title, message, severity } }];`
       { id: 'conn-1', source: 'trigger-1', target: 'ldap-1' },
       { id: 'conn-2', source: 'ldap-1', target: 'transform-1' }
     ]
+  },
+
+  'send-image-to-google-chat': {
+    name: '🖼️ Send Image & Message → Google Chat',
+    description: 'Post a local image and custom message to a Google Chat space. Trigger via the included HTML form — browse for an image, type your message, and click Send.',
+    category: 'Integration',
+    tags: ['google-chat', 'image', 'notification', 'form', 'webhook'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'webhook',
+        name: 'Receive Form Submission',
+        position: { x: 100, y: 200 },
+        parameters: {
+          httpMethod: 'POST',
+          path: 'send-image-to-chat',
+          responseMode: 'onReceived',
+          responseCode: 200,
+          responseData: '{"ok":true}'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Extract Fields',
+        position: { x: 380, y: 200 },
+        parameters: {
+          code: `const body = items[0]?.json?.body || {};
+const message = body.message || 'No message provided';
+const imageUrl = body.imageUrl || '';
+if (!imageUrl) throw new Error('imageUrl is required');
+return [{ json: { message, imageUrl } }];`
+        }
+      },
+      {
+        id: 'chat-1',
+        type: 'googleChat',
+        name: 'Post to Google Chat',
+        position: { x: 660, y: 200 },
+        parameters: {
+          credentialId: '',
+          webhookUrl: '',
+          messageType: 'card',
+          cardTitle: '📸 New Image',
+          cardSubtitle: '',
+          cardText: '{{ $input.message }}',
+          cardImageUrl: '{{ $input.imageUrl }}',
+          cardImageAspectRatio: 1.3333,
+          useTemplate: true
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'code-1' },
+      { source: 'code-1', target: 'chat-1' }
+    ]
   }
 };
 
