@@ -298,7 +298,7 @@ return [{ json: { fact, imageUrl: imgUrl, imageMarkdown: '![Cat](' + imgUrl + ')
         parameters: {
           code: `const body = items[0]?.json?.body || {};
 const fact = body.fact || 'Cats are awesome!';
-const imageUrl = 'https://cataas.com/cat?t=' + Date.now();
+const imageUrl = 'https://cataas.com/cat?width=500&height=500&t=' + Date.now();
 return [{ json: { fact, imageUrl } }];`
         }
       },
@@ -314,6 +314,7 @@ return [{ json: { fact, imageUrl } }];`
           cardSubtitle: '',
           cardText: '{{ $input.fact }}',
           cardImageUrl: '{{ $input.imageUrl }}',
+          cardImageAspectRatio: 1,
           useTemplate: true
         }
       }
