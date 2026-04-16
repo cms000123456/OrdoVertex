@@ -1,4 +1,8 @@
 import { NodeType } from '../../types';
+import { PrismaClient } from '@prisma/client';
+import { decryptJSON } from '../../utils/encryption';
+
+const prisma = new PrismaClient();
 
 export const googleChatNode: NodeType = {
   name: 'googleChat',
@@ -21,14 +25,27 @@ export const googleChatNode: NodeType = {
       description: 'Response from Google Chat'
     }
   ],
+  credentials: [
+    {
+      name: 'googleChatWebhook',
+      requiredFields: ['webhookUrl']
+    }
+  ],
   properties: [
+    {
+      name: 'credentialId',
+      displayName: 'Saved Webhook',
+      type: 'resource',
+      resourceType: 'credential',
+      default: '',
+      description: 'Select a saved Google Chat webhook. Save webhooks via Credentials Manager — each can have a name and description (e.g. "Marketing Alerts", "Dev Team").'
+    },
     {
       name: 'webhookUrl',
       displayName: 'Webhook URL',
       type: 'string',
       default: '',
-      description: 'Google Chat incoming webhook URL (get this from Space settings > Apps & integrations > Webhooks)',
-      required: true
+      description: 'Paste a webhook URL here if you are not using a saved credential. Get it from your Google Chat space: Settings > Apps & integrations > Webhooks.'
     },
     {
       name: 'messageType',
@@ -70,7 +87,7 @@ export const googleChatNode: NodeType = {
       displayName: 'Card Subtitle',
       type: 'string',
       default: '',
-      description: 'Optional subtitle',
+      description: 'Optional subtitle shown below the card title',
       displayOptions: {
         show: {
           messageType: ['card']
@@ -94,7 +111,7 @@ export const googleChatNode: NodeType = {
       displayName: 'Image URL',
       type: 'string',
       default: '',
-      description: 'Optional image to show in card',
+      description: 'Optional image to show in the card. Supports {{ $input.field }} template variables.',
       displayOptions: {
         show: {
           messageType: ['card']
@@ -106,7 +123,7 @@ export const googleChatNode: NodeType = {
       displayName: 'Image Aspect Ratio',
       type: 'number',
       default: 1.7778,
-      description: 'Width/height ratio of the image (e.g. 1.7778 for 16:9, 1.3333 for 4:3, 1 for square). Use the image\'s natural ratio to avoid cropping.',
+      description: 'Width/height ratio of the image (e.g. 1.7778 for 16:9, 1.3333 for 4:3, 1 for square). Match the image\'s natural ratio to avoid cropping.',
       displayOptions: {
         show: {
           messageType: ['card']
@@ -118,27 +135,43 @@ export const googleChatNode: NodeType = {
       displayName: 'Use Template Variables',
       type: 'boolean',
       default: true,
-      description: 'Replace {{ $input.field }} with input data'
+      description: 'Replace {{ $input.field }} placeholders with values from the input data'
     }
   ],
   execute: async (context) => {
     try {
-      const webhookUrl = context.getNodeParameter('webhookUrl', '') as string;
-      const messageType = context.getNodeParameter('messageType', 'text') as string;
-      const useTemplate = context.getNodeParameter('useTemplate', true) as boolean;
-      
+      // Resolve webhook URL: saved credential takes priority over manual URL
+      let webhookUrl = context.getNodeParameter('webhookUrl', '') as string;
+      const credentialId = context.getNodeParameter('credentialId', '') as string;
+
+      if (credentialId) {
+        const credential = await prisma.credential.findFirst({
+          where: { id: credentialId, userId: context.userId }
+        });
+        if (!credential) {
+          return { success: false, error: 'Selected credential not found or access denied.' };
+        }
+        const credData = decryptJSON(credential.data, credential.iv) as Record<string, string>;
+        if (!credData.webhookUrl) {
+          return { success: false, error: 'Credential is missing the webhookUrl field.' };
+        }
+        webhookUrl = credData.webhookUrl;
+      }
+
       if (!webhookUrl) {
         return {
           success: false,
-          error: 'Webhook URL is required. Get it from your Google Chat space settings.'
+          error: 'No webhook URL configured. Select a saved webhook or paste a URL directly.'
         };
       }
+
+      const messageType = context.getNodeParameter('messageType', 'text') as string;
+      const useTemplate = context.getNodeParameter('useTemplate', true) as boolean;
 
       // Get input data for template replacement
       const items = context.getInputData();
       const inputData = items[0]?.json || {};
 
-      // Helper to replace template variables
       const replaceTemplate = (text: string): string => {
         if (!useTemplate) return text;
         return text.replace(/\{\{\s*\$input\.(\w+)\s*\}\}/g, (_, key) => {
@@ -151,22 +184,20 @@ export const googleChatNode: NodeType = {
       if (messageType === 'text') {
         let text = context.getNodeParameter('text', 'Hello from OrdoVertex!') as string;
         text = replaceTemplate(text);
-        
         payload = { text };
       } else {
-        // Card format
         let title = context.getNodeParameter('cardTitle', 'OrdoVertex Notification') as string;
         let subtitle = context.getNodeParameter('cardSubtitle', '') as string;
         let text = context.getNodeParameter('cardText', 'Workflow executed successfully!') as string;
         let imageUrl = context.getNodeParameter('cardImageUrl', '') as string;
-        
+
         title = replaceTemplate(title);
         subtitle = replaceTemplate(subtitle);
         text = replaceTemplate(text);
         imageUrl = replaceTemplate(imageUrl);
 
         const widgets: any[] = [];
-        
+
         if (imageUrl) {
           const aspectRatio = context.getNodeParameter('cardImageAspectRatio', 1.7778) as number;
           widgets.push({
@@ -202,12 +233,9 @@ export const googleChatNode: NodeType = {
         };
       }
 
-      // Send to Google Chat
       const response = await fetch(webhookUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
