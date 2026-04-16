@@ -269,7 +269,7 @@ return [{ json: { fact, imageUrl: imgUrl, imageMarkdown: '![Cat](' + imgUrl + ')
 
   'demo-cat-fact-to-google-chat': {
     name: '🐱 Cat Fact + Image → Google Chat',
-    description: 'Fetch a random cat fact and image, then post them as a card to a Google Chat space',
+    description: 'Fetch a random cat fact and post it with a cat image to a Google Chat space',
     category: 'Demo',
     tags: ['demo', 'fun', 'animals', 'google-chat', 'notification'],
     nodes: [
@@ -284,33 +284,21 @@ return [{ json: { fact, imageUrl: imgUrl, imageMarkdown: '![Cat](' + imgUrl + ')
         id: 'http-fact',
         type: 'httpRequest',
         name: 'Get Cat Fact',
-        position: { x: 350, y: 100 },
+        position: { x: 350, y: 200 },
         parameters: {
           method: 'GET',
           url: 'https://catfact.ninja/fact'
         }
       },
       {
-        id: 'http-img',
-        type: 'httpRequest',
-        name: 'Get Cat Image',
-        position: { x: 350, y: 300 },
-        parameters: {
-          method: 'GET',
-          url: 'https://api.thecatapi.com/v1/images/search'
-        }
-      },
-      {
         id: 'code-1',
         type: 'code',
-        name: 'Combine Results',
-        position: { x: 650, y: 200 },
+        name: 'Build Message',
+        position: { x: 600, y: 200 },
         parameters: {
-          code: `const inputs = items.map(i => i?.json || {});
-const factResponse = inputs.find(i => i.body?.fact) || {};
-const imgResponse = inputs.find(i => Array.isArray(i.body)) || {};
-const fact = factResponse.body?.fact || 'Cats are awesome!';
-const imageUrl = imgResponse.body?.[0]?.url || 'https://cataas.com/cat';
+          code: `const body = items[0]?.json?.body || {};
+const fact = body.fact || 'Cats are awesome!';
+const imageUrl = 'https://cataas.com/cat?t=' + Date.now();
 return [{ json: { fact, imageUrl } }];`
         }
       },
@@ -318,7 +306,7 @@ return [{ json: { fact, imageUrl } }];`
         id: 'chat-1',
         type: 'googleChat',
         name: 'Post to Google Chat',
-        position: { x: 950, y: 200 },
+        position: { x: 850, y: 200 },
         parameters: {
           webhookUrl: '',
           messageType: 'card',
@@ -332,9 +320,7 @@ return [{ json: { fact, imageUrl } }];`
     ],
     connections: [
       { source: 'trigger-1', target: 'http-fact' },
-      { source: 'trigger-1', target: 'http-img' },
       { source: 'http-fact', target: 'code-1' },
-      { source: 'http-img', target: 'code-1' },
       { source: 'code-1', target: 'chat-1' }
     ]
   },
