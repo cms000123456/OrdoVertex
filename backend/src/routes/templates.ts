@@ -308,10 +308,15 @@ return [{ json: { fact, imageUrl: imgUrl, imageMarkdown: '![Cat](' + imgUrl + ')
         parameters: {
           code: `const inputs = items.map(i => i?.json || {});
 const factResponse = inputs.find(i => i.body?.fact) || {};
-const imgResponse = inputs.find(i => i.body?.url || i.body?._id) || {};
+const imgResponse = inputs.find(i => i.body?.url || i.body?._id || i.body?.id) || {};
 const fact = factResponse.body?.fact || 'Cats are awesome!';
-const imgId = imgResponse.body?._id;
-const imgUrl = imgId ? 'https://cataas.com/cat/' + imgId : 'https://cataas.com/cat';
+const imgBody = imgResponse.body || {};
+const rawUrl = imgBody.url || '';
+const imgId = imgBody._id || imgBody.id || '';
+const imgUrl = rawUrl.startsWith('http') ? rawUrl
+  : rawUrl ? 'https://cataas.com' + rawUrl
+  : imgId ? 'https://cataas.com/cat/' + imgId
+  : 'https://cataas.com/cat';
 return [{ json: { fact, imageUrl: imgUrl } }];`
         }
       },
