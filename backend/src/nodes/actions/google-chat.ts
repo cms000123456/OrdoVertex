@@ -102,6 +102,18 @@ export const googleChatNode: NodeType = {
       }
     },
     {
+      name: 'cardImageAspectRatio',
+      displayName: 'Image Aspect Ratio',
+      type: 'number',
+      default: 1.7778,
+      description: 'Width/height ratio of the image (e.g. 1.7778 for 16:9, 1.3333 for 4:3, 1 for square). Use the image\'s natural ratio to avoid cropping.',
+      displayOptions: {
+        show: {
+          messageType: ['card']
+        }
+      }
+    },
+    {
       name: 'useTemplate',
       displayName: 'Use Template Variables',
       type: 'boolean',
@@ -156,9 +168,11 @@ export const googleChatNode: NodeType = {
         const widgets: any[] = [];
         
         if (imageUrl) {
+          const aspectRatio = context.getNodeParameter('cardImageAspectRatio', 1.7778) as number;
           widgets.push({
             image: {
               imageUrl: imageUrl,
+              aspectRatio,
               onClick: {
                 openLink: { url: imageUrl }
               }
