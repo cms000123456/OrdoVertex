@@ -317,7 +317,8 @@ const imgUrl = rawUrl.startsWith('http') ? rawUrl
   : rawUrl ? 'https://cataas.com' + rawUrl
   : imgId ? 'https://cataas.com/cat/' + imgId
   : 'https://cataas.com/cat';
-return [{ json: { fact, imageUrl: imgUrl } }];`
+const imgUrlBusted = imgUrl + (imgUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
+return [{ json: { fact, imageUrl: imgUrlBusted } }];`
         }
       },
       {
