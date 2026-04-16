@@ -835,6 +835,60 @@ return [{ json: {
     ]
   },
 
+  'integration-webhook-google-chat': {
+    name: '💬 Webhook to Google Chat',
+    description: 'Receive a webhook POST and forward a notification to a Google Chat space',
+    category: 'Integration',
+    tags: ['webhook', 'google-chat', 'notification'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'webhook',
+        name: 'Webhook Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {
+          httpMethod: 'POST',
+          path: 'notify-chat',
+          responseMode: 'onReceived',
+          responseCode: 200,
+          responseData: '{"success": true}'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Format Message',
+        position: { x: 400, y: 200 },
+        parameters: {
+          code: `const body = items[0]?.json?.body || items[0]?.json || {};
+const title = body.title || 'New Notification';
+const message = body.message || JSON.stringify(body, null, 2);
+const severity = body.severity || body.level || 'info';
+return [{ json: { title, message, severity } }];`
+        }
+      },
+      {
+        id: 'chat-1',
+        type: 'googleChat',
+        name: 'Send to Google Chat',
+        position: { x: 700, y: 200 },
+        parameters: {
+          webhookUrl: '',
+          messageType: 'card',
+          cardTitle: '{{ $input.title }}',
+          cardSubtitle: 'Severity: {{ $input.severity }}',
+          cardText: '{{ $input.message }}',
+          cardImageUrl: '',
+          useTemplate: true
+        }
+      }
+    ],
+    connections: [
+      { id: 'conn-1', source: 'trigger-1', target: 'code-1' },
+      { id: 'conn-2', source: 'code-1', target: 'chat-1' }
+    ]
+  },
+
   // Database Templates
   'db-sync-data': {
     name: 'Database Sync',
