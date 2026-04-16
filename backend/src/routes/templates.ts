@@ -297,7 +297,7 @@ return [{ json: { fact, imageUrl: imgUrl, imageMarkdown: '![Cat](' + imgUrl + ')
         position: { x: 350, y: 300 },
         parameters: {
           method: 'GET',
-          url: 'https://cataas.com/cat?json=true'
+          url: 'https://api.thecatapi.com/v1/images/search'
         }
       },
       {
@@ -308,17 +308,10 @@ return [{ json: { fact, imageUrl: imgUrl, imageMarkdown: '![Cat](' + imgUrl + ')
         parameters: {
           code: `const inputs = items.map(i => i?.json || {});
 const factResponse = inputs.find(i => i.body?.fact) || {};
-const imgResponse = inputs.find(i => i.body?.url || i.body?._id || i.body?.id) || {};
+const imgResponse = inputs.find(i => Array.isArray(i.body)) || {};
 const fact = factResponse.body?.fact || 'Cats are awesome!';
-const imgBody = imgResponse.body || {};
-const rawUrl = imgBody.url || '';
-const imgId = imgBody._id || imgBody.id || '';
-const imgUrl = rawUrl.startsWith('http') ? rawUrl
-  : rawUrl ? 'https://cataas.com' + rawUrl
-  : imgId ? 'https://cataas.com/cat/' + imgId
-  : 'https://cataas.com/cat';
-const imgUrlBusted = imgUrl + (imgUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
-return [{ json: { fact, imageUrl: imgUrlBusted } }];`
+const imageUrl = imgResponse.body?.[0]?.url || 'https://cataas.com/cat';
+return [{ json: { fact, imageUrl } }];`
         }
       },
       {
