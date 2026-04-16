@@ -423,6 +423,48 @@ return {
             </ul>
           </div>
         </div>
+
+        <h3>Notification Actions</h3>
+
+        <div className="node-doc">
+          <h4><MessageCircle size={18} style={{display: 'inline', marginRight: '6px'}} />Google Chat</h4>
+          <p>Send messages or rich cards to a Google Chat space via an incoming webhook.</p>
+          <div className="node-config">
+            <strong>Webhook Setup:</strong>
+            <ol>
+              <li>Open your Google Chat space and click the space name at the top</li>
+              <li>Go to <strong>Apps &amp; integrations → Webhooks → Add webhook</strong></li>
+              <li>Give it a name and copy the generated URL</li>
+            </ol>
+            <strong>Using Saved Webhooks (recommended):</strong>
+            <ol>
+              <li>Open <strong>Credentials Manager</strong> and create a new credential</li>
+              <li>Set the type to <code>googleChat</code> and give it a descriptive name (e.g. <em>"Marketing Alerts"</em> or <em>"Dev Team"</em>)</li>
+              <li>In the data field enter: <code>{'{"webhookUrl": "https://chat.googleapis.com/..."}'}</code></li>
+              <li>In the Google Chat node, select the saved webhook from the <strong>Saved Webhook</strong> dropdown</li>
+            </ol>
+            <p className="note">
+              You can save as many webhooks as you like — one per space or team. The manual <strong>Webhook URL</strong> field still works for quick one-off use.
+            </p>
+            <strong>Message Types:</strong>
+            <ul>
+              <li><strong>Simple Text:</strong> Plain message, supports <code>{'{{ $input.field }}'}</code> variables</li>
+              <li><strong>Card:</strong> Rich format with title, subtitle, body text, and an optional image</li>
+            </ul>
+            <strong>Template Variables:</strong>
+            <p>When <em>Use Template Variables</em> is enabled, <code>{'{{ $input.fieldName }}'}</code> in any text or image URL field is replaced with the matching value from the previous node's output.</p>
+            <pre><code>{`// Code node output → Google Chat card
+return [{ json: {
+  alertTitle: 'Deploy succeeded',
+  details: 'Branch main deployed to production'
+} }];
+
+// Card Content field value:
+// {{ $input.details }}`}</code></pre>
+            <strong>Image Aspect Ratio:</strong>
+            <p>Match the <em>Image Aspect Ratio</em> to the image's natural dimensions to prevent Google Chat from cropping it. Common values: <code>1</code> (square), <code>1.3333</code> (4:3), <code>1.7778</code> (16:9).</p>
+          </div>
+        </div>
       </div>
     )
   },
