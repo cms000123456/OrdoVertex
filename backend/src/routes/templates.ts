@@ -267,6 +267,79 @@ return [{ json: { fact, imageUrl: imgUrl, imageMarkdown: '![Cat](' + imgUrl + ')
     ]
   },
 
+  'demo-cat-fact-to-google-chat': {
+    name: '🐱 Cat Fact + Image → Google Chat',
+    description: 'Fetch a random cat fact and image, then post them as a card to a Google Chat space',
+    category: 'Demo',
+    tags: ['demo', 'fun', 'animals', 'google-chat', 'notification'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'http-fact',
+        type: 'httpRequest',
+        name: 'Get Cat Fact',
+        position: { x: 350, y: 100 },
+        parameters: {
+          method: 'GET',
+          url: 'https://catfact.ninja/fact'
+        }
+      },
+      {
+        id: 'http-img',
+        type: 'httpRequest',
+        name: 'Get Cat Image',
+        position: { x: 350, y: 300 },
+        parameters: {
+          method: 'GET',
+          url: 'https://cataas.com/cat?json=true'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Combine Results',
+        position: { x: 650, y: 200 },
+        parameters: {
+          code: `const inputs = items.map(i => i?.json || {});
+const factResponse = inputs.find(i => i.body?.fact) || {};
+const imgResponse = inputs.find(i => i.body?.url || i.body?._id) || {};
+const fact = factResponse.body?.fact || 'Cats are awesome!';
+const imgId = imgResponse.body?._id;
+const imgUrl = imgId ? 'https://cataas.com/cat/' + imgId : 'https://cataas.com/cat';
+return [{ json: { fact, imageUrl: imgUrl } }];`
+        }
+      },
+      {
+        id: 'chat-1',
+        type: 'googleChat',
+        name: 'Post to Google Chat',
+        position: { x: 950, y: 200 },
+        parameters: {
+          webhookUrl: '',
+          messageType: 'card',
+          cardTitle: '🐱 Cat Fact of the Day',
+          cardSubtitle: '',
+          cardText: '{{ $input.fact }}',
+          cardImageUrl: '{{ $input.imageUrl }}',
+          useTemplate: true
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'http-fact' },
+      { source: 'trigger-1', target: 'http-img' },
+      { source: 'http-fact', target: 'code-1' },
+      { source: 'http-img', target: 'code-1' },
+      { source: 'code-1', target: 'chat-1' }
+    ]
+  },
+
   'demo-joke-generator': {
     name: '😄 Demo: Joke Generator',
     description: 'Get a random programming joke (free API)',
