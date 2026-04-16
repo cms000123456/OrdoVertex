@@ -255,7 +255,7 @@ export function executeSandboxedJavaScript(
     const script = new vm.Script(wrappedCode, {
       timeout,
       displayErrors: false,
-    });
+    } as any);
 
     // Execute in isolated context
     const result = script.runInContext(context, {
@@ -541,7 +541,7 @@ except Exception as e:
 
       // Send the script
       pyshell.send(pythonScript);
-      pyshell.end();
+      pyshell.end((err: any) => { if (err) console.error(err); });
     } catch (error: any) {
       if (!isFinished) {
         isFinished = true;

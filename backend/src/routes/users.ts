@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { authMiddleware, AuthRequest, hashPassword } from '../utils/auth';
@@ -25,7 +25,7 @@ router.post(
     body('name').optional().trim(),
     body('role').optional().isIn(['user', 'admin'])
   ],
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -129,7 +129,7 @@ router.patch(
     param('id').isUUID(),
     body('role').isIn(['user', 'admin'])
   ],
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -179,7 +179,7 @@ router.delete(
   '/:id',
   authMiddleware,
   [param('id').isUUID()],
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {

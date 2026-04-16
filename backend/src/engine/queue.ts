@@ -16,7 +16,7 @@ export interface WorkflowJob {
 
 // Create queues
 export const workflowQueue = new Queue<WorkflowJob>('workflows', {
-  connection: redis,
+  connection: redis as any,
   defaultJobOptions: {
     attempts: 3,
     backoff: {
@@ -30,7 +30,7 @@ export const workflowQueue = new Queue<WorkflowJob>('workflows', {
 
 // Webhook response queue for async responses
 export const webhookResponseQueue = new Queue('webhook-responses', {
-  connection: redis
+  connection: redis as any
 });
 
 // Create worker
@@ -60,7 +60,7 @@ export function createWorker() {
       }
     },
     {
-      connection: redis,
+      connection: redis as any,
       concurrency: 10,
       limiter: {
         max: 100,
@@ -95,7 +95,7 @@ export async function queueWorkflowExecution(
     data,
     mode,
     webhookResponseQueue: webhookResponseQueueId
-  });
+  }) as Promise<Job<WorkflowJob>>;
 }
 
 export async function getQueueStats() {

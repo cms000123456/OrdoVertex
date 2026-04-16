@@ -215,9 +215,7 @@ export class WorkflowExecutor {
   private findTriggerNodes(): WorkflowNode[] {
     return this.workflow.nodes.filter(node => {
       const nodeType = nodeRegistry.get(node.type);
-      return nodeType?.category === 'Triggers' || 
-             node.inputs === undefined || 
-             node.inputs?.length === 0;
+      return nodeType?.category === 'Triggers';
     });
   }
 

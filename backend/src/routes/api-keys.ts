@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware, AuthRequest } from '../utils/auth';
@@ -55,7 +55,7 @@ router.post(
   [
     body('name').trim().isLength({ min: 1, max: 100 })
   ],
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -105,7 +105,7 @@ router.delete(
   '/:id',
   authMiddleware,
   [param('id').isUUID()],
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {

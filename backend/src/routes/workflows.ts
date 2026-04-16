@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware, AuthRequest } from '../utils/auth';
@@ -97,7 +97,7 @@ router.post(
     body('nodes').isArray(),
     body('connections').isArray()
   ],
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -153,7 +153,7 @@ router.patch(
   [
     param('id').isUUID()
   ],
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
       const { name, description, nodes, connections, settings, active } = req.body;

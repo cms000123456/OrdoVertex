@@ -54,7 +54,7 @@ class WorkflowScheduler {
         async () => {
           console.log(`⏰ Scheduled trigger fired for workflow: ${workflowId}`);
           try {
-            await queueWorkflowExecution(workflowId, {}, 'schedule');
+            await queueWorkflowExecution(workflowId, '', {}, 'schedule');
             
             // Update last triggered time
             await prisma.trigger.updateMany({
