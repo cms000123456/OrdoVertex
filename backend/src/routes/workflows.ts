@@ -205,7 +205,7 @@ router.patch(
             timezone: triggerNode.parameters?.timezone || 'UTC'
           };
           await prisma.trigger.upsert({
-            where: { workflowId_type: { workflowId: id, type: 'schedule' } } as any,
+            where: { workflowId_type: { workflowId: id, type: 'schedule' } },
             create: { workflowId: id, type: 'schedule', enabled: !!active, config },
             update: { enabled: !!active, config }
           });
