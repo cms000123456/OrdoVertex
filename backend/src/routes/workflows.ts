@@ -216,7 +216,10 @@ router.patch(
                 const days = Array.isArray(p.weekDays) && p.weekDays.length > 0 ? p.weekDays.join(',') : (p.weekDay ?? '1');
                 return `${mm} ${hh} * * ${days}`;
               }
-              case 'monthly':         return `${mm} ${hh} ${Math.min(31, Math.max(1, parseInt(p.monthDay) || 1))} * *`;
+              case 'monthly': {
+                const mdays = Array.isArray(p.monthDays) && p.monthDays.length > 0 ? p.monthDays.join(',') : (p.monthDay ?? '1');
+                return `${mm} ${hh} ${mdays} * *`;
+              }
               default:                return `${mm} ${hh} * * *`; // daily
             }
           };

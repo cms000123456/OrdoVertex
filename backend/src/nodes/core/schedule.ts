@@ -93,11 +93,12 @@ export const scheduleTriggerNode: NodeType = {
       displayOptions: { show: { scheduleMode: ['simple'], frequency: ['weekly'] } }
     },
     {
-      name: 'monthDay',
-      displayName: 'On day of month',
-      type: 'options',
+      name: 'monthDays',
+      displayName: 'On days of month',
+      type: 'multiselect',
       options: Array.from({ length: 31 }, (_, i) => ({ name: String(i + 1), value: String(i + 1) })),
-      default: '1',
+      default: ['1'],
+      description: 'Select one or more days each month',
       displayOptions: { show: { scheduleMode: ['simple'], frequency: ['monthly'] } }
     },
     // ── Custom mode ───────────────────────────────────────────────────────────
