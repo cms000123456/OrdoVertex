@@ -1141,6 +1141,1021 @@ return [{ json: { title, message, severity } }];`
     ]
   },
 
+  // Advanced Demo Templates
+  'advanced-ai-triage-bot': {
+    name: '🤖 AI Support Triage Bot',
+    description: 'Webhook receives a support ticket, AI classifies severity and category, then routes to Google Chat or email. Requires an AI credential.',
+    category: 'Advanced',
+    tags: ['ai', 'triage', 'webhook', 'routing', 'google-chat', 'email'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'webhook',
+        name: 'Receive Ticket',
+        position: { x: 100, y: 300 },
+        parameters: {
+          httpMethod: 'POST',
+          path: 'support-ticket',
+          responseMode: 'onReceived',
+          responseCode: 200,
+          responseData: '{"received":true}'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Extract Ticket',
+        position: { x: 350, y: 300 },
+        parameters: {
+          code: `const body = items[0]?.json?.body || items[0]?.json || {};
+const ticket = {
+  id: body.id || 'TICKET-' + Date.now(),
+  subject: body.subject || body.title || 'No subject',
+  description: body.description || body.message || body.body || '',
+  submitter: body.email || body.user || 'unknown@example.com',
+  submittedAt: new Date().toISOString()
+};
+return [{ json: { ticket, message: ticket.subject + '\\n\\n' + ticket.description } }];`
+        }
+      },
+      {
+        id: 'agent-1',
+        type: 'aiAgent',
+        name: 'Classify Ticket',
+        position: { x: 620, y: 300 },
+        parameters: {
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          useCredential: true,
+          credentialId: '',
+          temperature: 0.1,
+          maxTokens: 300,
+          systemPrompt: 'You are a support ticket classifier. Given a ticket subject and description, respond ONLY with a valid JSON object (no markdown, no extra text) in this exact format: {"severity":"critical"|"high"|"medium"|"low","category":"billing"|"technical"|"account"|"feature-request"|"other","summary":"one sentence summary","suggested_action":"what should be done"}',
+          enableMemory: false,
+          enableTools: false,
+          jsonMode: true,
+          maxIterations: 3
+        }
+      },
+      {
+        id: 'code-2',
+        type: 'code',
+        name: 'Parse Classification',
+        position: { x: 900, y: 300 },
+        parameters: {
+          code: `const ticket = items[0]?.json?.ticket || {};
+const agentOutput = items[0]?.json?.output || items[0]?.json?.response || '{}';
+let classification = {};
+try {
+  const raw = typeof agentOutput === 'string' ? agentOutput : JSON.stringify(agentOutput);
+  const jsonMatch = raw.match(/\\{[\\s\\S]*\\}/);
+  classification = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+} catch(e) { classification = { severity: 'medium', category: 'other', summary: 'Could not classify', suggested_action: 'Manual review needed' }; }
+const isCritical = classification.severity === 'critical' || classification.severity === 'high';
+return [{ json: { ticket, classification, isCritical, severity: classification.severity || 'medium' } }];`
+        }
+      },
+      {
+        id: 'if-1',
+        type: 'if',
+        name: 'Critical?',
+        position: { x: 1150, y: 300 },
+        parameters: {
+          mode: 'simple',
+          field: 'isCritical',
+          operator: 'eq',
+          value: 'true'
+        }
+      },
+      {
+        id: 'chat-1',
+        type: 'googleChat',
+        name: '🚨 Alert Google Chat',
+        position: { x: 1400, y: 150 },
+        parameters: {
+          webhookUrl: '',
+          messageType: 'card',
+          cardTitle: '🚨 Critical Ticket: {{ $input.ticket.id }}',
+          cardSubtitle: 'Severity: {{ $input.severity }} | Category: {{ $input.classification.category }}',
+          cardText: '**{{ $input.ticket.subject }}**\n\n{{ $input.classification.summary }}\n\nAction: {{ $input.classification.suggested_action }}\nFrom: {{ $input.ticket.submitter }}',
+          useTemplate: true
+        }
+      },
+      {
+        id: 'email-1',
+        type: 'sendEmail',
+        name: '📧 Queue Email',
+        position: { x: 1400, y: 450 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          to: 'support@example.com',
+          subject: '[{{ $input.severity }}] {{ $input.ticket.subject }}',
+          body: 'Ticket: {{ $input.ticket.id }}\nFrom: {{ $input.ticket.submitter }}\nSeverity: {{ $input.severity }}\nCategory: {{ $input.classification.category }}\n\nSummary: {{ $input.classification.summary }}\nAction: {{ $input.classification.suggested_action }}\n\n---\n{{ $input.ticket.description }}'
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'code-1' },
+      { source: 'code-1', target: 'agent-1' },
+      { source: 'agent-1', target: 'code-2' },
+      { source: 'code-2', target: 'if-1' },
+      { source: 'if-1', sourceHandle: 'true', target: 'chat-1' },
+      { source: 'if-1', sourceHandle: 'false', target: 'email-1' }
+    ]
+  },
+
+  'advanced-document-summarizer': {
+    name: '📄 AI Document Summarizer',
+    description: 'Fetch an RSS feed or web page, split into chunks, summarize with AI, and send a digest to Google Chat or email. Requires an AI credential.',
+    category: 'Advanced',
+    tags: ['ai', 'summarize', 'rss', 'digest', 'google-chat'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'scheduleTrigger',
+        name: 'Daily Digest',
+        position: { x: 100, y: 200 },
+        parameters: { cronExpression: '0 8 * * *', timezone: 'Europe/Stockholm' }
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Fetch RSS Feed',
+        position: { x: 350, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: 'https://feeds.feedburner.com/TheHackersNews'
+        }
+      },
+      {
+        id: 'parser-1',
+        type: 'textParser',
+        name: 'Parse RSS',
+        position: { x: 600, y: 200 },
+        parameters: {
+          parseMode: 'rss',
+          sourceField: '{{ $input.body }}',
+          maxResults: 8
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Prepare for AI',
+        position: { x: 850, y: 200 },
+        parameters: {
+          code: `const data = items[0]?.json || {};
+const articles = data.items || data.articles || [];
+const text = articles.slice(0, 8).map((a, i) =>
+  (i+1) + '. ' + (a.title || '') + ': ' + (a.description || a.summary || '').substring(0, 200)
+).join('\\n\\n');
+return [{ json: { message: 'Summarize these news articles into a concise daily digest with key themes and the 3 most important stories:\\n\\n' + text, articleCount: articles.length } }];`
+        }
+      },
+      {
+        id: 'agent-1',
+        type: 'aiAgent',
+        name: 'Summarize with AI',
+        position: { x: 1100, y: 200 },
+        parameters: {
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          useCredential: true,
+          credentialId: '',
+          temperature: 0.4,
+          maxTokens: 600,
+          systemPrompt: 'You are a news digest editor. Write clear, concise summaries. Format output as: 📌 Key Themes: [themes]\n\n🔥 Top Stories:\n1. [story]\n2. [story]\n3. [story]\n\n📊 Summary: [2-3 sentence overview]',
+          enableMemory: false,
+          enableTools: false,
+          maxIterations: 3
+        }
+      },
+      {
+        id: 'chat-1',
+        type: 'googleChat',
+        name: 'Post Digest',
+        position: { x: 1350, y: 200 },
+        parameters: {
+          webhookUrl: '',
+          messageType: 'card',
+          cardTitle: '📰 Daily Security Digest',
+          cardSubtitle: 'AI-powered summary',
+          cardText: '{{ $input.output }}',
+          useTemplate: true
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'http-1' },
+      { source: 'http-1', target: 'parser-1' },
+      { source: 'parser-1', target: 'code-1' },
+      { source: 'code-1', target: 'agent-1' },
+      { source: 'agent-1', target: 'chat-1' }
+    ]
+  },
+
+  'advanced-ai-sql-query': {
+    name: '🧠 AI Natural Language → SQL',
+    description: 'Type a question in plain English, AI generates the SQL query, executes it against your database, and returns results. Requires AI and database credentials.',
+    category: 'Advanced',
+    tags: ['ai', 'sql', 'database', 'natural-language'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Ask a Question',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'set-1',
+        type: 'set',
+        name: 'Set Question',
+        position: { x: 350, y: 200 },
+        parameters: {
+          mode: 'manual',
+          values: [
+            { name: 'message', value: 'Show me the 5 most recently created users and their email addresses' },
+            { name: 'schema_hint', value: 'Tables: users(id, name, email, role, created_at), workflows(id, name, user_id, active, created_at), executions(id, workflow_id, status, started_at, finished_at)' }
+          ]
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Build AI Prompt',
+        position: { x: 600, y: 200 },
+        parameters: {
+          code: `const q = items[0]?.json?.message || '';
+const schema = items[0]?.json?.schema_hint || '';
+return [{ json: { message: 'Database schema: ' + schema + '\\n\\nGenerate a safe, read-only PostgreSQL SELECT query for this request: ' + q + '\\n\\nRespond with ONLY the SQL query, no explanation, no markdown.' } }];`
+        }
+      },
+      {
+        id: 'agent-1',
+        type: 'aiAgent',
+        name: 'Generate SQL',
+        position: { x: 850, y: 200 },
+        parameters: {
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          useCredential: true,
+          credentialId: '',
+          temperature: 0.1,
+          maxTokens: 300,
+          systemPrompt: 'You are a PostgreSQL expert. Generate safe, read-only SELECT queries only. Never generate INSERT, UPDATE, DELETE, DROP, or any data-modifying statements. Return only the SQL query with no explanation.',
+          enableMemory: false,
+          enableTools: false,
+          maxIterations: 3
+        }
+      },
+      {
+        id: 'code-2',
+        type: 'code',
+        name: 'Extract SQL',
+        position: { x: 1100, y: 200 },
+        parameters: {
+          code: `const output = items[0]?.json?.output || items[0]?.json?.response || '';
+const sql = (typeof output === 'string' ? output : JSON.stringify(output))
+  .replace(/\`\`\`sql/gi, '').replace(/\`\`\`/g, '').trim();
+// Safety check — only allow SELECT
+if (!sql.trim().toUpperCase().startsWith('SELECT')) {
+  throw new Error('AI generated a non-SELECT statement. Blocked for safety: ' + sql.substring(0, 100));
+}
+return [{ json: { query: sql, generatedAt: new Date().toISOString() } }];`
+        }
+      },
+      {
+        id: 'sql-1',
+        type: 'sqlDatabase',
+        name: 'Execute Query',
+        position: { x: 1350, y: 200 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          dbType: 'postgresql',
+          operation: 'query',
+          query: '{{ $input.query }}'
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'set-1' },
+      { source: 'set-1', target: 'code-1' },
+      { source: 'code-1', target: 'agent-1' },
+      { source: 'agent-1', target: 'code-2' },
+      { source: 'code-2', target: 'sql-1' }
+    ]
+  },
+
+  'advanced-csv-to-db-etl': {
+    name: '📊 CSV to Database ETL',
+    description: 'Download a CSV from SFTP, parse and validate rows, insert into a SQL database, and send a completion report via email. Requires SFTP, database, and SMTP credentials.',
+    category: 'Advanced',
+    tags: ['csv', 'etl', 'sftp', 'database', 'email'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'scheduleTrigger',
+        name: 'Run ETL',
+        position: { x: 100, y: 200 },
+        parameters: { cronExpression: '0 3 * * *', timezone: 'Europe/Stockholm' }
+      },
+      {
+        id: 'sftp-1',
+        type: 'sftp',
+        name: 'Download CSV',
+        position: { x: 350, y: 200 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          operation: 'get',
+          remotePath: '/incoming/data.csv',
+          encoding: 'utf8'
+        }
+      },
+      {
+        id: 'csv-1',
+        type: 'csv',
+        name: 'Parse CSV',
+        position: { x: 600, y: 200 },
+        parameters: {
+          operation: 'parse',
+          inputField: 'content',
+          delimiter: ',',
+          header: true
+        }
+      },
+      {
+        id: 'filter-1',
+        type: 'filter',
+        name: 'Valid Rows Only',
+        position: { x: 850, y: 200 },
+        parameters: {
+          mode: 'simple',
+          field: 'email',
+          operator: 'exists',
+          value: ''
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Transform Rows',
+        position: { x: 1100, y: 200 },
+        parameters: {
+          code: `const rows = items.map(item => {
+  const r = item.json || {};
+  return { json: {
+    name: (r.name || r.full_name || '').trim(),
+    email: (r.email || '').toLowerCase().trim(),
+    department: r.department || r.dept || 'Unknown',
+    imported_at: new Date().toISOString()
+  }};
+});
+return rows;`
+        }
+      },
+      {
+        id: 'sql-1',
+        type: 'sqlDatabase',
+        name: 'Insert to DB',
+        position: { x: 1350, y: 200 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          dbType: 'postgresql',
+          operation: 'query',
+          query: "INSERT INTO imported_users (name, email, department, imported_at) VALUES ('{{ $json.name }}', '{{ $json.email }}', '{{ $json.department }}', '{{ $json.imported_at }}') ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, department = EXCLUDED.department, imported_at = EXCLUDED.imported_at"
+        }
+      },
+      {
+        id: 'code-2',
+        type: 'code',
+        name: 'Build Report',
+        position: { x: 1600, y: 200 },
+        parameters: {
+          code: `const count = items.length;
+return [{ json: {
+  to: 'admin@example.com',
+  subject: 'ETL Complete: ' + count + ' rows imported',
+  body: 'CSV ETL job completed at ' + new Date().toLocaleString() + '\\n\\nRows processed: ' + count + '\\nSource: /incoming/data.csv'
+} }];`
+        }
+      },
+      {
+        id: 'email-1',
+        type: 'sendEmail',
+        name: 'Send Report',
+        position: { x: 1850, y: 200 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          to: '{{ $input.to }}',
+          subject: '{{ $input.subject }}',
+          body: '{{ $input.body }}'
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'sftp-1' },
+      { source: 'sftp-1', target: 'csv-1' },
+      { source: 'csv-1', target: 'filter-1' },
+      { source: 'filter-1', target: 'code-1' },
+      { source: 'code-1', target: 'sql-1' },
+      { source: 'sql-1', target: 'code-2' },
+      { source: 'code-2', target: 'email-1' }
+    ]
+  },
+
+  'advanced-multi-source-digest': {
+    name: '🌐 Multi-Source Daily Digest',
+    description: 'Every morning: fetch weather, crypto prices, and top news, aggregate into one report, and send to Google Chat. No API keys needed.',
+    category: 'Advanced',
+    tags: ['digest', 'scheduled', 'weather', 'crypto', 'news', 'google-chat'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'scheduleTrigger',
+        name: 'Morning Digest',
+        position: { x: 100, y: 300 },
+        parameters: { cronExpression: '0 7 * * 1-5', timezone: 'Europe/Stockholm' }
+      },
+      {
+        id: 'http-weather',
+        type: 'httpRequest',
+        name: 'Get Weather',
+        position: { x: 380, y: 100 },
+        parameters: {
+          method: 'GET',
+          url: 'https://wttr.in/Stockholm?format=j1',
+          options: { headers: { 'User-Agent': 'curl/7.64.1' } }
+        }
+      },
+      {
+        id: 'http-crypto',
+        type: 'httpRequest',
+        name: 'Get Crypto',
+        position: { x: 380, y: 300 },
+        parameters: {
+          method: 'GET',
+          url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true'
+        }
+      },
+      {
+        id: 'http-news',
+        type: 'httpRequest',
+        name: 'Get News',
+        position: { x: 380, y: 500 },
+        parameters: {
+          method: 'GET',
+          url: 'https://feeds.feedburner.com/TheHackersNews'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Aggregate All',
+        position: { x: 720, y: 300 },
+        parameters: {
+          code: `const all = items.map(i => i?.json?.body || i?.json || {});
+const weather = all.find(d => d.current_condition) || {};
+const crypto = all.find(d => d.bitcoin) || {};
+const newsXml = all.find(d => typeof d === 'string' || (d && typeof d.toString === 'function')) || '';
+
+const cond = weather.current_condition?.[0] || {};
+const weatherStr = cond.temp_C ? cond.temp_C + '°C, ' + (cond.weatherDesc?.[0]?.value || '') : 'N/A';
+
+const btc = crypto.bitcoin ? '$' + crypto.bitcoin.usd.toLocaleString() + ' (' + (crypto.bitcoin.usd_24h_change || 0).toFixed(1) + '%)' : 'N/A';
+const eth = crypto.ethereum ? '$' + crypto.ethereum.usd.toLocaleString() + ' (' + (crypto.ethereum.usd_24h_change || 0).toFixed(1) + '%)' : 'N/A';
+
+const xmlText = typeof newsXml === 'string' ? newsXml : JSON.stringify(newsXml);
+const titles = [];
+const titleRe = /<title><!\\[CDATA\\[([^\\]]+)\\]\\]><\\/title>|<title>([^<]+)<\\/title>/g;
+let m; let count = 0;
+while ((m = titleRe.exec(xmlText)) !== null && count < 3) {
+  const t = (m[1] || m[2] || '').trim();
+  if (t && !t.toLowerCase().includes('hacker news')) { titles.push(t); count++; }
+}
+
+const report = '☀️ *Stockholm:* ' + weatherStr +
+  '\\n₿ *BTC:* ' + btc + '  |  *ETH:* ' + eth +
+  '\\n\\n📰 *Top Stories:*\\n' + titles.map((t,i) => (i+1)+'. '+t).join('\\n');
+
+return [{ json: { report, date: new Date().toLocaleDateString('sv-SE') } }];`
+        }
+      },
+      {
+        id: 'chat-1',
+        type: 'googleChat',
+        name: 'Post Digest',
+        position: { x: 1000, y: 300 },
+        parameters: {
+          webhookUrl: '',
+          messageType: 'card',
+          cardTitle: '🌅 Morning Digest — {{ $input.date }}',
+          cardSubtitle: 'Weather · Crypto · News',
+          cardText: '{{ $input.report }}',
+          useTemplate: true
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'http-weather' },
+      { source: 'trigger-1', target: 'http-crypto' },
+      { source: 'trigger-1', target: 'http-news' },
+      { source: 'http-weather', target: 'code-1' },
+      { source: 'http-crypto', target: 'code-1' },
+      { source: 'http-news', target: 'code-1' },
+      { source: 'code-1', target: 'chat-1' }
+    ]
+  },
+
+  'advanced-db-change-monitor': {
+    name: '🔍 Database Change Monitor',
+    description: 'Scheduled query checks for new or updated rows in a table, deduplicates, and sends alerts to Google Chat when changes are detected. Requires database and webhook credentials.',
+    category: 'Advanced',
+    tags: ['database', 'monitor', 'scheduled', 'alert', 'google-chat'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'scheduleTrigger',
+        name: 'Check Every 15 Min',
+        position: { x: 100, y: 200 },
+        parameters: { cronExpression: '*/15 * * * *', timezone: 'Europe/Stockholm' }
+      },
+      {
+        id: 'sql-1',
+        type: 'sqlDatabase',
+        name: 'Query New Rows',
+        position: { x: 370, y: 200 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          dbType: 'postgresql',
+          operation: 'query',
+          query: "SELECT id, name, email, created_at FROM users WHERE created_at > NOW() - INTERVAL '15 minutes' ORDER BY created_at DESC LIMIT 50"
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Check for Changes',
+        position: { x: 650, y: 200 },
+        parameters: {
+          code: `const rows = items.map(i => i.json).filter(r => r && r.id);
+if (rows.length === 0) {
+  return [{ json: { hasChanges: false, count: 0, message: 'No new rows' } }];
+}
+const summary = rows.slice(0, 5).map(r => '• ' + (r.name || r.id) + (r.email ? ' <' + r.email + '>' : '')).join('\\n');
+return [{ json: { hasChanges: true, count: rows.length, summary, checkedAt: new Date().toISOString() } }];`
+        }
+      },
+      {
+        id: 'if-1',
+        type: 'if',
+        name: 'Has Changes?',
+        position: { x: 920, y: 200 },
+        parameters: {
+          mode: 'simple',
+          field: 'hasChanges',
+          operator: 'eq',
+          value: 'true'
+        }
+      },
+      {
+        id: 'chat-1',
+        type: 'googleChat',
+        name: 'Alert Google Chat',
+        position: { x: 1180, y: 100 },
+        parameters: {
+          webhookUrl: '',
+          messageType: 'card',
+          cardTitle: '🔔 {{ $input.count }} new row(s) detected',
+          cardSubtitle: 'Checked at {{ $input.checkedAt }}',
+          cardText: '{{ $input.summary }}',
+          useTemplate: true
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'sql-1' },
+      { source: 'sql-1', target: 'code-1' },
+      { source: 'code-1', target: 'if-1' },
+      { source: 'if-1', sourceHandle: 'true', target: 'chat-1' }
+    ]
+  },
+
+  'advanced-security-alert-pipeline': {
+    name: '🛡️ Security Alert Pipeline',
+    description: 'Webhook receives a log event, AI analyzes it for threats, and fires alerts to Google Chat and email when suspicious activity is detected. Requires AI, webhook, and SMTP credentials.',
+    category: 'Advanced',
+    tags: ['security', 'ai', 'alert', 'webhook', 'google-chat', 'email'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'webhook',
+        name: 'Receive Log Event',
+        position: { x: 100, y: 300 },
+        parameters: {
+          httpMethod: 'POST',
+          path: 'security-log',
+          responseMode: 'onReceived',
+          responseCode: 200,
+          responseData: '{"received":true}'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Extract Event',
+        position: { x: 370, y: 300 },
+        parameters: {
+          code: `const body = items[0]?.json?.body || items[0]?.json || {};
+const event = {
+  timestamp: body.timestamp || new Date().toISOString(),
+  source_ip: body.source_ip || body.ip || 'unknown',
+  user: body.user || body.username || 'unknown',
+  action: body.action || body.event || body.type || 'unknown',
+  resource: body.resource || body.path || body.url || 'unknown',
+  status: body.status || body.result || 'unknown',
+  raw: JSON.stringify(body).substring(0, 500)
+};
+return [{ json: { event, message: 'Analyze this security log event for threats:\\n' + JSON.stringify(event, null, 2) } }];`
+        }
+      },
+      {
+        id: 'agent-1',
+        type: 'aiAgent',
+        name: 'Analyze Threat',
+        position: { x: 640, y: 300 },
+        parameters: {
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          useCredential: true,
+          credentialId: '',
+          temperature: 0.1,
+          maxTokens: 300,
+          systemPrompt: 'You are a security analyst. Analyze log events and respond ONLY with JSON (no markdown): {"threat_level":"critical"|"high"|"medium"|"low"|"none","threat_type":"brute_force"|"injection"|"privilege_escalation"|"data_exfiltration"|"anomaly"|"normal","explanation":"brief explanation","recommended_action":"what to do"}',
+          enableMemory: false,
+          enableTools: false,
+          jsonMode: true,
+          maxIterations: 3
+        }
+      },
+      {
+        id: 'code-2',
+        type: 'code',
+        name: 'Parse Threat Level',
+        position: { x: 910, y: 300 },
+        parameters: {
+          code: `const event = items[0]?.json?.event || {};
+const output = items[0]?.json?.output || items[0]?.json?.response || '{}';
+let analysis = {};
+try {
+  const raw = typeof output === 'string' ? output : JSON.stringify(output);
+  const jsonMatch = raw.match(/\\{[\\s\\S]*\\}/);
+  analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+} catch(e) { analysis = { threat_level: 'medium', threat_type: 'anomaly', explanation: 'Parse error', recommended_action: 'Manual review' }; }
+const isAlert = ['critical','high'].includes(analysis.threat_level);
+return [{ json: { event, analysis, isAlert, threat_level: analysis.threat_level || 'unknown' } }];`
+        }
+      },
+      {
+        id: 'if-1',
+        type: 'if',
+        name: 'Threat Detected?',
+        position: { x: 1160, y: 300 },
+        parameters: {
+          mode: 'simple',
+          field: 'isAlert',
+          operator: 'eq',
+          value: 'true'
+        }
+      },
+      {
+        id: 'chat-1',
+        type: 'googleChat',
+        name: '🚨 Security Alert',
+        position: { x: 1420, y: 150 },
+        parameters: {
+          webhookUrl: '',
+          messageType: 'card',
+          cardTitle: '🚨 Security Alert: {{ $input.analysis.threat_type }}',
+          cardSubtitle: 'Level: {{ $input.threat_level }} | IP: {{ $input.event.source_ip }}',
+          cardText: '{{ $input.analysis.explanation }}\n\nAction: {{ $input.analysis.recommended_action }}\nUser: {{ $input.event.user }}\nResource: {{ $input.event.resource }}',
+          useTemplate: true
+        }
+      },
+      {
+        id: 'email-1',
+        type: 'sendEmail',
+        name: '📧 Security Email',
+        position: { x: 1420, y: 400 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          to: 'security@example.com',
+          subject: '[{{ $input.threat_level }}] Security Alert: {{ $input.analysis.threat_type }}',
+          body: 'Threat Level: {{ $input.threat_level }}\nType: {{ $input.analysis.threat_type }}\nSource IP: {{ $input.event.source_ip }}\nUser: {{ $input.event.user }}\nResource: {{ $input.event.resource }}\nTime: {{ $input.event.timestamp }}\n\nAnalysis: {{ $input.analysis.explanation }}\nRecommended Action: {{ $input.analysis.recommended_action }}\n\nRaw Event:\n{{ $input.event.raw }}'
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'code-1' },
+      { source: 'code-1', target: 'agent-1' },
+      { source: 'agent-1', target: 'code-2' },
+      { source: 'code-2', target: 'if-1' },
+      { source: 'if-1', sourceHandle: 'true', target: 'chat-1' },
+      { source: 'if-1', sourceHandle: 'true', target: 'email-1' }
+    ]
+  },
+
+  'advanced-ldap-audit': {
+    name: '👥 LDAP User Audit',
+    description: 'Scheduled sync pulls all LDAP users, compares against the database, flags new and removed accounts, and sends a report. Requires LDAP and database credentials.',
+    category: 'Advanced',
+    tags: ['ldap', 'audit', 'users', 'database', 'scheduled', 'google-chat'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'scheduleTrigger',
+        name: 'Daily Audit',
+        position: { x: 100, y: 200 },
+        parameters: { cronExpression: '0 6 * * *', timezone: 'Europe/Stockholm' }
+      },
+      {
+        id: 'ldap-1',
+        type: 'ldap',
+        name: 'Fetch LDAP Users',
+        position: { x: 360, y: 100 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          operation: 'search',
+          baseDn: 'ou=users,dc=company,dc=com',
+          filter: '(objectClass=person)',
+          scope: 'sub',
+          attributes: ['cn', 'mail', 'department', 'memberOf']
+        }
+      },
+      {
+        id: 'sql-1',
+        type: 'sqlDatabase',
+        name: 'Fetch DB Users',
+        position: { x: 360, y: 320 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          dbType: 'postgresql',
+          operation: 'query',
+          query: 'SELECT email, name, department FROM users WHERE active = true ORDER BY email'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Compare & Diff',
+        position: { x: 680, y: 200 },
+        parameters: {
+          code: `const all = items.map(i => i.json || {});
+const ldapData = all.find(d => d.entries || d.results) || {};
+const dbData = all.find(d => Array.isArray(d.rows) || (d.id && d.email)) || {};
+
+const ldapEntries = ldapData.entries || ldapData.results || [];
+const dbRows = dbData.rows || (Array.isArray(dbData) ? dbData : []);
+
+const ldapEmails = new Set(ldapEntries.map(e => (e.attributes?.mail?.[0] || '').toLowerCase()).filter(Boolean));
+const dbEmails = new Set(dbRows.map(r => (r.email || '').toLowerCase()).filter(Boolean));
+
+const newInLdap = [...ldapEmails].filter(e => !dbEmails.has(e));
+const removedFromLdap = [...dbEmails].filter(e => !ldapEmails.has(e));
+
+return [{ json: {
+  ldapCount: ldapEmails.size,
+  dbCount: dbEmails.size,
+  newAccounts: newInLdap,
+  removedAccounts: removedFromLdap,
+  hasChanges: newInLdap.length > 0 || removedFromLdap.length > 0,
+  auditedAt: new Date().toISOString()
+} }];`
+        }
+      },
+      {
+        id: 'chat-1',
+        type: 'googleChat',
+        name: 'Post Audit Report',
+        position: { x: 980, y: 200 },
+        parameters: {
+          webhookUrl: '',
+          messageType: 'card',
+          cardTitle: '👥 LDAP Audit Report',
+          cardSubtitle: '{{ $input.auditedAt }}',
+          cardText: 'LDAP Users: {{ $input.ldapCount }} | DB Users: {{ $input.dbCount }}\n\n✅ New accounts: {{ $input.newAccounts }}\n⚠️ Removed accounts: {{ $input.removedAccounts }}',
+          useTemplate: true
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'ldap-1' },
+      { source: 'trigger-1', target: 'sql-1' },
+      { source: 'ldap-1', target: 'code-1' },
+      { source: 'sql-1', target: 'code-1' },
+      { source: 'code-1', target: 'chat-1' }
+    ]
+  },
+
+  'advanced-github-pr-summary': {
+    name: '🐙 GitHub PR → AI Summary → Google Chat',
+    description: 'Receive a GitHub pull_request webhook, AI summarizes the changes, and posts a review summary to Google Chat. Requires an AI credential and webhook.',
+    category: 'Advanced',
+    tags: ['github', 'ai', 'webhook', 'google-chat', 'devops'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'webhook',
+        name: 'GitHub Webhook',
+        position: { x: 100, y: 200 },
+        parameters: {
+          httpMethod: 'POST',
+          path: 'github-pr',
+          responseMode: 'onReceived',
+          responseCode: 200,
+          responseData: '{"ok":true}'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Extract PR Data',
+        position: { x: 370, y: 200 },
+        parameters: {
+          code: `const body = items[0]?.json?.body || items[0]?.json || {};
+const action = body.action || '';
+const pr = body.pull_request || {};
+if (!pr.number) return [{ json: { skip: true, reason: 'Not a PR event' } }];
+if (!['opened','synchronize','reopened'].includes(action)) return [{ json: { skip: true, reason: 'Ignored action: ' + action } }];
+
+return [{ json: {
+  skip: false,
+  number: pr.number,
+  title: pr.title || '',
+  author: pr.user?.login || 'unknown',
+  base: pr.base?.ref || 'main',
+  head: pr.head?.ref || '',
+  additions: pr.additions || 0,
+  deletions: pr.deletions || 0,
+  changed_files: pr.changed_files || 0,
+  body: (pr.body || 'No description').substring(0, 800),
+  url: pr.html_url || '',
+  repo: body.repository?.full_name || '',
+  message: 'Summarize this GitHub PR for a developer team:\\nTitle: ' + pr.title + '\\nBranch: ' + (pr.head?.ref||'') + ' → ' + (pr.base?.ref||'main') + '\\nChanged files: ' + (pr.changed_files||0) + ' (+' + (pr.additions||0) + '/-' + (pr.deletions||0) + ')\\nDescription: ' + (pr.body||'none').substring(0,600)
+} }];`
+        }
+      },
+      {
+        id: 'if-1',
+        type: 'if',
+        name: 'Skip?',
+        position: { x: 640, y: 200 },
+        parameters: {
+          mode: 'simple',
+          field: 'skip',
+          operator: 'eq',
+          value: 'false'
+        }
+      },
+      {
+        id: 'agent-1',
+        type: 'aiAgent',
+        name: 'Summarize PR',
+        position: { x: 900, y: 100 },
+        parameters: {
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          useCredential: true,
+          credentialId: '',
+          temperature: 0.3,
+          maxTokens: 400,
+          systemPrompt: 'You are a senior code reviewer. Write a concise PR summary for a team chat. Format: 🎯 Purpose: [what this PR does]\n📦 Changes: [key changes]\n⚠️ Review focus: [what reviewers should look at]\nKeep it under 150 words.',
+          enableMemory: false,
+          enableTools: false,
+          maxIterations: 3
+        }
+      },
+      {
+        id: 'chat-1',
+        type: 'googleChat',
+        name: 'Post to Google Chat',
+        position: { x: 1160, y: 100 },
+        parameters: {
+          webhookUrl: '',
+          messageType: 'card',
+          cardTitle: '🔀 PR #{{ $input.number }}: {{ $input.title }}',
+          cardSubtitle: '{{ $input.repo }} | {{ $input.author }} | +{{ $input.additions }}/-{{ $input.deletions }} in {{ $input.changed_files }} files',
+          cardText: '{{ $input.output }}\n\n🔗 {{ $input.url }}',
+          useTemplate: true
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'code-1' },
+      { source: 'code-1', target: 'if-1' },
+      { source: 'if-1', sourceHandle: 'true', target: 'agent-1' },
+      { source: 'agent-1', target: 'chat-1' }
+    ]
+  },
+
+  'advanced-form-submission-handler': {
+    name: '📝 Form Submission Handler',
+    description: 'Webhook receives a form submission, validates and transforms the data, saves to database, and sends a confirmation email to the submitter. Requires database and SMTP credentials.',
+    category: 'Advanced',
+    tags: ['webhook', 'form', 'database', 'email', 'validation'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'webhook',
+        name: 'Receive Form',
+        position: { x: 100, y: 200 },
+        parameters: {
+          httpMethod: 'POST',
+          path: 'form-submit',
+          responseMode: 'responseNode',
+          responseCode: 200
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Validate & Transform',
+        position: { x: 380, y: 200 },
+        parameters: {
+          code: `const body = items[0]?.json?.body || items[0]?.json || {};
+const name = (body.name || '').trim();
+const email = (body.email || '').trim().toLowerCase();
+const message = (body.message || '').trim();
+
+if (!name) throw new Error('name is required');
+if (!email || !email.includes('@')) throw new Error('valid email is required');
+if (!message) throw new Error('message is required');
+
+return [{ json: {
+  name,
+  email,
+  message: message.substring(0, 2000),
+  submitted_at: new Date().toISOString(),
+  ip: items[0]?.json?.headers?.['x-forwarded-for'] || 'unknown'
+} }];`
+        }
+      },
+      {
+        id: 'sql-1',
+        type: 'sqlDatabase',
+        name: 'Save to DB',
+        position: { x: 660, y: 200 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          dbType: 'postgresql',
+          operation: 'query',
+          query: "INSERT INTO form_submissions (name, email, message, submitted_at, ip) VALUES ('{{ $json.name }}', '{{ $json.email }}', '{{ $json.message }}', '{{ $json.submitted_at }}', '{{ $json.ip }}') RETURNING id"
+        }
+      },
+      {
+        id: 'email-1',
+        type: 'sendEmail',
+        name: 'Confirmation Email',
+        position: { x: 940, y: 200 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          to: '{{ $input.email }}',
+          subject: 'We received your message, {{ $input.name }}!',
+          body: 'Hi {{ $input.name }},\n\nThank you for reaching out. We have received your message and will get back to you shortly.\n\nYour message:\n{{ $input.message }}\n\nSubmitted: {{ $input.submitted_at }}\n\nBest regards,\nThe Team'
+        }
+      },
+      {
+        id: 'response-1',
+        type: 'webhookResponse',
+        name: 'HTTP Response',
+        position: { x: 1200, y: 200 },
+        parameters: {
+          statusCode: 200,
+          contentType: 'application/json',
+          responseMode: 'json',
+          jsonData: { success: true, message: 'Form received. Check your email for confirmation.' }
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'code-1' },
+      { source: 'code-1', target: 'sql-1' },
+      { source: 'sql-1', target: 'email-1' },
+      { source: 'email-1', target: 'response-1' }
+    ]
+  },
+
   'send-image-to-google-chat': {
     name: '🖼️ Send Image & Message → Google Chat',
     description: 'Post a local image and custom message to a Google Chat space. Trigger via the included HTML form — browse for an image, type your message, and click Send.',
