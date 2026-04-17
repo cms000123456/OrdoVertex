@@ -554,7 +554,7 @@ router.get('/types/list', authenticateToken, async (req: AuthRequest, res) => {
       name: 'Webhook',
       description: 'Webhook URL credential (e.g. Google Chat, Slack)',
       fields: [
-        { name: 'webhookUrl', type: 'string', displayName: 'Webhook URL', required: true, sensitive: true, placeholder: 'https://chat.googleapis.com/v1/spaces/...' },
+        { name: 'webhookUrl', type: 'string', displayName: 'Webhook URL', required: true, sensitive: false, placeholder: 'https://chat.googleapis.com/v1/spaces/...' },
         { name: 'description', type: 'string', displayName: 'Description', required: false, placeholder: 'e.g. Marketing Alerts' }
       ]
     }
