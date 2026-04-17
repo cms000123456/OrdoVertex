@@ -79,6 +79,8 @@ services:
     volumes:
       - ./backend:/app
       - ./.data/logs:/app/logs
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     depends_on:
       postgres:
         condition: service_healthy
