@@ -17,6 +17,13 @@ export const scheduleTriggerNode: NodeType = {
   ],
   properties: [
     {
+      name: 'enabled',
+      displayName: 'Enable Schedule',
+      type: 'boolean',
+      default: true,
+      description: 'Enable or disable this schedule trigger without deactivating the whole workflow'
+    },
+    {
       name: 'cronExpression',
       displayName: 'Cron Expression',
       type: 'string',

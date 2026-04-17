@@ -204,12 +204,14 @@ router.patch(
             cron: triggerNode.parameters?.cronExpression || '0 9 * * *',
             timezone: triggerNode.parameters?.timezone || 'UTC'
           };
+          const nodeEnabled = triggerNode.parameters?.enabled !== false;
+          const triggerEnabled = !!active && nodeEnabled;
           await prisma.trigger.upsert({
             where: { workflowId_type: { workflowId: id, type: 'schedule' } },
-            create: { workflowId: id, type: 'schedule', enabled: !!active, config },
-            update: { enabled: !!active, config }
+            create: { workflowId: id, type: 'schedule', enabled: triggerEnabled, config },
+            update: { enabled: triggerEnabled, config }
           });
-          if (active) {
+          if (triggerEnabled) {
             await sendSchedulerControl('schedule', id, config);
           } else {
             await sendSchedulerControl('unschedule', id);
