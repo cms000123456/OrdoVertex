@@ -1141,6 +1141,294 @@ return [{ json: { title, message, severity } }];`
     ]
   },
 
+  // Slack & Teams Templates
+  'integration-slack-notification': {
+    name: '💬 Slack Notification',
+    description: 'Send a formatted message to a Slack channel via incoming webhook. Requires a Slack webhook credential.',
+    category: 'Integration',
+    tags: ['slack', 'notification', 'webhook'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Send Notification',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'set-1',
+        type: 'set',
+        name: 'Set Message',
+        position: { x: 350, y: 200 },
+        parameters: {
+          mode: 'manual',
+          values: [
+            { name: 'title', value: 'Hello from OrdoVertex' },
+            { name: 'message', value: 'This is a test notification sent via Slack webhook.' },
+            { name: 'color', value: '#36a64f' }
+          ]
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Build Slack Payload',
+        position: { x: 620, y: 200 },
+        parameters: {
+          code: `const title = items[0]?.json?.title || 'Notification';
+const message = items[0]?.json?.message || '';
+const color = items[0]?.json?.color || '#36a64f';
+const payload = {
+  attachments: [{
+    color,
+    blocks: [
+      { type: 'header', text: { type: 'plain_text', text: title } },
+      { type: 'section', text: { type: 'mrkdwn', text: message } },
+      { type: 'context', elements: [{ type: 'mrkdwn', text: 'Sent by *OrdoVertex* at ' + new Date().toLocaleString() }] }
+    ]
+  }]
+};
+return [{ json: { payload: JSON.stringify(payload) } }];`
+        }
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Post to Slack',
+        position: { x: 900, y: 200 },
+        parameters: {
+          method: 'POST',
+          url: '{{ $credentials.webhookUrl }}',
+          useCredential: true,
+          credentialId: '',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{{ $input.payload }}'
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'set-1' },
+      { source: 'set-1', target: 'code-1' },
+      { source: 'code-1', target: 'http-1' }
+    ]
+  },
+
+  'integration-slack-alert': {
+    name: '🚨 Slack Alert on Webhook',
+    description: 'Receive a webhook event and forward a formatted alert to Slack. Good for CI/CD notifications, monitoring, or error alerts.',
+    category: 'Integration',
+    tags: ['slack', 'alert', 'webhook', 'devops'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'webhook',
+        name: 'Receive Event',
+        position: { x: 100, y: 200 },
+        parameters: {
+          httpMethod: 'POST',
+          path: 'slack-alert',
+          responseMode: 'onReceived',
+          responseCode: 200,
+          responseData: '{"ok":true}'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Build Slack Payload',
+        position: { x: 400, y: 200 },
+        parameters: {
+          code: `const body = items[0]?.json?.body || items[0]?.json || {};
+const title = body.title || body.summary || 'New Event';
+const message = body.message || body.description || JSON.stringify(body, null, 2).substring(0, 500);
+const level = body.level || body.severity || 'info';
+const colors = { critical: '#ff0000', error: '#ff0000', warning: '#ffaa00', info: '#36a64f', success: '#36a64f' };
+const color = colors[level] || '#36a64f';
+const emoji = { critical: '🚨', error: '❌', warning: '⚠️', info: 'ℹ️', success: '✅' }[level] || 'ℹ️';
+const payload = {
+  attachments: [{
+    color,
+    blocks: [
+      { type: 'header', text: { type: 'plain_text', text: emoji + ' ' + title } },
+      { type: 'section', text: { type: 'mrkdwn', text: message } },
+      { type: 'section', fields: [
+        { type: 'mrkdwn', text: '*Level:*\\n' + level },
+        { type: 'mrkdwn', text: '*Time:*\\n' + new Date().toLocaleString() }
+      ]},
+    ]
+  }]
+};
+return [{ json: { payload: JSON.stringify(payload) } }];`
+        }
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Post to Slack',
+        position: { x: 700, y: 200 },
+        parameters: {
+          method: 'POST',
+          url: '{{ $credentials.webhookUrl }}',
+          useCredential: true,
+          credentialId: '',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{{ $input.payload }}'
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'code-1' },
+      { source: 'code-1', target: 'http-1' }
+    ]
+  },
+
+  'integration-teams-notification': {
+    name: '🟦 Microsoft Teams Notification',
+    description: 'Send a formatted Adaptive Card message to a Microsoft Teams channel via incoming webhook. Requires a Teams webhook credential.',
+    category: 'Integration',
+    tags: ['teams', 'microsoft', 'notification', 'webhook'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Send Notification',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'set-1',
+        type: 'set',
+        name: 'Set Message',
+        position: { x: 350, y: 200 },
+        parameters: {
+          mode: 'manual',
+          values: [
+            { name: 'title', value: 'Hello from OrdoVertex' },
+            { name: 'message', value: 'This is a test notification sent via Microsoft Teams webhook.' },
+            { name: 'themeColor', value: '0076D7' }
+          ]
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Build Teams Payload',
+        position: { x: 620, y: 200 },
+        parameters: {
+          code: `const title = items[0]?.json?.title || 'Notification';
+const message = items[0]?.json?.message || '';
+const themeColor = items[0]?.json?.themeColor || '0076D7';
+const payload = {
+  "@type": "MessageCard",
+  "@context": "http://schema.org/extensions",
+  "themeColor": themeColor,
+  "summary": title,
+  "sections": [{
+    "activityTitle": title,
+    "activityText": message,
+    "facts": [
+      { "name": "Source", "value": "OrdoVertex" },
+      { "name": "Time", "value": new Date().toLocaleString() }
+    ],
+    "markdown": true
+  }]
+};
+return [{ json: { payload: JSON.stringify(payload) } }];`
+        }
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Post to Teams',
+        position: { x: 900, y: 200 },
+        parameters: {
+          method: 'POST',
+          url: '{{ $credentials.webhookUrl }}',
+          useCredential: true,
+          credentialId: '',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{{ $input.payload }}'
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'set-1' },
+      { source: 'set-1', target: 'code-1' },
+      { source: 'code-1', target: 'http-1' }
+    ]
+  },
+
+  'integration-teams-alert': {
+    name: '🚨 Microsoft Teams Alert on Webhook',
+    description: 'Receive a webhook event and forward a formatted alert card to Microsoft Teams. Good for monitoring, CI/CD, or error notifications.',
+    category: 'Integration',
+    tags: ['teams', 'microsoft', 'alert', 'webhook', 'devops'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'webhook',
+        name: 'Receive Event',
+        position: { x: 100, y: 200 },
+        parameters: {
+          httpMethod: 'POST',
+          path: 'teams-alert',
+          responseMode: 'onReceived',
+          responseCode: 200,
+          responseData: '{"ok":true}'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Build Teams Payload',
+        position: { x: 400, y: 200 },
+        parameters: {
+          code: `const body = items[0]?.json?.body || items[0]?.json || {};
+const title = body.title || body.summary || 'New Event';
+const message = body.message || body.description || JSON.stringify(body).substring(0, 500);
+const level = body.level || body.severity || 'info';
+const colors = { critical: 'FF0000', error: 'FF0000', warning: 'FFA500', info: '0076D7', success: '00AA00' };
+const themeColor = colors[level] || '0076D7';
+const payload = {
+  "@type": "MessageCard",
+  "@context": "http://schema.org/extensions",
+  "themeColor": themeColor,
+  "summary": title,
+  "sections": [{
+    "activityTitle": title,
+    "activityText": message,
+    "facts": [
+      { "name": "Severity", "value": level },
+      { "name": "Source", "value": body.source || body.service || 'OrdoVertex' },
+      { "name": "Time", "value": new Date().toLocaleString() }
+    ],
+    "markdown": true
+  }]
+};
+return [{ json: { payload: JSON.stringify(payload) } }];`
+        }
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Post to Teams',
+        position: { x: 700, y: 200 },
+        parameters: {
+          method: 'POST',
+          url: '{{ $credentials.webhookUrl }}',
+          useCredential: true,
+          credentialId: '',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{{ $input.payload }}'
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'code-1' },
+      { source: 'code-1', target: 'http-1' }
+    ]
+  },
+
   // Advanced Demo Templates
   'advanced-ai-triage-bot': {
     name: '🤖 AI Support Triage Bot',

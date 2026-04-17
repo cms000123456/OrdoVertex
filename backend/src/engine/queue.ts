@@ -5,13 +5,21 @@ import { executeWorkflow } from './executor';
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 const redis = new IORedis(redisUrl, { maxRetriesPerRequest: null });
 
+export { redis };
+
 // Define job types
 export interface WorkflowJob {
   workflowId: string;
   userId: string;
   data: any;
   mode: 'manual' | 'webhook' | 'schedule';
-  webhookResponseQueue?: string; // For webhook responses
+  webhookResponseQueue?: string;
+}
+
+export interface SchedulerControlJob {
+  action: 'schedule' | 'unschedule';
+  workflowId: string;
+  config?: { cron: string; timezone?: string };
 }
 
 // Create queues
@@ -32,6 +40,16 @@ export const workflowQueue = new Queue<WorkflowJob>('workflows', {
 export const webhookResponseQueue = new Queue('webhook-responses', {
   connection: redis as any
 });
+
+// Scheduler control queue — API sends commands, worker executes them
+export const schedulerControlQueue = new Queue<SchedulerControlJob>('scheduler-control', {
+  connection: redis as any,
+  defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 500 }, removeOnComplete: 20, removeOnFail: 10 }
+});
+
+export async function sendSchedulerControl(action: 'schedule' | 'unschedule', workflowId: string, config?: { cron: string; timezone?: string }) {
+  return schedulerControlQueue.add(action, { action, workflowId, config });
+}
 
 // Create worker
 export function createWorker() {
@@ -107,11 +125,34 @@ export async function getQueueStats() {
     workflowQueue.getDelayedCount()
   ]);
 
-  return {
-    waiting,
-    active,
-    completed,
-    failed,
-    delayed
-  };
+  return { waiting, active, completed, failed, delayed };
+}
+
+export async function getFailedJobs(start = 0, end = 49) {
+  const jobs = await workflowQueue.getFailed(start, end);
+  return jobs.map(job => ({
+    id: job.id,
+    workflowId: job.data.workflowId,
+    userId: job.data.userId,
+    mode: job.data.mode,
+    failedReason: job.failedReason,
+    attemptsMade: job.attemptsMade,
+    timestamp: job.timestamp,
+    processedOn: job.processedOn,
+    finishedOn: job.finishedOn
+  }));
+}
+
+export async function retryFailedJob(jobId: string) {
+  const job = await workflowQueue.getJob(jobId);
+  if (!job) throw new Error(`Job ${jobId} not found`);
+  await job.retry();
+  return { retried: true, jobId };
+}
+
+export async function deleteFailedJob(jobId: string) {
+  const job = await workflowQueue.getJob(jobId);
+  if (!job) throw new Error(`Job ${jobId} not found`);
+  await job.remove();
+  return { deleted: true, jobId };
 }

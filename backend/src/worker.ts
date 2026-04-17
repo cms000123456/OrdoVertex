@@ -1,26 +1,48 @@
 import { PrismaClient } from '@prisma/client';
+import { Worker, Job } from 'bullmq';
 import { registerAllNodes } from './nodes';
 import { scheduler } from './engine/scheduler';
-import { createWorker } from './engine/queue';
+import { createWorker, redis, SchedulerControlJob } from './engine/queue';
 
 const prisma = new PrismaClient();
+const HEARTBEAT_KEY = 'worker:heartbeat';
+const HEARTBEAT_INTERVAL_MS = 30_000;
+
+function startHeartbeat() {
+  const write = () => redis.set(HEARTBEAT_KEY, Date.now().toString(), 'EX', 120);
+  write();
+  return setInterval(write, HEARTBEAT_INTERVAL_MS);
+}
+
+function createSchedulerControlWorker() {
+  const worker = new Worker<SchedulerControlJob>(
+    'scheduler-control',
+    async (job: Job<SchedulerControlJob>) => {
+      const { action, workflowId, config } = job.data;
+      if (action === 'schedule' && config) {
+        await scheduler.scheduleWorkflow(workflowId, config);
+      } else if (action === 'unschedule') {
+        await scheduler.unscheduleWorkflow(workflowId);
+      }
+    },
+    { connection: redis as any, concurrency: 5 }
+  );
+  worker.on('failed', (job, err) => console.error(`❌ Scheduler control job failed:`, err));
+  return worker;
+}
 
 async function main() {
   try {
     console.log('🚀 Starting OrdoVertex Worker...');
 
-    // Register all nodes
     registerAllNodes();
-
-    // Initialize scheduler
     await scheduler.initialize();
-
-    // Test database connection
     await prisma.$connect();
     console.log('✅ Database connected');
 
-    // Start the worker
     createWorker();
+    createSchedulerControlWorker();
+    startHeartbeat();
 
     console.log(`
 ✅ OrdoVertex Worker is running
