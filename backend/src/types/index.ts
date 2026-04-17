@@ -88,7 +88,10 @@ export interface NodeProperty {
   placeholder?: string;
   description?: string;
   required?: boolean;
-  options?: Array<{ name: string; value: string; description?: string }>;
+  sensitive?: boolean;
+  min?: number;
+  max?: number;
+  options?: Array<{ name: string; value: string | number; description?: string }>;
   resourceType?: string;
   displayOptions?: DisplayOptions;
 }
@@ -107,7 +110,8 @@ export interface NodeExecuteContext {
   node: WorkflowNode;
   items: any[];
   credentials?: Record<string, string>;
-  userId: string;  // Maps to req.user!.id
+  userId: string;
+  executionId?: string;
   getInputData: () => any[];
   getNodeParameter: (name: string, fallback?: any) => any;
   continueOnFail: () => boolean;
@@ -116,7 +120,7 @@ export interface NodeExecuteContext {
 export interface NodeExecuteResult {
   success: boolean;
   output?: any[];
-  error?: Error;
+  error?: string | Error;
   binary?: Record<string, any>;
 }
 

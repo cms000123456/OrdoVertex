@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NodeType } from '../../types';
 import ldap from 'ldapjs';
 

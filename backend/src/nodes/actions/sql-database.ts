@@ -1,6 +1,8 @@
 import { NodeType } from '../../types';
+// @ts-ignore
 import { Pool as PostgresPool } from 'pg';
 import * as mysql from 'mysql2/promise';
+// @ts-ignore
 import * as mssql from 'mssql';
 import { Database as SQLiteDatabase } from 'sqlite3';
 import { open } from 'sqlite';

@@ -34,7 +34,7 @@ function getTransporter(): nodemailer.Transporter | null {
   }
 
   // Create new transporter
-  transporter = nodemailer.createTransporter({
+  transporter = nodemailer.createTransport({
     host: settings.smtpHost,
     port: settings.smtpPort,
     secure: settings.smtpSecure, // true for 465, false for other ports

@@ -248,7 +248,7 @@ export const sftpNode: NodeType = {
           const binary = context.getNodeParameter('binary', false) as boolean;
           const encoding = binary ? null : 'utf8';
           
-          const data = await sftp.get(remotePath, encoding);
+          const data = await sftp.get(remotePath, encoding as any);
           
           if (binary) {
             // Return as base64

@@ -75,6 +75,7 @@ services:
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-this-is-a-32-char-dev-key-change-me!}
       LOGS_DIR: /app/logs
+      TZ: ${TZ:-Europe/Stockholm}
     volumes:
       - ./backend:/app
       - ./.data/logs:/app/logs

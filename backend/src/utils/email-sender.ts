@@ -20,7 +20,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     return;
   }
 
-  const transporter = nodemailer.createTransporter({
+  const transporter = nodemailer.createTransport({
     host: smtpHost,
     port: smtpPort,
     secure: smtpPort === 465,

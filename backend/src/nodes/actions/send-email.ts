@@ -217,7 +217,7 @@ export const sendEmailNode: NodeType = {
         };
       }
 
-      const transporter = nodemailer.createTransporter(transporterConfig);
+      const transporter = nodemailer.createTransport(transporterConfig);
 
       // Convert markdown to simple HTML if needed
       let html: string | undefined;

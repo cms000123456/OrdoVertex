@@ -372,7 +372,7 @@ export const aiAgentNode: NodeType = {
       const userMessage = items[0]?.json?.message || items[0]?.json?.input || JSON.stringify(items[0]?.json);
 
       // Resolve memory key
-      const memoryKey = memoryKeyTemplate.replace('{{ $executionId }}', context.executionId);
+      const memoryKey = memoryKeyTemplate.replace('{{ $executionId }}', context.executionId ?? '');
 
       // Get API key
       let apiKey: string;
@@ -427,7 +427,7 @@ export const aiAgentNode: NodeType = {
           }
         })) : [];
 
-      let response: string;
+      let response = '';
       let toolCalls: any[] = [];
 
       // Call appropriate provider

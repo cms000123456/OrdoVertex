@@ -3,6 +3,18 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        role?: string;
+      };
+    }
+  }
+}
+
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -39,7 +51,7 @@ export function verifyToken(token: string): { id: string; email: string; role?: 
   return jwt.verify(token, JWT_SECRET_KEY) as { id: string; email: string; role?: string };
 }
 
-export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+export function authMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
     
@@ -61,7 +73,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   }
 }
 
-export async function apiKeyMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+export async function apiKeyMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     const apiKey = req.headers['x-api-key'] as string;
     

@@ -15,8 +15,8 @@ const DEFAULT_MAINTENANCE_SETTINGS = {
   apiRequestLogsRetention: 7, // days
   enableAutoPurge: true,
   purgeSchedule: '0 2 * * *', // Daily at 2 AM
-  lastPurgeRun: null,
-  nextPurgeRun: null
+  lastPurgeRun: null as string | null,
+  nextPurgeRun: null as string | null
 };
 
 // Default security settings
