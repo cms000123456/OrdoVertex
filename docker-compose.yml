@@ -61,7 +61,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: sh -c "npm install && npx prisma@5 db push && npx prisma@5 db seed && npm run dev"
+    command: sh -c "npm install && npx prisma@5 db push && npx prisma@5 generate && npx prisma@5 db seed && npm run dev"
 
   worker:
     build:
@@ -86,7 +86,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: npm run worker
+    command: sh -c "npx prisma@5 generate && npm run worker"
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -u ${REDIS_URL:-redis://redis:6379} get worker:heartbeat | grep -qE '^[0-9]+$'"]
       interval: 30s
