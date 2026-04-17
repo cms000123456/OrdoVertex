@@ -87,6 +87,12 @@ services:
       redis:
         condition: service_healthy
     command: npm run worker
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -u ${REDIS_URL:-redis://redis:6379} get worker:heartbeat | grep -qE '^[0-9]+$'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:

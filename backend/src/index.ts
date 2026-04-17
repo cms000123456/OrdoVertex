@@ -25,6 +25,8 @@ import alertRoutes from './routes/alerts';
 import templateRoutes from './routes/templates';
 import logsRoutes from './routes/logs';
 import systemRoutes from './routes/system';
+import schedulerRoutes from './routes/scheduler';
+import queueRoutes from './routes/queue';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -114,6 +116,8 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/system', systemRoutes);
+app.use('/api/scheduler', schedulerRoutes);
+app.use('/api/queue', queueRoutes);
 app.use('/webhook', webhookRoutes);
 
 // Admin/System Routes

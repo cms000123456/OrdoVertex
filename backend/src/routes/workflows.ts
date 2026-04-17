@@ -4,8 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { executeWorkflow } from '../engine/executor';
-import { queueWorkflowExecution } from '../engine/queue';
-import { scheduler } from '../engine/scheduler';
+import { queueWorkflowExecution, sendSchedulerControl } from '../engine/queue';
 import { workflowContainsCodeNodes } from '../utils/code-sandbox';
 import { isCodeNodeApprovalRequired } from './system';
 
@@ -197,17 +196,24 @@ router.patch(
         }
       });
 
-      // Handle schedule triggers
+      // Handle schedule triggers — upsert DB record and signal worker
       if (nodes && active !== undefined) {
         const triggerNode = nodes.find((n: any) => n.type === 'scheduleTrigger');
         if (triggerNode) {
+          const config = {
+            cron: triggerNode.parameters?.cronExpression || '0 9 * * *',
+            timezone: triggerNode.parameters?.timezone || 'UTC'
+          };
           if (active) {
-            await scheduler.scheduleWorkflow(id, {
-              cron: triggerNode.parameters?.cronExpression || '0 9 * * *',
-              timezone: triggerNode.parameters?.timezone || 'UTC'
+            await prisma.trigger.upsert({
+              where: { workflowId_type: { workflowId: id, type: 'schedule' } } as any,
+              create: { workflowId: id, type: 'schedule', enabled: true, config },
+              update: { enabled: true, config }
             });
+            await sendSchedulerControl('schedule', id, config);
           } else {
-            await scheduler.unscheduleWorkflow(id);
+            await prisma.trigger.updateMany({ where: { workflowId: id, type: 'schedule' }, data: { enabled: false } });
+            await sendSchedulerControl('unschedule', id);
           }
         }
       }
@@ -235,7 +241,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
     }
 
     // Unschedule if needed
-    await scheduler.unscheduleWorkflow(id);
+    await sendSchedulerControl('unschedule', id);
 
     await prisma.workflow.delete({
       where: { id }

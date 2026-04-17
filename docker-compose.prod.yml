@@ -130,6 +130,12 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -u ${REDIS_URL:-redis://redis:6379} get worker:heartbeat | grep -qE '^[0-9]+$'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     # Remove volume mount in production
     # volumes:
     #   - ./backend:/app
