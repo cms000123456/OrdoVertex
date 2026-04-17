@@ -145,17 +145,21 @@ export const googleChatNode: NodeType = {
       const credentialId = context.getNodeParameter('credentialId', '') as string;
 
       if (credentialId) {
-        const credential = await prisma.credential.findFirst({
-          where: { id: credentialId, userId: context.userId }
-        });
-        if (!credential) {
-          return { success: false, error: 'Selected credential not found or access denied.' };
+        try {
+          const credential = await prisma.credential.findFirst({
+            where: { id: credentialId, userId: context.userId }
+          });
+          if (!credential) {
+            return { success: false, error: `Credential not found (id: ${credentialId}). Make sure it was saved and belongs to your account.` };
+          }
+          const credData = decryptJSON(credential.data, credential.iv) as Record<string, string>;
+          if (!credData.webhookUrl) {
+            return { success: false, error: 'Credential is missing the webhookUrl field.' };
+          }
+          webhookUrl = credData.webhookUrl;
+        } catch (credError) {
+          return { success: false, error: `Failed to load credential: ${credError instanceof Error ? credError.message : String(credError)}` };
         }
-        const credData = decryptJSON(credential.data, credential.iv) as Record<string, string>;
-        if (!credData.webhookUrl) {
-          return { success: false, error: 'Credential is missing the webhookUrl field.' };
-        }
-        webhookUrl = credData.webhookUrl;
       }
 
       if (!webhookUrl) {
