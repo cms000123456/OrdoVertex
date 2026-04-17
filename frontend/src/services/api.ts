@@ -245,6 +245,14 @@ export const templatesApi = {
   createFromTemplate: (id: string, data: any) => api.post(`/api/templates/${id}/create`, data)
 };
 
+// Scheduler API
+export const schedulerApi = {
+  getStatus: () => api.get('/api/scheduler/status'),
+  getTriggers: (enabledOnly?: boolean) => api.get('/api/scheduler/triggers', { params: enabledOnly ? { enabled: 'true' } : {} }),
+  setEnabled: (id: string, enabled: boolean) => api.patch(`/api/scheduler/triggers/${id}`, { enabled }),
+  runNow: (id: string) => api.post(`/api/scheduler/triggers/${id}/run`)
+};
+
 // MFA API
 export const mfaApi = {
   setup: () => api.post('/api/auth/mfa/setup'),
