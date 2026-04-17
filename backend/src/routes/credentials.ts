@@ -175,7 +175,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     // Validate credential type
-    const validTypes = ['database', 'http', 'oauth2', 'apiKey', 'ssh', 'generic', 'hashicorpVault', 'openai', 'anthropic', 'gemini', 'kimi', 'smtp', 'sftp', 'aws', 'ldap'];
+    const validTypes = ['database', 'http', 'oauth2', 'apiKey', 'ssh', 'generic', 'hashicorpVault', 'openai', 'anthropic', 'gemini', 'kimi', 'smtp', 'sftp', 'aws', 'ldap', 'webhook'];
     if (!validTypes.includes(type)) {
       return errorResponse(res, `Invalid credential type. Must be one of: ${validTypes.join(', ')}`);
     }
