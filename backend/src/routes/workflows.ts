@@ -212,7 +212,10 @@ router.patch(
               case 'every_minute':    return '* * * * *';
               case 'every_n_minutes': return `*/${Math.max(1, parseInt(p.intervalMinutes) || 15)} * * * *`;
               case 'hourly':          return `${parseInt(p.atMinute) || 0} * * * *`;
-              case 'weekly':          return `${mm} ${hh} * * ${p.weekDay ?? 1}`;
+              case 'weekly': {
+                const days = Array.isArray(p.weekDays) && p.weekDays.length > 0 ? p.weekDays.join(',') : (p.weekDay ?? '1');
+                return `${mm} ${hh} * * ${days}`;
+              }
               case 'monthly':         return `${mm} ${hh} ${Math.min(31, Math.max(1, parseInt(p.monthDay) || 1))} * *`;
               default:                return `${mm} ${hh} * * *`; // daily
             }
