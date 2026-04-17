@@ -282,6 +282,28 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
           </select>
         );
 
+      case 'multiselect': {
+        const selected: string[] = Array.isArray(value) ? value : (property.default || []);
+        const toggle = (v: string) => {
+          const next = selected.includes(v) ? selected.filter((x: string) => x !== v) : [...selected, v];
+          onParameterChange(property.name, next);
+        };
+        return (
+          <div className="multiselect-checkboxes">
+            {property.options?.map((opt: any) => (
+              <label key={opt.value} className="multiselect-option">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(opt.value)}
+                  onChange={() => toggle(opt.value)}
+                />
+                <span>{opt.name}</span>
+              </label>
+            ))}
+          </div>
+        );
+      }
+
       case 'resource':
         if (property.resourceType === 'credential') {
           return (

@@ -512,6 +512,26 @@
   color: #6b7280;
 }
 
+.multiselect-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.multiselect-option {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.multiselect-option input[type="checkbox"] {
+  cursor: pointer;
+}
+
 .property-description {
   font-size: 11px;
   color: #6b7280;

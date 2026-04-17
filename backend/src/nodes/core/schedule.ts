@@ -76,27 +76,28 @@ export const scheduleTriggerNode: NodeType = {
       displayOptions: { show: { scheduleMode: ['simple'], frequency: ['daily', 'weekly', 'monthly'] } }
     },
     {
-      name: 'weekDay',
-      displayName: 'On day',
-      type: 'options',
+      name: 'weekDays',
+      displayName: 'On days',
+      type: 'multiselect',
       options: [
-        { name: 'Monday', value: '1' },
-        { name: 'Tuesday', value: '2' },
-        { name: 'Wednesday', value: '3' },
-        { name: 'Thursday', value: '4' },
-        { name: 'Friday', value: '5' },
-        { name: 'Saturday', value: '6' },
-        { name: 'Sunday', value: '0' }
+        { name: 'Mon', value: '1' },
+        { name: 'Tue', value: '2' },
+        { name: 'Wed', value: '3' },
+        { name: 'Thu', value: '4' },
+        { name: 'Fri', value: '5' },
+        { name: 'Sat', value: '6' },
+        { name: 'Sun', value: '0' }
       ],
-      default: '1',
+      default: ['1'],
+      description: 'Select one or more days',
       displayOptions: { show: { scheduleMode: ['simple'], frequency: ['weekly'] } }
     },
     {
       name: 'monthDay',
       displayName: 'On day of month',
-      type: 'number',
-      default: 1,
-      description: 'Day of the month (1–31)',
+      type: 'options',
+      options: Array.from({ length: 31 }, (_, i) => ({ name: String(i + 1), value: String(i + 1) })),
+      default: '1',
       displayOptions: { show: { scheduleMode: ['simple'], frequency: ['monthly'] } }
     },
     // ── Custom mode ───────────────────────────────────────────────────────────
