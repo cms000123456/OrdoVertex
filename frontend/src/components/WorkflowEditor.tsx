@@ -14,7 +14,7 @@ import ReactFlow, {
   ReactFlowProvider
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Play, Save, ArrowLeft, Terminal, Key, Sparkles } from 'lucide-react';
+import { Play, Save, ArrowLeft, Terminal, Key, Sparkles, Power } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -45,6 +45,7 @@ function Flow() {
   const [nodeTypesList, setNodeTypesList] = useState<NodeType[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [isTogglingActive, setIsTogglingActive] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
   
@@ -61,7 +62,8 @@ function Flow() {
     setNodes: setStoreNodes,
     setConnections: setStoreConnections,
     setNodeTypes,
-    updateNodeParameters
+    updateNodeParameters,
+    setCurrentWorkflow
   } = useWorkflowStore();
 
   // Helper functions for node display
@@ -338,6 +340,21 @@ function Flow() {
     }
   };
 
+  const handleToggleActive = async () => {
+    if (!currentWorkflow) return;
+    setIsTogglingActive(true);
+    try {
+      const newActive = !currentWorkflow.active;
+      await workflowsApi.update(currentWorkflow.id, { active: newActive });
+      setCurrentWorkflow({ ...currentWorkflow, active: newActive });
+      toast.success(newActive ? 'Workflow activated' : 'Workflow deactivated');
+    } catch (error) {
+      toast.error('Failed to update workflow status');
+    } finally {
+      setIsTogglingActive(false);
+    }
+  };
+
   const handleExecute = async () => {
     if (!currentWorkflow) return;
 
@@ -429,6 +446,15 @@ function Flow() {
           >
             <Sparkles size={16} />
             AI Help
+          </button>
+          <button
+            className={`btn ${currentWorkflow?.active ? 'btn-success' : 'btn-secondary'}`}
+            onClick={handleToggleActive}
+            disabled={isTogglingActive || !currentWorkflow}
+            title={currentWorkflow?.active ? 'Deactivate workflow' : 'Activate workflow'}
+          >
+            <Power size={16} />
+            {isTogglingActive ? '...' : currentWorkflow?.active ? 'Active' : 'Inactive'}
           </button>
           <button
             className="btn btn-secondary"
