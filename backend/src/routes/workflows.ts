@@ -200,9 +200,26 @@ router.patch(
       if (nodes && active !== undefined) {
         const triggerNode = nodes.find((n: any) => n.type === 'scheduleTrigger');
         if (triggerNode) {
+          const p = triggerNode.parameters || {};
+          const buildCron = (): string => {
+            if (p.scheduleMode === 'custom' || !p.scheduleMode) {
+              return p.cronExpression || '0 9 * * *';
+            }
+            const [h, m] = (p.atTime || '09:00').split(':').map(Number);
+            const hh = isNaN(h) ? 9 : h;
+            const mm = isNaN(m) ? 0 : m;
+            switch (p.frequency) {
+              case 'every_minute':    return '* * * * *';
+              case 'every_n_minutes': return `*/${Math.max(1, parseInt(p.intervalMinutes) || 15)} * * * *`;
+              case 'hourly':          return `${parseInt(p.atMinute) || 0} * * * *`;
+              case 'weekly':          return `${mm} ${hh} * * ${p.weekDay ?? 1}`;
+              case 'monthly':         return `${mm} ${hh} ${Math.min(31, Math.max(1, parseInt(p.monthDay) || 1))} * *`;
+              default:                return `${mm} ${hh} * * *`; // daily
+            }
+          };
           const config = {
-            cron: triggerNode.parameters?.cronExpression || '0 9 * * *',
-            timezone: triggerNode.parameters?.timezone || 'UTC'
+            cron: buildCron(),
+            timezone: p.timezone || 'UTC'
           };
           const triggerEnabled = triggerNode.parameters?.enabled !== false;
           await prisma.trigger.upsert({
