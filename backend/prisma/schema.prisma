@@ -321,6 +321,7 @@ model Trigger {
   lastTriggered DateTime?
   createdAt  DateTime @default(now())
 
+  @@unique([workflowId, type])
   @@index([workflowId])
 }
 
