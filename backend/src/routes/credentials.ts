@@ -549,6 +549,14 @@ router.get('/types/list', authenticateToken, async (req: AuthRequest, res) => {
         { name: 'bindDn', type: 'string', displayName: 'Bind DN', required: true, placeholder: 'cn=admin,dc=example,dc=com' },
         { name: 'password', type: 'string', displayName: 'Password', required: true, sensitive: true }
       ]
+    },
+    webhook: {
+      name: 'Webhook',
+      description: 'Webhook URL credential (e.g. Google Chat, Slack)',
+      fields: [
+        { name: 'webhookUrl', type: 'string', displayName: 'Webhook URL', required: true, sensitive: true, placeholder: 'https://chat.googleapis.com/v1/spaces/...' },
+        { name: 'description', type: 'string', displayName: 'Description', required: false, placeholder: 'e.g. Marketing Alerts' }
+      ]
     }
   };
 
