@@ -45,6 +45,22 @@ class WorkflowScheduler {
         return false;
       }
 
+      // Normalize timezone: GMT+X is not a valid IANA name; convert to Etc/GMT-X (sign reversed)
+      const resolveTimezone = (tz: string): string => {
+        const gmtMatch = tz.match(/^GMT([+-])(\d{1,2})$/i);
+        if (gmtMatch) {
+          const flipped = gmtMatch[1] === '+' ? '-' : '+';
+          return `Etc/GMT${flipped}${gmtMatch[2]}`;
+        }
+        return tz;
+      };
+
+      const rawTz = config.timezone || 'UTC';
+      const timezone = resolveTimezone(rawTz);
+      if (timezone !== rawTz) {
+        console.warn(`⚠️  Timezone "${rawTz}" converted to IANA format "${timezone}"`);
+      }
+
       // Stop existing job if any
       await this.unscheduleWorkflow(workflowId);
 
@@ -55,7 +71,7 @@ class WorkflowScheduler {
           console.log(`⏰ Scheduled trigger fired for workflow: ${workflowId}`);
           try {
             await queueWorkflowExecution(workflowId, '', {}, 'schedule');
-            
+
             // Update last triggered time
             await prisma.trigger.updateMany({
               where: { workflowId, type: 'schedule' },
@@ -67,7 +83,7 @@ class WorkflowScheduler {
         },
         {
           scheduled: true,
-          timezone: config.timezone || 'UTC'
+          timezone
         }
       );
 
