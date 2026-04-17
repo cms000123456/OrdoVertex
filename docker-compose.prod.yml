@@ -127,6 +127,9 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       TZ: ${TZ:-Europe/Stockholm}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     # Remove volume mount in production
     # volumes:
     #   - ./backend:/app
