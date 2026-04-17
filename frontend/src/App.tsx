@@ -90,6 +90,28 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return !isAuthenticated ? <>{children}</> : <Navigate to="/workflows" />;
 }
 
+// Clock widget showing local HH:mm and timezone abbreviation
+function ClockWidget() {
+  const [time, setTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date()), 10_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const hhmm = time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const tz = new Intl.DateTimeFormat('en', { timeZoneName: 'short' })
+    .formatToParts(time)
+    .find(p => p.type === 'timeZoneName')?.value ?? '';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.2, userSelect: 'none' }}>
+      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{hhmm}</span>
+      <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', letterSpacing: '0.03em' }}>{tz}</span>
+    </div>
+  );
+}
+
 // Main layout with navigation
 function MainLayout() {
   const user = useAuthStore((state) => state.user);
@@ -104,6 +126,7 @@ function MainLayout() {
           <span className="nav-logo">OrdoVertex</span>
         </div>
         <div className="nav-items">
+          <ClockWidget />
           <div className="nav-theme-selector">
             <ThemeSelectorCompact />
           </div>
