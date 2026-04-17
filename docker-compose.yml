@@ -61,7 +61,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: sh -c "npm install && npx prisma@5 db push && npx prisma@5 generate && npx prisma@5 db seed && npm run dev"
+    command: sh -c "npm install && npx prisma@5 db push --accept-data-loss && npx prisma@5 generate && npx prisma@5 db seed && npm run dev"
 
   worker:
     build:
