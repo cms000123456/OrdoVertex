@@ -30,6 +30,7 @@ import { LogViewer } from './components/LogViewer';
 import { PerformanceMonitor } from './components/PerformanceMonitor';
 import { Onboarding } from './components/Onboarding';
 import { WorkspaceManager } from './components/WorkspaceManager';
+import { SchedulerManager } from './components/SchedulerManager';
 import { VerifyEmail } from './components/VerifyEmail';
 import { ResendVerification } from './components/ResendVerification';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -224,6 +225,7 @@ function App() {
           <Route path="/admin/logs" element={<LogViewer />} />
           <Route path="/admin/documentation" element={<AdminDocumentation />} />
           <Route path="/admin/settings" element={<SystemSettings />} />
+          <Route path="/admin/scheduler" element={<SchedulerManager />} />
           <Route path="/workspaces" element={<WorkspaceManager />} />
           <Route path="/workspaces/:id" element={<WorkspaceManager />} />
           {/* Help routes */}

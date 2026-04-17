@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Shield, Users, Settings, ChevronDown, Workflow, Key, Lock, Terminal, UsersRound, Activity, Building2, BookOpen, FileText } from 'lucide-react';
+import { Shield, Users, Settings, ChevronDown, Workflow, Key, Lock, Terminal, UsersRound, Activity, Building2, BookOpen, FileText, Clock } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import './AdminMenu.css';
 
@@ -138,6 +138,17 @@ export function AdminMenu() {
           >
             <BookOpen size={16} />
             <span>Documentation</span>
+          </NavLink>
+
+          <NavLink
+            to="/admin/scheduler"
+            className={({ isActive }) =>
+              `admin-menu-item ${isActive ? 'active' : ''}`
+            }
+            onClick={() => setIsExpanded(false)}
+          >
+            <Clock size={16} />
+            <span>Scheduler</span>
           </NavLink>
 
           <NavLink
