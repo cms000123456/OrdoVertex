@@ -14,6 +14,7 @@ interface WorkflowState {
   
   // Actions
   setCurrentWorkflow: (workflow: Workflow | null) => void;
+  patchCurrentWorkflow: (updates: Partial<Workflow>) => void;
   setNodes: (nodes: WorkflowNode[]) => void;
   setConnections: (connections: WorkflowConnection[]) => void;
   addNode: (node: WorkflowNode) => void;
@@ -45,6 +46,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     connections: workflow?.connections || [],
     selectedNode: null
   }),
+
+  patchCurrentWorkflow: (updates) => set((state) => ({
+    currentWorkflow: state.currentWorkflow ? { ...state.currentWorkflow, ...updates } : null
+  })),
 
   setNodes: (nodes) => set({ nodes }),
   
