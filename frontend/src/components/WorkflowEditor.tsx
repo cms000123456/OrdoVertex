@@ -63,7 +63,8 @@ function Flow() {
     setConnections: setStoreConnections,
     setNodeTypes,
     updateNodeParameters,
-    setCurrentWorkflow
+    setCurrentWorkflow,
+    patchCurrentWorkflow
   } = useWorkflowStore();
 
   // Helper functions for node display
@@ -332,6 +333,7 @@ function Flow() {
       };
 
       await workflowsApi.update(currentWorkflow.id, data);
+      patchCurrentWorkflow({ nodes: updatedNodes, connections: data.connections });
       toast.success('Workflow saved successfully');
     } catch (error) {
       toast.error('Failed to save workflow');
@@ -346,7 +348,7 @@ function Flow() {
     try {
       const newActive = !currentWorkflow.active;
       await workflowsApi.update(currentWorkflow.id, { active: newActive });
-      setCurrentWorkflow({ ...currentWorkflow, active: newActive });
+      patchCurrentWorkflow({ active: newActive });
       toast.success(newActive ? 'Workflow activated' : 'Workflow deactivated');
     } catch (error) {
       toast.error('Failed to update workflow status');
