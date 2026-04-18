@@ -202,7 +202,7 @@ router.patch(
         if (triggerNode) {
           const p = triggerNode.parameters || {};
           const buildCron = (): string => {
-            if (p.scheduleMode === 'custom' || !p.scheduleMode) {
+            if (p.scheduleMode === 'custom') {
               return p.cronExpression || '0 9 * * *';
             }
             const [h, m] = (p.atTime || '09:00').split(':').map(Number);
