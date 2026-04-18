@@ -55,7 +55,7 @@ class WorkflowScheduler {
         return tz;
       };
 
-      const rawTz = config.timezone || 'UTC';
+      const rawTz = (config.timezone || 'UTC').trim();
       const timezone = resolveTimezone(rawTz);
       if (timezone !== rawTz) {
         console.warn(`⚠️  Timezone "${rawTz}" converted to IANA format "${timezone}"`);

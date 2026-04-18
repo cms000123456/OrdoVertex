@@ -225,7 +225,7 @@ router.patch(
           };
           const config = {
             cron: buildCron(),
-            timezone: p.timezone || 'UTC'
+            timezone: (p.timezone || 'UTC').trim()
           };
           const triggerEnabled = triggerNode.parameters?.enabled !== false;
           const existingTrigger = await prisma.trigger.findFirst({

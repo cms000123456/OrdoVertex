@@ -240,6 +240,7 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
             type="text"
             value={value || ''}
             onChange={(e) => onParameterChange(property.name, e.target.value)}
+            onBlur={(e) => onParameterChange(property.name, e.target.value.trim())}
             placeholder={property.placeholder}
             className="form-input"
           />
