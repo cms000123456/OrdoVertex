@@ -61,3 +61,5 @@ deploy_key.pub
 
 # Screenshots - These are committed for documentation
 # .screenshots/
+
+test/

@@ -87,6 +87,24 @@ At this point, the application is running on:
 
 **Note:** These ports are bound to localhost only and are NOT exposed to the internet.
 
+### Startup Order
+
+The worker waits for the API health check to pass before starting. This ensures database migrations are complete before the worker tries to connect. On the first deployment this can take 60–90 seconds — this is normal.
+
+### Known Limitation: Fresh Installs
+
+`docker-compose.prod.yml` runs `prisma migrate deploy`, which applies incremental migrations only. Because the project currently has no baseline (initial) migration, a **brand new empty database will fail**. The workaround for fresh production installs is to run a one-time schema push before the first start:
+
+```bash
+# First-time install only — pushes the full schema to a fresh database
+docker-compose -f docker-compose.prod.yml run --rm api npx prisma db push
+
+# Then start normally
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+Subsequent deployments and restarts use `migrate deploy` as normal.
+
 ---
 
 ## Step 3: Configure HTTPS with Nginx
@@ -306,6 +324,36 @@ Internet
   │  Redis  │
   └────────┘
 ```
+
+---
+
+## Local Testing (Pre-Production)
+
+A prod-like stack is included in the `test/` folder. It mirrors `docker-compose.prod.yml` but uses different ports so it runs safely alongside a local dev environment.
+
+| Service  | Local dev | Test stack |
+|----------|-----------|------------|
+| Frontend | :3000     | :3010      |
+| API      | :3001     | :3011      |
+
+```bash
+cd test
+cp .env.example .env
+
+# Fill in JWT_SECRET and ENCRYPTION_KEY (min 32 chars each):
+# openssl rand -base64 32
+
+# Start the stack (builds images, runs db push + seed)
+docker compose up -d --build
+
+# Run smoke tests (18 HTTP tests — no direct DB access)
+npm install && npm test
+
+# Tear down and wipe test volumes when done
+docker compose down -v
+```
+
+> **Note:** The `test/` folder is in `.gitignore` and will not be pushed to the repository.
 
 ---
 

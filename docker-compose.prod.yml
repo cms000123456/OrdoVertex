@@ -97,6 +97,12 @@ services:
       sh -c "npx prisma migrate deploy &&
              npx prisma db seed || true &&
              npm start"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health | grep -q ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -143,6 +149,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      api:
         condition: service_healthy
     networks:
       - ordovertex-network
