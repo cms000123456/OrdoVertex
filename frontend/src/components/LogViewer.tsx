@@ -1,15 +1,9 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Terminal, RefreshCw, AlertCircle, ChevronDown, Download, Trash2, FileText } from 'lucide-react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Terminal, RefreshCw, ChevronDown, Download, Trash2, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { logsApi } from '../services/api';
 import './LogViewer.css';
 
-interface LogFile {
-  name: string;
-  file: string;
-  size: number;
-  updated: string;
-}
 
 interface LogData {
   logName: string;
@@ -28,7 +22,6 @@ const LOG_TYPES = [
 const LINE_OPTIONS = [50, 100, 250, 500, 1000];
 
 export function LogViewer() {
-  const [logFiles, setLogFiles] = useState<LogFile[]>([]);
   const [selectedLog, setSelectedLog] = useState('api');
   const [lines, setLines] = useState(100);
   const [logData, setLogData] = useState<LogData | null>(null);
@@ -40,14 +33,13 @@ export function LogViewer() {
 
   const fetchLogFiles = async () => {
     try {
-      const response = await logsApi.getLogFiles();
-      setLogFiles(response.data.data.logs || []);
+      await logsApi.getLogFiles();
     } catch (error: any) {
       console.error('Failed to fetch log files');
     }
   };
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await logsApi.getLogs(selectedLog, lines, searchTerm);
@@ -57,7 +49,7 @@ export function LogViewer() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedLog, lines, searchTerm]);
 
   useEffect(() => {
     fetchLogFiles();
@@ -65,7 +57,7 @@ export function LogViewer() {
 
   useEffect(() => {
     fetchLogs();
-  }, [selectedLog, lines]);
+  }, [selectedLog, lines, fetchLogs]);
 
   useEffect(() => {
     if (autoRefresh) {
@@ -80,7 +72,7 @@ export function LogViewer() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [autoRefresh, selectedLog, lines, searchTerm]);
+  }, [autoRefresh, selectedLog, lines, searchTerm, fetchLogs]);
 
   const scrollToBottom = () => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });

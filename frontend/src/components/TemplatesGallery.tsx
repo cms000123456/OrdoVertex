@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -66,12 +66,7 @@ export function TemplatesGallery() {
   const [newWorkflowName, setNewWorkflowName] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  useEffect(() => {
-    loadTemplates();
-    loadCategories();
-  }, []);
-
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     try {
       const params: any = {};
       if (selectedCategory) params.category = selectedCategory;
@@ -84,7 +79,12 @@ export function TemplatesGallery() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedCategory, searchQuery]);
+
+  useEffect(() => {
+    loadTemplates();
+    loadCategories();
+  }, [loadTemplates]);
 
   const loadCategories = async () => {
     try {
@@ -100,7 +100,7 @@ export function TemplatesGallery() {
       loadTemplates();
     }, 300);
     return () => clearTimeout(timeout);
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, loadTemplates]);
 
   const handleCreateFromTemplate = async () => {
     if (!selectedTemplate) return;

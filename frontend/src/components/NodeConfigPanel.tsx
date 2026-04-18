@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ExternalLink, Database, PlayCircle, Settings, Lightbulb, XCircle, RefreshCw, Image } from 'lucide-react';
+import { X, ExternalLink, Database, PlayCircle, Settings, Lightbulb, XCircle, RefreshCw } from 'lucide-react';
 import { useWorkflowStore } from '../store/workflowStore';
 import { credentialApi, executionsApi } from '../services/api';
 import { Credential } from '../types';

@@ -8,7 +8,6 @@ import {
   Zap, 
   HelpCircle,
   ChevronRight,
-  ExternalLink,
   MessageCircle,
   Github,
   Bot,
@@ -703,10 +702,10 @@ export function HelpCenter() {
 
         <div className="help-footer">
           <h4>Need more help?</h4>
-          <a href="#" className="help-link">
+          <button type="button" className="help-link">
             <MessageCircle size={16} />
             Contact Support
-          </a>
+          </button>
           <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="help-link">
             <Github size={16} />
             GitHub Repository

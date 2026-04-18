@@ -210,10 +210,6 @@ export function SystemSettings() {
     }
   };
 
-  const handleSaveSettings = async (settingType: string) => {
-    toast.success(`${settingType} settings saved successfully`);
-  };
-
   const handleSaveSecurity = async () => {
     try {
       await systemApi.updateSecuritySettings({

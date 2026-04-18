@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Plus, Trash2, Edit2, Check, X, AlertCircle } from 'lucide-react';
+import { Shield, Plus, Trash2, Edit2, X, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { samlApi } from '../services/api';
 import './SAMLConfig.css';
