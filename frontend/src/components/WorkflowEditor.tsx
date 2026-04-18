@@ -332,6 +332,10 @@ function Flow() {
         active: currentWorkflow.active
       };
 
+      const schedNode = updatedNodes.find((n: any) => n.type === 'scheduleTrigger');
+      console.log('[DEBUG save] scheduleTrigger params:', JSON.stringify(schedNode?.parameters));
+      console.log('[DEBUG save] store nodes atTime:', useWorkflowStore.getState().nodes.find(n => n.type === 'scheduleTrigger')?.parameters?.atTime);
+
       await workflowsApi.update(currentWorkflow.id, data);
       patchCurrentWorkflow({ nodes: updatedNodes, connections: data.connections });
       toast.success('Workflow saved successfully');
