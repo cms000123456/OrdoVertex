@@ -34,16 +34,10 @@ interface QueueStats {
   delayed: number;
 }
 
-interface DBStats {
-  connections: number;
-  slowQueries: number;
-  totalQueries: number;
-}
 
 export function PerformanceMonitor() {
   const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
   const [queueStats, setQueueStats] = useState<QueueStats | null>(null);
-  const [dbStats, setDbStats] = useState<DBStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);

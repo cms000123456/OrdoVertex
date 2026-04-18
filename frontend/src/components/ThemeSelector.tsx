@@ -120,8 +120,6 @@ export function ThemeSelectorCompact() {
     setIsOpen(false);
   };
 
-  const currentThemeData = availableThemes[currentTheme];
-
   // Get a few popular themes for quick access
   const quickThemes: ThemeKey[] = ['dark', 'dracula', 'nord', 'light'];
 

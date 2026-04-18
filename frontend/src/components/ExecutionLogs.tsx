@@ -1,20 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  Clock, 
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Search,
+  Download,
+  Clock,
   AlertCircle,
   CheckCircle,
   XCircle,
   Play,
-  MoreHorizontal,
   ChevronDown,
   ChevronUp,
   Terminal,
-  Trash2,
-  Copy,
-  X
+  Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { executionLogsApi, executionsApi } from '../services/api';
@@ -101,15 +97,6 @@ export function ExecutionLogs() {
     pages: 0
   });
 
-  useEffect(() => {
-    loadStats();
-    loadExecutions();
-  }, []);
-
-  useEffect(() => {
-    loadLogs();
-  }, [filters, pagination.page, selectedExecution]);
-
   const loadStats = async () => {
     try {
       const response = await executionLogsApi.getStats();
@@ -128,7 +115,7 @@ export function ExecutionLogs() {
     }
   };
 
-  const loadLogs = async () => {
+  const loadLogs = useCallback(async () => {
     setIsLoading(true);
     try {
       const params: any = {
@@ -151,7 +138,16 @@ export function ExecutionLogs() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filters, pagination.page, pagination.limit, selectedExecution]);
+
+  useEffect(() => {
+    loadStats();
+    loadExecutions();
+  }, []);
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
 
   const handleExport = async (executionId: string) => {
     try {

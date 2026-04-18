@@ -56,7 +56,6 @@ export function GroupsTeamsManager() {
   const [editingGroup, setEditingGroup] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editWorkspaces, setEditWorkspaces] = useState<string[]>([]);
   
   // Member management
   const [showAddMember, setShowAddMember] = useState<string | null>(null);
@@ -77,13 +76,6 @@ export function GroupsTeamsManager() {
     setIsAdmin(user.role === 'admin');
   }, []);
 
-  // Load all data on mount
-  useEffect(() => {
-    loadWorkspaces();
-    loadAllGroups();
-    loadAllUsers();
-  }, []);
-
   const loadAllUsers = async () => {
     try {
       const response = await usersApi.getAll();
@@ -94,7 +86,7 @@ export function GroupsTeamsManager() {
     }
   };
 
-  const loadWorkspaces = async () => {
+  const loadWorkspaces = useCallback(async () => {
     try {
       const response = await workspacesApi.getAll();
       console.log('Workspaces response:', response.data);
@@ -115,7 +107,14 @@ export function GroupsTeamsManager() {
       console.error('Workspace load error:', err);
       setLoading(false);
     }
-  };
+  }, [selectedWorkspace]);
+
+  // Load all data on mount
+  useEffect(() => {
+    loadWorkspaces();
+    loadAllGroups();
+    loadAllUsers();
+  }, [loadWorkspaces]);
 
   const loadAllGroups = async () => {
     setLoading(true);
@@ -127,24 +126,6 @@ export function GroupsTeamsManager() {
       setError('Failed to load groups: ' + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleAssignWorkspace = async (groupId: string, workspaceId: string) => {
-    try {
-      await groupsApi.addWorkspaceAccess(groupId, workspaceId, 'viewer');
-      loadAllGroups();
-    } catch (err: any) {
-      setError('Failed to assign workspace: ' + (err.response?.data?.error || err.message));
-    }
-  };
-
-  const handleRemoveWorkspaceAccess = async (groupId: string, accessId: string) => {
-    try {
-      await groupsApi.removeWorkspaceAccess(groupId, accessId);
-      loadAllGroups();
-    } catch (err: any) {
-      setError('Failed to remove workspace access: ' + (err.response?.data?.error || err.message));
     }
   };
 

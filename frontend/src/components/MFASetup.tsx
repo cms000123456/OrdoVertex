@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Copy, Check, AlertTriangle } from 'lucide-react';
+import { Shield, Copy, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { mfaApi } from '../services/api';
 import './MFASetup.css';

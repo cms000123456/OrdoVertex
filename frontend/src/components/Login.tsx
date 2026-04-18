@@ -21,7 +21,6 @@ export function Login() {
   const [mfaCode, setMfaCode] = useState('');
   const [backupCodeMode, setBackupCodeMode] = useState(false);
   const [verificationRequired, setVerificationRequired] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState('');
   const [verificationMessage, setVerificationMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,7 +48,6 @@ export function Login() {
         // Check if verification is required after registration
         if (response.data.data?.requiresVerification) {
           setVerificationRequired(true);
-          setRegisteredEmail(formData.email);
           setVerificationMessage(response.data.message || 'Registration successful! Please check your email to verify your account.');
           setIsLoading(false);
           return;

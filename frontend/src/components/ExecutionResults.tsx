@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Play, CheckCircle, XCircle, Clock, ChevronDown, ChevronRight, Database, X, Image } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Play, CheckCircle, XCircle, Clock, ChevronDown, ChevronRight, Database, X } from 'lucide-react';
 import { executionsApi } from '../services/api';
 import { Execution } from '../types';
 import './ExecutionResults.css';
@@ -29,14 +29,7 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
-  useEffect(() => {
-    loadExecutions();
-    // Poll for new executions every 3 seconds
-    const interval = setInterval(loadExecutions, 3000);
-    return () => clearInterval(interval);
-  }, [workflowId]);
-
-  const loadExecutions = async () => {
+  const loadExecutions = useCallback(async () => {
     try {
       const response = await executionsApi.getAll();
       // Filter executions for this workflow
@@ -44,7 +37,7 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
         (e: Execution) => e.workflowId === workflowId
       );
       setExecutions(workflowExecutions);
-      
+
       // If we have a selected execution, refresh its details
       if (selectedExecution) {
         const updated = workflowExecutions.find((e: Execution) => e.id === selectedExecution.id);
@@ -57,7 +50,14 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [workflowId, selectedExecution]);
+
+  useEffect(() => {
+    loadExecutions();
+    // Poll for new executions every 3 seconds
+    const interval = setInterval(loadExecutions, 3000);
+    return () => clearInterval(interval);
+  }, [workflowId, loadExecutions]);
 
   const loadExecutionDetails = async (executionId: string) => {
     setIsLoadingDetails(true);
