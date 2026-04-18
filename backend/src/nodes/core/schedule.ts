@@ -115,10 +115,10 @@ export const scheduleTriggerNode: NodeType = {
     {
       name: 'timezone',
       displayName: 'Timezone',
-      type: 'string',
+      type: 'timezone',
       default: 'UTC',
-      placeholder: 'Europe/Stockholm',
-      description: 'IANA timezone name (e.g. Europe/Stockholm, America/New_York)'
+      placeholder: 'Search timezones…',
+      description: 'IANA timezone name'
     }
   ],
   execute: async (context) => {

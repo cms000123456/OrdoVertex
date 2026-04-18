@@ -83,7 +83,7 @@ export interface NodeOutput {
 export interface NodeProperty {
   name: string;
   displayName: string;
-  type: 'string' | 'number' | 'boolean' | 'json' | 'options' | 'multiline' | 'resource' | 'multiselect';
+  type: 'string' | 'number' | 'boolean' | 'json' | 'options' | 'multiline' | 'resource' | 'multiselect' | 'timezone';
   default?: any;
   placeholder?: string;
   description?: string;

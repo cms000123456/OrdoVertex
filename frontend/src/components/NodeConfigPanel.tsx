@@ -234,6 +234,27 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
     const value = node.parameters[property.name] ?? property.default;
 
     switch (property.type) {
+      case 'timezone': {
+        const tzId = `tz-list-${property.name}`;
+        const tzList = (Intl as any).supportedValuesOf?.('timeZone') as string[] ?? [];
+        return (
+          <>
+            <input
+              type="text"
+              list={tzId}
+              value={value || ''}
+              onChange={(e) => onParameterChange(property.name, e.target.value)}
+              onBlur={(e) => onParameterChange(property.name, e.target.value.trim())}
+              placeholder={property.placeholder}
+              className="form-input"
+            />
+            <datalist id={tzId}>
+              {tzList.map((tz) => <option key={tz} value={tz} />)}
+            </datalist>
+          </>
+        );
+      }
+
       case 'string':
         return (
           <input
