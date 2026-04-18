@@ -197,7 +197,7 @@ router.patch(
       });
 
       // Handle schedule triggers — upsert DB record and signal worker
-      if (nodes && active !== undefined) {
+      if (nodes) {
         const triggerNode = nodes.find((n: any) => n.type === 'scheduleTrigger');
         if (triggerNode) {
           const p = triggerNode.parameters || {};
@@ -238,6 +238,12 @@ router.patch(
           } else {
             await sendSchedulerControl('unschedule', id);
           }
+        } else {
+          // Schedule node was removed — clean up trigger record and stop job
+          await prisma.trigger.deleteMany({
+            where: { workflowId: id, type: 'schedule' }
+          });
+          await sendSchedulerControl('unschedule', id);
         }
       }
 
