@@ -197,7 +197,7 @@ router.patch(
       });
 
       // Handle schedule triggers — upsert DB record and signal worker
-      if (nodes && active !== undefined) {
+      if (nodes) {
         const triggerNode = nodes.find((n: any) => n.type === 'scheduleTrigger');
         if (triggerNode) {
           const p = triggerNode.parameters || {};
@@ -228,16 +228,30 @@ router.patch(
             timezone: p.timezone || 'UTC'
           };
           const triggerEnabled = triggerNode.parameters?.enabled !== false;
-          await prisma.trigger.upsert({
-            where: { workflowId_type: { workflowId: id, type: 'schedule' } },
-            create: { workflowId: id, type: 'schedule', enabled: triggerEnabled, config },
-            update: { enabled: triggerEnabled, config }
+          const existingTrigger = await prisma.trigger.findFirst({
+            where: { workflowId: id, type: 'schedule' }
           });
+          if (existingTrigger) {
+            await prisma.trigger.update({
+              where: { id: existingTrigger.id },
+              data: { enabled: triggerEnabled, config }
+            });
+          } else {
+            await prisma.trigger.create({
+              data: { workflowId: id, type: 'schedule', enabled: triggerEnabled, config }
+            });
+          }
           if (triggerEnabled) {
             await sendSchedulerControl('schedule', id, config);
           } else {
             await sendSchedulerControl('unschedule', id);
           }
+        } else {
+          // Schedule node was removed — clean up trigger record and stop job
+          await prisma.trigger.deleteMany({
+            where: { workflowId: id, type: 'schedule' }
+          });
+          await sendSchedulerControl('unschedule', id);
         }
       }
 
