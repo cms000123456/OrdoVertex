@@ -175,7 +175,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     // Validate credential type
-    const validTypes = ['database', 'http', 'oauth2', 'apiKey', 'ssh', 'generic', 'hashicorpVault', 'openai', 'anthropic', 'gemini', 'kimi', 'smtp', 'sftp', 'aws', 'ldap', 'webhook'];
+    const validTypes = ['database', 'http', 'oauth2', 'apiKey', 'ssh', 'generic', 'hashicorpVault', 'openai', 'anthropic', 'gemini', 'kimi', 'smtp', 'sftp', 'smb', 'aws', 'ldap', 'webhook'];
     if (!validTypes.includes(type)) {
       return errorResponse(res, `Invalid credential type. Must be one of: ${validTypes.join(', ')}`);
     }
@@ -531,6 +531,17 @@ router.get('/types/list', authenticateToken, async (req: AuthRequest, res) => {
         { name: 'password', type: 'string', displayName: 'Password', required: false, sensitive: true },
         { name: 'privateKey', type: 'string', displayName: 'Private Key', required: false, sensitive: true, multiline: true },
         { name: 'passphrase', type: 'string', displayName: 'Key Passphrase', required: false, sensitive: true }
+      ]
+    },
+    smb: {
+      name: 'SMB/CIFS Share',
+      description: 'SMB/CIFS credentials for Windows or Samba file shares',
+      fields: [
+        { name: 'host', type: 'string', displayName: 'Host', required: true, placeholder: '192.168.1.10' },
+        { name: 'share', type: 'string', displayName: 'Share Name', required: true, placeholder: 'shared' },
+        { name: 'domain', type: 'string', displayName: 'Domain', required: false, placeholder: 'WORKGROUP' },
+        { name: 'username', type: 'string', displayName: 'Username', required: true },
+        { name: 'password', type: 'string', displayName: 'Password', required: true, sensitive: true }
       ]
     },
     aws: {
