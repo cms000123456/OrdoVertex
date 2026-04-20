@@ -1,6 +1,6 @@
 FROM node:20-alpine
 
-RUN apk add --no-cache openssl python3 py3-pip
+RUN apk add --no-cache openssl python3 py3-pip samba-client krb5
 
 WORKDIR /app
 

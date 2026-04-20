@@ -1,5 +1,5 @@
 import { NodeType } from '../../types';
-import SMB2 from '@marsaud/smb2';
+import { SmbConnection, smbCommand, smbDownload, smbUpload, parseLsOutput } from '../../utils/smb-client';
 
 export const smbNode: NodeType = {
   name: 'smb',
@@ -68,6 +68,21 @@ export const smbNode: NodeType = {
       }
     },
     {
+      name: 'authType',
+      displayName: 'Auth Type',
+      type: 'options',
+      options: [
+        { name: 'NTLMv2', value: 'ntlm' },
+        { name: 'Kerberos', value: 'kerberos' }
+      ],
+      default: 'ntlm',
+      displayOptions: {
+        show: {
+          useCredential: [false]
+        }
+      }
+    },
+    {
       name: 'domain',
       displayName: 'Domain',
       type: 'string',
@@ -75,7 +90,8 @@ export const smbNode: NodeType = {
       placeholder: 'WORKGROUP',
       displayOptions: {
         show: {
-          useCredential: [false]
+          useCredential: [false],
+          authType: ['ntlm']
         }
       }
     },
@@ -85,7 +101,8 @@ export const smbNode: NodeType = {
       type: 'string',
       displayOptions: {
         show: {
-          useCredential: [false]
+          useCredential: [false],
+          authType: ['ntlm']
         }
       }
     },
@@ -95,7 +112,32 @@ export const smbNode: NodeType = {
       type: 'string',
       displayOptions: {
         show: {
-          useCredential: [false]
+          useCredential: [false],
+          authType: ['ntlm']
+        }
+      }
+    },
+    {
+      name: 'principal',
+      displayName: 'Kerberos Principal',
+      type: 'string',
+      placeholder: 'user@REALM.COM',
+      displayOptions: {
+        show: {
+          useCredential: [false],
+          authType: ['kerberos']
+        }
+      }
+    },
+    {
+      name: 'keytab',
+      displayName: 'Keytab (base64)',
+      type: 'string',
+      description: 'Base64-encoded keytab file. Leave empty to use the existing ticket cache.',
+      displayOptions: {
+        show: {
+          useCredential: [false],
+          authType: ['kerberos']
         }
       }
     },
@@ -160,19 +202,13 @@ export const smbNode: NodeType = {
     }
   ],
   execute: async (context) => {
-    let smb: SMB2 | null = null;
-
     try {
       const useCredential = context.getNodeParameter('useCredential', true) as boolean;
       const operation = context.getNodeParameter('operation', 'download') as string;
       const remotePath = (context.getNodeParameter('remotePath', '') as string)
         .replace(/\//g, '\\').replace(/^\\+/, '');
 
-      let host: string;
-      let share: string;
-      let domain: string;
-      let username: string;
-      let password: string;
+      let conn: SmbConnection;
 
       if (useCredential) {
         const { PrismaClient } = await import('@prisma/client');
@@ -184,31 +220,37 @@ export const smbNode: NodeType = {
           where: { id: credentialId, userId: context.userId }
         });
 
-        if (!credential) {
-          throw new Error('SMB credential not found');
-        }
+        if (!credential) throw new Error('SMB credential not found');
 
-        const credData = decryptJSON(credential.data, credential.iv);
-        host = credData.host;
-        share = credData.share;
-        domain = credData.domain || '';
-        username = credData.username;
-        password = credData.password;
+        const d = decryptJSON(credential.data, credential.iv);
+        const authType = (d.authType || 'ntlm') as string;
+
+        conn = {
+          host: d.host,
+          share: d.share,
+          auth: authType === 'kerberos'
+            ? { type: 'kerberos', principal: d.principal, keytabBase64: d.keytab || undefined }
+            : { type: 'ntlm', domain: d.domain || '', username: d.username, password: d.password }
+        };
       } else {
-        host = context.getNodeParameter('host', '') as string;
-        share = context.getNodeParameter('share', '') as string;
-        domain = context.getNodeParameter('domain', '') as string;
-        username = context.getNodeParameter('username', '') as string;
-        password = context.getNodeParameter('password', '') as string;
+        const authType = (context.getNodeParameter('authType', 'ntlm') as string);
+        conn = {
+          host: context.getNodeParameter('host', '') as string,
+          share: context.getNodeParameter('share', '') as string,
+          auth: authType === 'kerberos'
+            ? {
+                type: 'kerberos',
+                principal: context.getNodeParameter('principal', '') as string,
+                keytabBase64: (context.getNodeParameter('keytab', '') as string) || undefined,
+              }
+            : {
+                type: 'ntlm',
+                domain: context.getNodeParameter('domain', '') as string,
+                username: context.getNodeParameter('username', '') as string,
+                password: context.getNodeParameter('password', '') as string,
+              }
+        };
       }
-
-      smb = new SMB2({
-        share: `\\\\${host}\\${share}`,
-        domain,
-        username,
-        password,
-        autoCloseTimeout: 0
-      });
 
       const items = context.getInputData();
       let result: any;
@@ -216,38 +258,34 @@ export const smbNode: NodeType = {
       switch (operation) {
         case 'download': {
           const binary = context.getNodeParameter('binary', false) as boolean;
-          const buffer = await smb.readFile(remotePath) as Buffer;
-
-          if (binary) {
-            result = { data: buffer.toString('base64'), encoding: 'base64', remotePath, size: buffer.length };
-          } else {
-            result = { data: buffer.toString('utf8'), remotePath, size: buffer.length };
-          }
+          const buffer = await smbDownload(conn, remotePath);
+          result = binary
+            ? { data: buffer.toString('base64'), encoding: 'base64', remotePath, size: buffer.length }
+            : { data: buffer.toString('utf8'), remotePath, size: buffer.length };
           break;
         }
 
         case 'upload': {
           const dataField = context.getNodeParameter('data', '') as string;
           const binary = context.getNodeParameter('binary', false) as boolean;
-
           const rawData = items[0]?.json?.[dataField] ?? dataField;
           const buffer = binary && typeof rawData === 'string'
             ? Buffer.from(rawData, 'base64')
             : Buffer.from(String(rawData));
-
-          await smb.writeFile(remotePath, buffer);
+          await smbUpload(conn, remotePath, buffer);
           result = { uploaded: true, remotePath, size: buffer.length };
           break;
         }
 
         case 'list': {
-          const entries = await smb.readdir(remotePath || '');
-          result = { path: remotePath, files: entries };
+          const dir = remotePath ? `cd "${remotePath}"; ls` : 'ls';
+          const output = await smbCommand(conn, dir);
+          result = { path: remotePath, files: parseLsOutput(output) };
           break;
         }
 
         case 'delete': {
-          await smb.unlink(remotePath);
+          await smbCommand(conn, `del "${remotePath}"`);
           result = { deleted: true, remotePath };
           break;
         }
@@ -255,16 +293,13 @@ export const smbNode: NodeType = {
         case 'move': {
           const newPath = (context.getNodeParameter('newPath', '') as string)
             .replace(/\//g, '\\').replace(/^\\+/, '');
-          // Use copy+delete instead of rename to avoid SMB2 FILE_DELETE_ACCESS permission issues
-          const moveBuffer = await smb.readFile(remotePath) as Buffer;
-          await smb.writeFile(newPath, moveBuffer);
-          await smb.unlink(remotePath);
+          await smbCommand(conn, `rename "${remotePath}" "${newPath}"`);
           result = { moved: true, from: remotePath, to: newPath };
           break;
         }
 
         case 'mkdir': {
-          await smb.mkdir(remotePath);
+          await smbCommand(conn, `mkdir "${remotePath}"`);
           result = { created: true, path: remotePath };
           break;
         }
@@ -273,22 +308,10 @@ export const smbNode: NodeType = {
           throw new Error(`Unknown operation: ${operation}`);
       }
 
-      smb.disconnect();
-
-      return {
-        success: true,
-        output: [{ json: result }]
-      };
+      return { success: true, output: [{ json: result }] };
     } catch (error: any) {
-      if (smb) {
-        try { smb.disconnect(); } catch (_) {}
-      }
-
       if (context.continueOnFail()) {
-        return {
-          success: true,
-          output: [{ json: { error: error.message, success: false } }]
-        };
+        return { success: true, output: [{ json: { error: error.message, success: false } }] };
       }
       throw error;
     }

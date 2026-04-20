@@ -1,5 +1,5 @@
 import { NodeType } from '../../types';
-import SMB2 from '@marsaud/smb2';
+import { SmbConnection, smbCommand, smbDownload, parseLsOutput } from '../../utils/smb-client';
 
 export const smbTriggerNode: NodeType = {
   name: 'smbTrigger',
@@ -62,6 +62,21 @@ export const smbTriggerNode: NodeType = {
       }
     },
     {
+      name: 'authType',
+      displayName: 'Auth Type',
+      type: 'options',
+      options: [
+        { name: 'NTLMv2', value: 'ntlm' },
+        { name: 'Kerberos', value: 'kerberos' }
+      ],
+      default: 'ntlm',
+      displayOptions: {
+        show: {
+          useCredential: [false]
+        }
+      }
+    },
+    {
       name: 'domain',
       displayName: 'Domain',
       type: 'string',
@@ -69,7 +84,8 @@ export const smbTriggerNode: NodeType = {
       placeholder: 'WORKGROUP',
       displayOptions: {
         show: {
-          useCredential: [false]
+          useCredential: [false],
+          authType: ['ntlm']
         }
       }
     },
@@ -79,7 +95,8 @@ export const smbTriggerNode: NodeType = {
       type: 'string',
       displayOptions: {
         show: {
-          useCredential: [false]
+          useCredential: [false],
+          authType: ['ntlm']
         }
       }
     },
@@ -89,7 +106,32 @@ export const smbTriggerNode: NodeType = {
       type: 'string',
       displayOptions: {
         show: {
-          useCredential: [false]
+          useCredential: [false],
+          authType: ['ntlm']
+        }
+      }
+    },
+    {
+      name: 'principal',
+      displayName: 'Kerberos Principal',
+      type: 'string',
+      placeholder: 'user@REALM.COM',
+      displayOptions: {
+        show: {
+          useCredential: [false],
+          authType: ['kerberos']
+        }
+      }
+    },
+    {
+      name: 'keytab',
+      displayName: 'Keytab (base64)',
+      type: 'string',
+      description: 'Base64-encoded keytab file. Leave empty to use the existing ticket cache.',
+      displayOptions: {
+        show: {
+          useCredential: [false],
+          authType: ['kerberos']
         }
       }
     },
@@ -97,9 +139,9 @@ export const smbTriggerNode: NodeType = {
       name: 'remotePath',
       displayName: 'Remote Path',
       type: 'string',
-      default: '\\',
+      default: '',
       placeholder: '\\incoming',
-      description: 'Folder path within the share to watch'
+      description: 'Folder path within the share to watch (leave empty for share root)'
     },
     {
       name: 'pattern',
@@ -120,7 +162,7 @@ export const smbTriggerNode: NodeType = {
       displayName: 'Download Content',
       type: 'boolean',
       default: false,
-      description: 'Download file content (max 50MB)'
+      description: 'Download file content (max 50 MB)'
     },
     {
       name: 'encoding',
@@ -151,7 +193,7 @@ export const smbTriggerNode: NodeType = {
       type: 'string',
       default: '',
       placeholder: '\\processed',
-      description: 'Move file to this folder after processing (instead of deleting)',
+      description: 'Move file to this folder after processing',
       displayOptions: {
         show: {
           deleteAfterRead: [false]
@@ -160,23 +202,19 @@ export const smbTriggerNode: NodeType = {
     }
   ],
   execute: async (context) => {
-    let smb: SMB2 | null = null;
-
     try {
       const useCredential = context.getNodeParameter('useCredential', true) as boolean;
-      const remotePath = context.getNodeParameter('remotePath', '\\') as string;
+      const remotePath = (context.getNodeParameter('remotePath', '') as string)
+        .replace(/\//g, '\\').replace(/^\\+/, '').replace(/\\+$/, '');
       const pattern = context.getNodeParameter('pattern', '*') as string;
       const maxFiles = context.getNodeParameter('maxFiles', 10) as number;
       const downloadContent = context.getNodeParameter('downloadContent', false) as boolean;
       const encoding = context.getNodeParameter('encoding', 'utf8') as string;
       const deleteAfterRead = context.getNodeParameter('deleteAfterRead', false) as boolean;
-      const moveAfterRead = context.getNodeParameter('moveAfterRead', '') as string;
+      const moveAfterRead = (context.getNodeParameter('moveAfterRead', '') as string)
+        .replace(/\//g, '\\').replace(/^\\+/, '').replace(/\\+$/, '');
 
-      let host: string;
-      let share: string;
-      let domain: string;
-      let username: string;
-      let password: string;
+      let conn: SmbConnection;
 
       if (useCredential) {
         const { PrismaClient } = await import('@prisma/client');
@@ -188,102 +226,89 @@ export const smbTriggerNode: NodeType = {
           where: { id: credentialId, userId: context.userId }
         });
 
-        if (!credential) {
-          throw new Error('SMB credential not found');
-        }
+        if (!credential) throw new Error('SMB credential not found');
 
-        const credData = decryptJSON(credential.data, credential.iv);
-        host = credData.host;
-        share = credData.share;
-        domain = credData.domain || '';
-        username = credData.username;
-        password = credData.password;
+        const d = decryptJSON(credential.data, credential.iv);
+        const authType = (d.authType || 'ntlm') as string;
+
+        conn = {
+          host: d.host,
+          share: d.share,
+          auth: authType === 'kerberos'
+            ? { type: 'kerberos', principal: d.principal, keytabBase64: d.keytab || undefined }
+            : { type: 'ntlm', domain: d.domain || '', username: d.username, password: d.password }
+        };
       } else {
-        host = context.getNodeParameter('host', '') as string;
-        share = context.getNodeParameter('share', '') as string;
-        domain = context.getNodeParameter('domain', '') as string;
-        username = context.getNodeParameter('username', '') as string;
-        password = context.getNodeParameter('password', '') as string;
+        const authType = (context.getNodeParameter('authType', 'ntlm') as string);
+        conn = {
+          host: context.getNodeParameter('host', '') as string,
+          share: context.getNodeParameter('share', '') as string,
+          auth: authType === 'kerberos'
+            ? {
+                type: 'kerberos',
+                principal: context.getNodeParameter('principal', '') as string,
+                keytabBase64: (context.getNodeParameter('keytab', '') as string) || undefined,
+              }
+            : {
+                type: 'ntlm',
+                domain: context.getNodeParameter('domain', '') as string,
+                username: context.getNodeParameter('username', '') as string,
+                password: context.getNodeParameter('password', '') as string,
+              }
+        };
       }
 
-      smb = new SMB2({
-        share: `\\\\${host}\\${share}`,
-        domain,
-        username,
-        password,
-        autoCloseTimeout: 0
-      });
-
-      const normalizedPath = remotePath.replace(/\//g, '\\').replace(/^\\+/, '').replace(/\\+$/, '');
-      const entries = await smb.readdir(normalizedPath || '');
-      const matchedFiles: any[] = [];
+      const listCmd = remotePath ? `cd "${remotePath}"; ls` : 'ls';
+      const output = await smbCommand(conn, listCmd);
+      const allEntries = parseLsOutput(output);
 
       const patternRegex = pattern !== '*'
         ? new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i')
         : null;
 
-      for (const entry of entries.slice(0, maxFiles * 3)) {
+      const matchedFiles: any[] = [];
+
+      for (const entry of allEntries) {
         if (matchedFiles.length >= maxFiles) break;
-
-        if (typeof entry !== 'string') continue;
-
         if (patternRegex && !patternRegex.test(entry)) continue;
 
-        const filePath = normalizedPath ? `${normalizedPath}\\${entry}` : entry;
-
+        const filePath = remotePath ? `${remotePath}\\${entry}` : entry;
         const fileInfo: any = {
           name: entry,
           path: filePath,
-          share: `\\\\${host}\\${share}`
+          share: `//${conn.host}/${conn.share}`
         };
 
         if (downloadContent) {
           try {
-            const buffer = await smb.readFile(filePath) as Buffer;
+            const buffer = await smbDownload(conn, filePath);
             if (buffer.length <= 50 * 1024 * 1024) {
-              if (encoding === 'base64') {
-                fileInfo.content = buffer.toString('base64');
-              } else if (encoding === 'binary') {
-                fileInfo.content = buffer;
-              } else {
-                fileInfo.content = buffer.toString('utf8');
-              }
+              fileInfo.content = encoding === 'base64'
+                ? buffer.toString('base64')
+                : buffer.toString('utf8');
               fileInfo.size = buffer.length;
             } else {
-              fileInfo.contentError = 'File exceeds 50MB limit';
+              fileInfo.contentError = 'File exceeds 50 MB limit';
             }
-          } catch (err) {
-            fileInfo.contentError = 'Failed to download content';
+          } catch (err: any) {
+            fileInfo.contentError = `Failed to download content: ${err.message}`;
           }
         }
 
         matchedFiles.push(fileInfo);
 
         if (deleteAfterRead) {
-          await smb.unlink(filePath);
+          await smbCommand(conn, `del "${filePath}"`).catch(() => {});
         } else if (moveAfterRead) {
-          const destDir = moveAfterRead.replace(/\//g, '\\').replace(/^\\+/, '').replace(/\\+$/, '');
-          const destPath = `${destDir}\\${entry}`;
-          await smb.rename(filePath, destPath);
+          const destPath = `${moveAfterRead}\\${entry}`;
+          await smbCommand(conn, `rename "${filePath}" "${destPath}"`).catch(() => {});
         }
       }
 
-      smb.disconnect();
-
-      return {
-        success: true,
-        output: matchedFiles.map(f => ({ json: f }))
-      };
+      return { success: true, output: matchedFiles.map(f => ({ json: f })) };
     } catch (error: any) {
-      if (smb) {
-        try { smb.disconnect(); } catch (_) {}
-      }
-
       if (context.continueOnFail()) {
-        return {
-          success: true,
-          output: [{ json: { error: error.message } }]
-        };
+        return { success: true, output: [{ json: { error: error.message } }] };
       }
       throw error;
     }

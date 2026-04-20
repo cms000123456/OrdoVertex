@@ -535,13 +535,16 @@ router.get('/types/list', authenticateToken, async (req: AuthRequest, res) => {
     },
     smb: {
       name: 'SMB/CIFS Share',
-      description: 'SMB/CIFS credentials for Windows or Samba file shares',
+      description: 'SMB/CIFS credentials for Windows or Samba file shares (NTLMv2 or Kerberos)',
       fields: [
         { name: 'host', type: 'string', displayName: 'Host', required: true, placeholder: '192.168.1.10' },
         { name: 'share', type: 'string', displayName: 'Share Name', required: true, placeholder: 'shared' },
-        { name: 'domain', type: 'string', displayName: 'Domain', required: false, placeholder: 'WORKGROUP' },
-        { name: 'username', type: 'string', displayName: 'Username', required: true },
-        { name: 'password', type: 'string', displayName: 'Password', required: true, sensitive: true }
+        { name: 'authType', type: 'string', displayName: 'Auth Type', required: false, placeholder: 'ntlm (default) or kerberos' },
+        { name: 'domain', type: 'string', displayName: 'Domain (NTLMv2)', required: false, placeholder: 'WORKGROUP' },
+        { name: 'username', type: 'string', displayName: 'Username (NTLMv2)', required: false },
+        { name: 'password', type: 'string', displayName: 'Password (NTLMv2)', required: false, sensitive: true },
+        { name: 'principal', type: 'string', displayName: 'Principal (Kerberos)', required: false, placeholder: 'user@REALM.COM' },
+        { name: 'keytab', type: 'string', displayName: 'Keytab base64 (Kerberos)', required: false, sensitive: true }
       ]
     },
     aws: {
