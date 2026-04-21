@@ -72,12 +72,15 @@ function spawnSmbclient(
   conn: SmbConnection,
   command: string,
   authArgs: string[],
-  extraEnv?: Record<string, string>
+  extraEnv?: Record<string, string>,
+  unsetEnv?: string[]
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const args = [`//${conn.host}/${conn.share}`, '-m', 'SMB3', ...authArgs, '-c', command];
+    const env = { ...process.env, ...extraEnv };
+    for (const key of unsetEnv ?? []) delete env[key];
     const proc = spawn('smbclient', args, {
-      env: { ...process.env, ...extraEnv },
+      env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';
@@ -103,14 +106,15 @@ function spawnSmbclient(
 export async function smbCommand(conn: SmbConnection, command: string): Promise<string> {
   if (conn.auth.type === 'ntlm') {
     return withAuthFile(conn.auth, (authFilePath) =>
-      spawnSmbclient(conn, command, ['-A', authFilePath])
+      // Unset KRB5_CONFIG so smbclient uses NTLM and doesn't try Kerberos
+      spawnSmbclient(conn, command, ['-A', authFilePath], undefined, ['KRB5_CONFIG'])
     );
   }
   return withKerberosTicket(conn.auth, (ccachePath) =>
     spawnSmbclient(
       conn,
       command,
-      ['-k', '--no-pass'],
+      ['--use-kerberos=required'],
       ccachePath ? { KRB5CCNAME: `FILE:${ccachePath}` } : undefined
     )
   );
