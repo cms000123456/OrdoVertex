@@ -764,6 +764,405 @@ return [{ json: {
     ]
   },
 
+  'demo-website-health-monitor': {
+    name: '🖥️ Demo: Website Health Monitor',
+    description: 'Check if a website is up and branch based on the HTTP status code. Demonstrates IF node conditional logic (no API key needed).',
+    category: 'Demo',
+    tags: ['demo', 'monitoring', 'if', 'conditional'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'set-1',
+        type: 'set',
+        name: 'Set URL',
+        position: { x: 350, y: 200 },
+        parameters: {
+          mode: 'manual',
+          values: [
+            { name: 'url', value: 'https://httpbin.org/get' }
+          ]
+        }
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Check Website',
+        position: { x: 600, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: '{{ $json.url }}',
+          options: { timeout: 15000 }
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Extract Status',
+        position: { x: 850, y: 200 },
+        parameters: {
+          code: `const response = items[0]?.json || {};
+const statusCode = response.statusCode || 0;
+const statusOk = statusCode >= 200 && statusCode < 300;
+return [{ json: {
+  url: response.request?.url || 'unknown',
+  statusCode,
+  statusOk,
+  statusText: statusOk ? 'Online' : 'Offline or Error'
+} }];`
+        }
+      },
+      {
+        id: 'if-1',
+        type: 'if',
+        name: 'Is Online?',
+        position: { x: 1100, y: 200 },
+        parameters: {
+          mode: 'simple',
+          field: 'statusOk',
+          operator: 'eq',
+          value: 'true'
+        }
+      },
+      {
+        id: 'set-ok',
+        type: 'set',
+        name: '✅ Online Result',
+        position: { x: 1350, y: 100 },
+        parameters: {
+          mode: 'manual',
+          values: [
+            { name: 'result', value: 'Website is ONLINE ✅' },
+            { name: 'url', value: '{{ $json.url }}' },
+            { name: 'statusCode', value: '{{ $json.statusCode }}' }
+          ]
+        }
+      },
+      {
+        id: 'set-fail',
+        type: 'set',
+        name: '❌ Offline Result',
+        position: { x: 1350, y: 300 },
+        parameters: {
+          mode: 'manual',
+          values: [
+            { name: 'result', value: 'Website is OFFLINE or ERROR ❌' },
+            { name: 'url', value: '{{ $json.url }}' },
+            { name: 'statusCode', value: '{{ $json.statusCode }}' }
+          ]
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'set-1' },
+      { source: 'set-1', target: 'http-1' },
+      { source: 'http-1', target: 'code-1' },
+      { source: 'code-1', target: 'if-1' },
+      { source: 'if-1', sourceHandle: 'true', target: 'set-ok' },
+      { source: 'if-1', sourceHandle: 'false', target: 'set-fail' }
+    ]
+  },
+
+  'demo-password-generator': {
+    name: '🔑 Demo: Password Generator',
+    description: 'Generate secure passwords locally without any external API. Demonstrates pure Code node data generation.',
+    category: 'Demo',
+    tags: ['demo', 'password', 'security', 'offline', 'code'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Generate Passwords',
+        position: { x: 350, y: 200 },
+        parameters: {
+          code: `const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+function gen(len, useSymbols) {
+  const pool = chars + (useSymbols ? symbols : '');
+  let pwd = '';
+  for (let i = 0; i < len; i++) {
+    pwd += pool.charAt(Math.floor(Math.random() * pool.length));
+  }
+  return pwd;
+}
+const words = ['alpha','bravo','charlie','delta','echo','foxtrot','golf','hotel','india','juliet','kilo','lima','mike','november','oscar','papa','quebec','romeo','sierra','tango'];
+function genPhrase() {
+  const parts = [];
+  for (let i = 0; i < 4; i++) {
+    parts.push(words[Math.floor(Math.random() * words.length)]);
+  }
+  return parts.join('-') + '-' + Math.floor(Math.random() * 1000);
+}
+return [{ json: {
+  simple: gen(8, false),
+  strong: gen(16, true),
+  passphrase: genPhrase(),
+  generatedAt: new Date().toISOString()
+} }];`
+        }
+      },
+      {
+        id: 'set-1',
+        type: 'set',
+        name: 'Format Output',
+        position: { x: 650, y: 200 },
+        parameters: {
+          mode: 'manual',
+          values: [
+            { name: 'summary', value: 'Passwords generated successfully' },
+            { name: 'simple', value: '{{ $json.simple }}' },
+            { name: 'strong', value: '{{ $json.strong }}' },
+            { name: 'passphrase', value: '{{ $json.passphrase }}' },
+            { name: 'timestamp', value: '{{ $json.generatedAt }}' }
+          ]
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'code-1' },
+      { source: 'code-1', target: 'set-1' }
+    ]
+  },
+
+  'demo-nasa-apod': {
+    name: '🚀 Demo: NASA Astronomy Picture of the Day',
+    description: "Fetch NASA's Astronomy Picture of the Day with explanation. Uses NASA's free DEMO_KEY.",
+    category: 'Demo',
+    tags: ['demo', 'nasa', 'space', 'image', 'science'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Fetch APOD',
+        position: { x: 350, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: 'https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY',
+          options: { timeout: 30000 }
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Format APOD',
+        position: { x: 650, y: 200 },
+        parameters: {
+          code: `const response = items[0]?.json || {};
+const data = response.body || {};
+return [{ json: {
+  title: data.title || 'Unknown',
+  date: data.date || '',
+  explanation: (data.explanation || '').substring(0, 400) + '...',
+  imageUrl: data.hdurl || data.url || '',
+  mediaType: data.media_type || 'image',
+  copyright: data.copyright || 'Public Domain',
+  source: 'NASA APOD'
+} }];`
+        }
+      },
+      {
+        id: 'display-1',
+        type: 'imageDisplay',
+        name: 'Show Image',
+        position: { x: 950, y: 200 },
+        parameters: {
+          imageUrl: '{{ $input.imageUrl }}',
+          altText: '{{ $input.title }}',
+          caption: '{{ $input.title }} — {{ $input.date }}',
+          maxWidth: '500px'
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'http-1' },
+      { source: 'http-1', target: 'code-1' },
+      { source: 'code-1', target: 'display-1' }
+    ]
+  },
+
+  'demo-currency-converter': {
+    name: '💱 Demo: Currency Converter',
+    description: 'Convert currencies using free exchange rates from OpenER API. Demonstrates Math node with expression mode (no API key needed).',
+    category: 'Demo',
+    tags: ['demo', 'currency', 'finance', 'math', 'conversion'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'set-1',
+        type: 'set',
+        name: 'Set Amount & Currencies',
+        position: { x: 350, y: 200 },
+        parameters: {
+          mode: 'manual',
+          values: [
+            { name: 'amount', value: 100 },
+            { name: 'fromCurrency', value: 'USD' },
+            { name: 'toCurrency', value: 'EUR' }
+          ]
+        }
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Fetch Rates',
+        position: { x: 600, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: 'https://open.er-api.com/v6/latest/USD',
+          options: { timeout: 15000 }
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Extract Rate',
+        position: { x: 850, y: 200 },
+        parameters: {
+          code: `const response = items[0]?.json || {};
+const data = response.body || {};
+const rates = data.rates || {};
+const rate = rates['EUR'] || 0;
+return [{ json: {
+  fromCurrency: 'USD',
+  toCurrency: 'EUR',
+  amount: 100,
+  rate,
+  rateDate: data.time_last_update_utc || new Date().toISOString()
+} }];`
+        }
+      },
+      {
+        id: 'math-1',
+        type: 'math',
+        name: 'Calculate Conversion',
+        position: { x: 1100, y: 200 },
+        parameters: {
+          mode: 'expression',
+          expression: 'amount * rate',
+          outputField: 'convertedAmount'
+        }
+      },
+      {
+        id: 'code-2',
+        type: 'code',
+        name: 'Format Result',
+        position: { x: 1350, y: 200 },
+        parameters: {
+          code: `const data = items[0]?.json || {};
+const amount = data.amount || 0;
+const rate = data.rate || 0;
+const converted = data.convertedAmount || 0;
+return [{ json: {
+  result: amount + ' USD = ' + converted.toFixed(2) + ' EUR',
+  rate: rate,
+  rateDate: data.rateDate || new Date().toISOString()
+} }];`
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'set-1' },
+      { source: 'set-1', target: 'http-1' },
+      { source: 'http-1', target: 'code-1' },
+      { source: 'code-1', target: 'math-1' },
+      { source: 'math-1', target: 'code-2' }
+    ]
+  },
+
+  'demo-hacker-news': {
+    name: '📰 Demo: Hacker News Top Stories',
+    description: 'Fetch top tech stories from Hacker News via Algolia API. No API key needed.',
+    category: 'Demo',
+    tags: ['demo', 'news', 'tech', 'hn', 'aggregator'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'manualTrigger',
+        name: 'Manual Trigger',
+        position: { x: 100, y: 200 },
+        parameters: {}
+      },
+      {
+        id: 'http-1',
+        type: 'httpRequest',
+        name: 'Fetch Top Stories',
+        position: { x: 350, y: 200 },
+        parameters: {
+          method: 'GET',
+          url: 'https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=5',
+          options: { timeout: 15000 }
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Format Stories',
+        position: { x: 650, y: 200 },
+        parameters: {
+          code: `const response = items[0]?.json || {};
+const data = response.body || {};
+const hits = data.hits || [];
+const stories = hits.map((h, i) => ({
+  rank: i + 1,
+  title: h.title || 'No title',
+  author: h.author || 'unknown',
+  points: h.points || 0,
+  comments: h.num_comments || 0,
+  url: h.url || 'https://news.ycombinator.com/item?id=' + h.objectID
+}));
+return [{ json: {
+  storyCount: stories.length,
+  stories,
+  fetchedAt: new Date().toISOString()
+} }];`
+        }
+      },
+      {
+        id: 'set-1',
+        type: 'set',
+        name: 'Add Timestamp',
+        position: { x: 950, y: 200 },
+        parameters: {
+          mode: 'manual',
+          values: [
+            { name: 'summary', value: 'Top {{ $json.storyCount }} HN stories fetched' },
+            { name: 'fetchedAt', value: '{{ $json.fetchedAt }}' }
+          ]
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'http-1' },
+      { source: 'http-1', target: 'code-1' },
+      { source: 'code-1', target: 'set-1' }
+    ]
+  },
+
   // AI Templates
   ...Object.entries(aiAgentTemplates).reduce((acc, [key, value]) => ({
     ...acc,
@@ -1038,6 +1437,104 @@ return [{ json: { title, message, severity } }];`
     connections: [
       { id: 'conn-1', source: 'trigger-1', target: 'format-1' },
       { id: 'conn-2', source: 'format-1', target: 'email-1' }
+    ]
+  },
+
+  // SMB/CIFS File Share
+  'file-smb-report-backup': {
+    name: '🗂️ SMB: Daily Report Backup',
+    description: 'Generate a daily summary report and upload it to an SMB/CIFS file share. Requires an SMB credential with host, share, and NTLMv2 or Kerberos auth.',
+    category: 'File',
+    tags: ['smb', 'cifs', 'file', 'backup', 'report'],
+    nodes: [
+      {
+        id: 'trigger-1',
+        type: 'scheduleTrigger',
+        name: 'Daily at 6 AM',
+        description: 'Runs every morning',
+        position: { x: 100, y: 200 },
+        parameters: {
+          rule: '0 6 * * *',
+          timezone: 'Europe/Stockholm'
+        }
+      },
+      {
+        id: 'code-1',
+        type: 'code',
+        name: 'Build Report',
+        description: 'Generates a plain-text daily summary',
+        position: { x: 380, y: 200 },
+        parameters: {
+          code: `const now = new Date();
+const date = now.toISOString().slice(0, 10);
+const time = now.toTimeString().slice(0, 8);
+const filename = \`report-\${date}.txt\`;
+const content = [
+  '=== Daily Report ===',
+  \`Date: \${date}\`,
+  \`Generated: \${time} UTC\`,
+  '',
+  'Summary',
+  '-------',
+  'This report was automatically generated by OrdoVertex.',
+  'Replace this section with real data from your workflow.',
+  '',
+  '=== End of Report ==='
+].join('\\n');
+return [{ json: { filename, content, date } }];`
+        }
+      },
+      {
+        id: 'smb-upload',
+        type: 'smb',
+        name: 'Upload to Share',
+        description: 'Writes the report file to the SMB share',
+        position: { x: 660, y: 200 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          operation: 'upload',
+          remotePath: '{{ $json.filename }}',
+          data: '{{ $json.content }}',
+          binary: false
+        }
+      },
+      {
+        id: 'smb-list',
+        type: 'smb',
+        name: 'List Share',
+        description: 'Confirms the file was written by listing the share root',
+        position: { x: 940, y: 200 },
+        parameters: {
+          useCredential: true,
+          credentialId: '',
+          operation: 'list',
+          remotePath: ''
+        }
+      },
+      {
+        id: 'code-2',
+        type: 'code',
+        name: 'Log Result',
+        description: 'Emits a summary of what was uploaded',
+        position: { x: 1220, y: 200 },
+        parameters: {
+          code: `const files = items[0]?.json?.files || [];
+const uploaded = items[0]?.json?.filename || 'unknown';
+return [{ json: {
+  status: 'success',
+  uploaded,
+  shareContents: files,
+  filesOnShare: files.length
+} }];`
+        }
+      }
+    ],
+    connections: [
+      { source: 'trigger-1', target: 'code-1' },
+      { source: 'code-1', target: 'smb-upload' },
+      { source: 'smb-upload', target: 'smb-list' },
+      { source: 'smb-list', target: 'code-2' }
     ]
   },
 
