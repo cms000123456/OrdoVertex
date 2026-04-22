@@ -7,6 +7,7 @@ import { sendTestEmail, verifyEmailConfig, clearEmailTransporter } from '../serv
 import { encrypt, decrypt, EncryptedData } from '../utils/encryption';
 import { rateLimit } from '../utils/rate-limit';
 import logger from '../utils/logger';
+import { asyncHandler } from 'utils/async-handler';
 
 const router = Router();
 

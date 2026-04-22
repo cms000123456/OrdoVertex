@@ -4,6 +4,7 @@ import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { redis, sendSchedulerControl, queueWorkflowExecution } from '../engine/queue';
 import { rateLimit } from '../utils/rate-limit';
+import { asyncHandler } from 'utils/async-handler';
 
 const router = Router();
 

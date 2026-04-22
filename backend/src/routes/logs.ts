@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 import logger from '../utils/logger';
+import { asyncHandler } from 'utils/async-handler';
 
 const router = Router();
 const logsDir = process.env.LOGS_DIR || '/app/logs';

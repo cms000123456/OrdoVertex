@@ -6,6 +6,7 @@ const authenticateToken = authMiddleware;
 import { encryptJSON, decryptJSON } from '../utils/encryption';
 import { getVaultSecret, validateVaultConnection, VaultConfig } from '../utils/vault';
 import logger from '../utils/logger';
+import { asyncHandler } from 'utils/async-handler';
 
 const router = Router();
 

@@ -1,8 +1,11 @@
 import { PrismaClient } from '@prisma/client';
+import os from 'os';
+import path from 'path';
 
 // Mock JWT_SECRET for tests
 process.env.JWT_SECRET = 'test-jwt-secret-minimum-32-characters-long';
 process.env.ENCRYPTION_KEY = 'test-encryption-key-32-chars-long!!';
+process.env.LOGS_DIR = path.join(os.tmpdir(), 'ordovertex-test-logs');
 
 // Create test prisma client
 export const prisma = new PrismaClient();

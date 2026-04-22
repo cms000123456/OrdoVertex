@@ -3,6 +3,7 @@ import { prisma } from '../prisma';
 import { authMiddleware } from '../utils/auth';
 import { sendEmail } from '../utils/email-sender';
 import { rateLimit } from '../utils/rate-limit';
+import { asyncHandler } from 'utils/async-handler';
 
 const router = Router();
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { getFailedJobs, retryFailedJob, deleteFailedJob, getQueueStats } from '../engine/queue';
+import { asyncHandler } from 'utils/async-handler';
 
 const router = Router();
 router.use(authMiddleware);

@@ -8,6 +8,7 @@ import { authRateLimit } from '../utils/rate-limit';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email';
 import { getSecuritySettings, getBaseUrl } from './system';
 import logger from '../utils/logger';
+import { asyncHandler } from 'utils/async-handler';
 
 const router = Router();
 

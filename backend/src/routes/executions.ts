@@ -4,6 +4,7 @@ import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { getQueueStats } from '../engine/queue';
 import logger from '../utils/logger';
+import { asyncHandler } from 'utils/async-handler';
 
 const router = Router();
 
