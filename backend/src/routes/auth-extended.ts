@@ -9,7 +9,7 @@ import { successResponse, errorResponse } from '../utils/response';
 import { authRateLimit } from '../utils/rate-limit';
 import crypto from 'crypto';
 import logger from '../utils/logger';
-import { asyncHandler } from 'utils/async-handler';
+import { asyncHandler } from '../utils/async-handler';
 
 const router = Router();
 

@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { queueWorkflowExecution } from '../engine/queue';
 import logger from '../utils/logger';
-import { asyncHandler } from 'utils/async-handler';
+import { asyncHandler } from '../utils/async-handler';
 
 const router = Router();
 

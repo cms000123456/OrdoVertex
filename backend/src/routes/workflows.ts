@@ -8,7 +8,7 @@ import { queueWorkflowExecution, sendSchedulerControl } from '../engine/queue';
 import { workflowContainsCodeNodes } from '../utils/code-sandbox';
 import { isCodeNodeApprovalRequired } from './system';
 import logger from '../utils/logger';
-import { asyncHandler } from 'utils/async-handler';
+import { asyncHandler } from '../utils/async-handler';
 
 const router = Router();
 

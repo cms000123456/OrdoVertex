@@ -5,7 +5,7 @@ import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import logger from '../utils/logger';
 import { successResponse, errorResponse } from '../utils/response';
-import { asyncHandler } from 'utils/async-handler';
+import { asyncHandler } from '../utils/async-handler';
 const authenticateToken = authMiddleware;
 
 const router = Router();

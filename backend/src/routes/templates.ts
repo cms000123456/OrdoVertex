@@ -5,7 +5,7 @@ import { authMiddleware, AuthRequest } from '../utils/auth';
 import crypto from 'crypto';
 import { workflowTemplates } from '../data/templates';
 import logger from '../utils/logger';
-import { asyncHandler } from 'utils/async-handler';
+import { asyncHandler } from '../utils/async-handler';
 
 const router = Router();
 
