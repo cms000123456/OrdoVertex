@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 import { prisma } from '../../prisma';
 import { decryptJSON } from '../../utils/encryption';
 import OpenAI from 'openai';
@@ -250,12 +251,12 @@ export const aiEmbeddingNode: NodeType = {
         }]
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
-            json: { error: error.message }
+            json: { error: getErrorMessage(error) }
           }]
         };
       }

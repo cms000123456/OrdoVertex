@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 
 export const setNode: NodeType = {
   name: 'set',
@@ -131,13 +132,13 @@ export const setNode: NodeType = {
         success: true,
         output
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
             json: {
-              error: error.message
+              error: getErrorMessage(error)
             }
           }]
         };

@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 
 export const webhookResponseNode: NodeType = {
   name: 'webhookResponse',
@@ -189,13 +190,13 @@ export const webhookResponseNode: NodeType = {
           json: response
         }]
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
             json: {
-              error: error.message,
+              error: getErrorMessage(error),
               statusCode: 500,
               body: { error: 'Internal server error' }
             }

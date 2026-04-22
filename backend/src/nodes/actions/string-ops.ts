@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 
 export const stringOpsNode: NodeType = {
   name: 'stringOps',
@@ -305,12 +306,12 @@ export const stringOpsNode: NodeType = {
         success: true,
         output
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
-            json: { error: error.message }
+            json: { error: getErrorMessage(error) }
           }]
         };
       }

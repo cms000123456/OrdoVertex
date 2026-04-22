@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 import { prisma } from '../../prisma';
 import { validateExpression } from '../../utils/safe-eval';
 import { decryptJSON } from '../../utils/encryption';
@@ -527,11 +528,11 @@ export const aiAgentNode: NodeType = {
                     params: toolParams,
                     result
                   });
-                } catch (error: any) {
+                } catch (error: unknown) {
                   currentMessages.push({
                     role: 'tool',
                     tool_call_id: toolCall.id,
-                    content: JSON.stringify({ error: error.message })
+                    content: JSON.stringify({ error: getErrorMessage(error) })
                   });
                 }
               }
@@ -665,11 +666,11 @@ export const aiAgentNode: NodeType = {
                     params: toolParams,
                     result
                   });
-                } catch (error: any) {
+                } catch (error: unknown) {
                   currentMessages.push({
                     role: 'tool',
                     tool_call_id: toolCall.id,
-                    content: JSON.stringify({ error: error.message })
+                    content: JSON.stringify({ error: getErrorMessage(error) })
                   });
                 }
               }
@@ -744,12 +745,12 @@ export const aiAgentNode: NodeType = {
         ]
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
-            json: { error: error.message }
+            json: { error: getErrorMessage(error) }
           }]
         };
       }

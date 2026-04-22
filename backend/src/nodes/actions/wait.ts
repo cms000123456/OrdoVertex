@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 
 export const waitNode: NodeType = {
   name: 'wait',
@@ -78,7 +79,7 @@ export const waitNode: NodeType = {
         success: true,
         output: items
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,

@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 import Client from 'ssh2-sftp-client';
 
 export const sftpTriggerNode: NodeType = {
@@ -304,14 +305,14 @@ export const sftpTriggerNode: NodeType = {
         success: true,
         output: matchedFiles.map(f => ({ json: f }))
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       await sftp.end();
       
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
-            json: { error: error.message }
+            json: { error: getErrorMessage(error) }
           }]
         };
       }

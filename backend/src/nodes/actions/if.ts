@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 
 export const ifNode: NodeType = {
   name: 'if',
@@ -95,13 +96,13 @@ export const ifNode: NodeType = {
           false: falseItems
         }
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
             json: {
-              error: error.message
+              error: getErrorMessage(error)
             }
           }]
         };

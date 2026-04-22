@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 
 export const aggregateNode: NodeType = {
   name: 'aggregate',
@@ -150,11 +151,11 @@ export const aggregateNode: NodeType = {
         success: true,
         output: [{ json: result }]
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
-          output: [{ json: { error: error.message } }]
+          output: [{ json: { error: getErrorMessage(error) } }]
         };
       }
       throw error;

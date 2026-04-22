@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 
 // In-memory vector store (in production, use Pinecone, Weaviate, or pgvector)
 const vectorStores = new Map<string, VectorDocument[]>();
@@ -325,12 +326,12 @@ export const aiVectorStoreNode: NodeType = {
           throw new Error(`Unknown operation: ${operation}`);
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
-            json: { error: error.message }
+            json: { error: getErrorMessage(error) }
           }]
         };
       }

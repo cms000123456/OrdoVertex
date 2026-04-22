@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 import { parse } from 'csv-parse/sync';
 import { stringify } from 'csv-stringify/sync';
 
@@ -191,12 +192,12 @@ export const csvNode: NodeType = {
           }]
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
-            json: { error: error.message }
+            json: { error: getErrorMessage(error) }
           }]
         };
       }

@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 
 export const removeDuplicatesNode: NodeType = {
   name: 'removeDuplicates',
@@ -110,12 +111,12 @@ export const removeDuplicatesNode: NodeType = {
           ...duplicates.map(item => ({ ...item, _duplicate: true }))
         ]
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
-            json: { error: error.message }
+            json: { error: getErrorMessage(error) }
           }]
         };
       }

@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 import { validateExpression } from '../../utils/safe-eval';
 
 export const filterNode: NodeType = {
@@ -205,12 +206,12 @@ export const filterNode: NodeType = {
           ...unmatched.map(item => ({ ...item, _unmatched: true }))
         ]
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
-            json: { error: error.message }
+            json: { error: getErrorMessage(error) }
           }]
         };
       }

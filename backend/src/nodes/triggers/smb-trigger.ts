@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 import { SmbConnection, smbCommand, smbDownload, parseLsOutput } from '../../utils/smb-client';
 
 export const smbTriggerNode: NodeType = {
@@ -305,9 +306,9 @@ export const smbTriggerNode: NodeType = {
       }
 
       return { success: true, output: matchedFiles.map(f => ({ json: f })) };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
-        return { success: true, output: [{ json: { error: error.message } }] };
+        return { success: true, output: [{ json: { error: getErrorMessage(error) } }] };
       }
       throw error;
     }

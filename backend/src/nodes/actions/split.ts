@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 
 export const splitNode: NodeType = {
   name: 'split',
@@ -64,11 +65,11 @@ export const splitNode: NodeType = {
         success: true,
         output: batches.length > 0 ? batches : [{ json: { items: [] } }]
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
-          output: [{ json: { error: error.message, items: [] } }]
+          output: [{ json: { error: getErrorMessage(error), items: [] } }]
         };
       }
       throw error;

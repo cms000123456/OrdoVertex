@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 import { validateExpression } from '../../utils/safe-eval';
 
 export const mathNode: NodeType = {
@@ -297,12 +298,12 @@ export const mathNode: NodeType = {
         success: true,
         output
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
-            json: { error: error.message }
+            json: { error: getErrorMessage(error) }
           }]
         };
       }
