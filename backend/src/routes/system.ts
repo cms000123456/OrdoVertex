@@ -81,210 +81,185 @@ function adminMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
 }
 
 // Get system stats
-router.get('/stats', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const [
-      workflowCount,
-      executionCount,
-      userCount,
-      executionLogCount,
-      nodeExecutionCount
-    ] = await Promise.all([
-      prisma.workflow.count(),
-      prisma.workflowExecution.count(),
-      prisma.user.count(),
-      prisma.executionLog.count(),
-      prisma.nodeExecution.count()
-    ]);
+router.get('/stats', authMiddleware, adminMiddleware, asyncHandler(async (req, res) => {
+  const [
+    workflowCount,
+    executionCount,
+    userCount,
+    executionLogCount,
+    nodeExecutionCount
+  ] = await Promise.all([
+    prisma.workflow.count(),
+    prisma.workflowExecution.count(),
+    prisma.user.count(),
+    prisma.executionLog.count(),
+    prisma.nodeExecution.count()
+  ]);
 
-    // Get database size (PostgreSQL specific)
-    const dbSize = await prisma.$queryRaw`
-      SELECT pg_size_pretty(pg_database_size(current_database())) as size
-    `;
+  // Get database size (PostgreSQL specific)
+  const dbSize = await prisma.$queryRaw`
+    SELECT pg_size_pretty(pg_database_size(current_database())) as size
+  `;
 
-    // Get table sizes
-    const tableSizes = await prisma.$queryRaw`
-      SELECT 
-        schemaname,
-        tablename,
-        pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
-      FROM pg_tables
-      WHERE schemaname = 'public'
-      ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
-    `;
+  // Get table sizes
+  const tableSizes = await prisma.$queryRaw`
+    SELECT 
+      schemaname,
+      tablename,
+      pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
+    FROM pg_tables
+    WHERE schemaname = 'public'
+    ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+  `;
 
-    res.json({
-      success: true,
-      data: {
-        counts: {
-          workflows: workflowCount,
-          executions: executionCount,
-          users: userCount,
-          executionLogs: executionLogCount,
-          nodeExecutions: nodeExecutionCount
-        },
-        database: {
-          size: (dbSize as any)[0]?.size || 'Unknown',
-          tables: tableSizes
-        }
+  res.json({
+    success: true,
+    data: {
+      counts: {
+        workflows: workflowCount,
+        executions: executionCount,
+        users: userCount,
+        executionLogs: executionLogCount,
+        nodeExecutions: nodeExecutionCount
+      },
+      database: {
+        size: (dbSize as any)[0]?.size || 'Unknown',
+        tables: tableSizes
       }
-    });
-  } catch (error: any) {
-    logger.error('Get system stats error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+    }
+  });
+}));
 
 // Get maintenance settings
-router.get('/maintenance', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      data: maintenanceSettings
-    });
-  } catch (error: any) {
-    logger.error('Get maintenance settings error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+router.get('/maintenance', authMiddleware, adminMiddleware, asyncHandler(async (req, res) => {
+  res.json({
+    success: true,
+    data: maintenanceSettings
+  });
+}));
 
 // Update maintenance settings
-router.patch('/maintenance', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const {
-      executionLogsRetention,
-      workflowExecutionsRetention,
-      apiRequestLogsRetention,
-      enableAutoPurge,
-      purgeSchedule
-    } = req.body;
+router.patch('/maintenance', authMiddleware, adminMiddleware, asyncHandler(async (req, res) => {
+  const {
+    executionLogsRetention,
+    workflowExecutionsRetention,
+    apiRequestLogsRetention,
+    enableAutoPurge,
+    purgeSchedule
+  } = req.body;
 
-    // Validate settings
-    if (executionLogsRetention !== undefined) {
-      if (executionLogsRetention < 1 || executionLogsRetention > 365) {
-        return errorResponse(res, 'Execution logs retention must be between 1 and 365 days', 400);
-      }
-      maintenanceSettings.executionLogsRetention = executionLogsRetention;
+  // Validate settings
+  if (executionLogsRetention !== undefined) {
+    if (executionLogsRetention < 1 || executionLogsRetention > 365) {
+      return errorResponse(res, 'Execution logs retention must be between 1 and 365 days', 400);
     }
-
-    if (workflowExecutionsRetention !== undefined) {
-      if (workflowExecutionsRetention < 1 || workflowExecutionsRetention > 365) {
-        return errorResponse(res, 'Workflow executions retention must be between 1 and 365 days', 400);
-      }
-      maintenanceSettings.workflowExecutionsRetention = workflowExecutionsRetention;
-    }
-
-    if (apiRequestLogsRetention !== undefined) {
-      if (apiRequestLogsRetention < 1 || apiRequestLogsRetention > 365) {
-        return errorResponse(res, 'API request logs retention must be between 1 and 365 days', 400);
-      }
-      maintenanceSettings.apiRequestLogsRetention = apiRequestLogsRetention;
-    }
-
-    if (enableAutoPurge !== undefined) {
-      maintenanceSettings.enableAutoPurge = enableAutoPurge;
-      
-      // Schedule or unschedule purge
-      if (enableAutoPurge) {
-        scheduleAutoPurge();
-      } else {
-        if (scheduledPurgeTask) {
-          scheduledPurgeTask.stop();
-          scheduledPurgeTask = null;
-        }
-        maintenanceSettings.nextPurgeRun = null;
-      }
-    }
-
-    if (purgeSchedule) {
-      // Validate cron expression (basic check)
-      if (!isValidCron(purgeSchedule)) {
-        return errorResponse(res, 'Invalid cron schedule format', 400);
-      }
-      maintenanceSettings.purgeSchedule = purgeSchedule;
-      
-      // Reschedule if auto-purge is enabled
-      if (maintenanceSettings.enableAutoPurge) {
-        scheduleAutoPurge();
-      }
-    }
-
-    res.json({
-      success: true,
-      data: maintenanceSettings
-    });
-  } catch (error: any) {
-    logger.error('Update maintenance settings error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    maintenanceSettings.executionLogsRetention = executionLogsRetention;
   }
-});
+
+  if (workflowExecutionsRetention !== undefined) {
+    if (workflowExecutionsRetention < 1 || workflowExecutionsRetention > 365) {
+      return errorResponse(res, 'Workflow executions retention must be between 1 and 365 days', 400);
+    }
+    maintenanceSettings.workflowExecutionsRetention = workflowExecutionsRetention;
+  }
+
+  if (apiRequestLogsRetention !== undefined) {
+    if (apiRequestLogsRetention < 1 || apiRequestLogsRetention > 365) {
+      return errorResponse(res, 'API request logs retention must be between 1 and 365 days', 400);
+    }
+    maintenanceSettings.apiRequestLogsRetention = apiRequestLogsRetention;
+  }
+
+  if (enableAutoPurge !== undefined) {
+    maintenanceSettings.enableAutoPurge = enableAutoPurge;
+    
+    // Schedule or unschedule purge
+    if (enableAutoPurge) {
+      scheduleAutoPurge();
+    } else {
+      if (scheduledPurgeTask) {
+        scheduledPurgeTask.stop();
+        scheduledPurgeTask = null;
+      }
+      maintenanceSettings.nextPurgeRun = null;
+    }
+  }
+
+  if (purgeSchedule) {
+    // Validate cron expression (basic check)
+    if (!isValidCron(purgeSchedule)) {
+      return errorResponse(res, 'Invalid cron schedule format', 400);
+    }
+    maintenanceSettings.purgeSchedule = purgeSchedule;
+    
+    // Reschedule if auto-purge is enabled
+    if (maintenanceSettings.enableAutoPurge) {
+      scheduleAutoPurge();
+    }
+  }
+
+  res.json({
+    success: true,
+    data: maintenanceSettings
+  });
+}));
 
 // Manual purge
-router.post('/maintenance/purge', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const results = await runPurge();
-    
-    res.json({
-      success: true,
-      data: {
-        message: 'Purge completed successfully',
-        results,
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error: any) {
-    logger.error('Manual purge error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+router.post('/maintenance/purge', authMiddleware, adminMiddleware, asyncHandler(async (req, res) => {
+  const results = await runPurge();
+  
+  res.json({
+    success: true,
+    data: {
+      message: 'Purge completed successfully',
+      results,
+      timestamp: new Date().toISOString()
+    }
+  });
+}));
 
 // Get purge preview (what would be deleted)
-router.get('/maintenance/purge-preview', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const now = new Date();
-    
-    const [
-      executionLogsToDelete,
-      oldExecutions,
-      oldNodeExecutions
-    ] = await Promise.all([
-      prisma.executionLog.count({
-        where: {
-          timestamp: {
-            lt: new Date(now.getTime() - maintenanceSettings.executionLogsRetention * 24 * 60 * 60 * 1000)
-          }
+router.get('/maintenance/purge-preview', authMiddleware, adminMiddleware, asyncHandler(async (req, res) => {
+  const now = new Date();
+  
+  const [
+    executionLogsToDelete,
+    oldExecutions,
+    oldNodeExecutions
+  ] = await Promise.all([
+    prisma.executionLog.count({
+      where: {
+        timestamp: {
+          lt: new Date(now.getTime() - maintenanceSettings.executionLogsRetention * 24 * 60 * 60 * 1000)
         }
-      }),
-      prisma.workflowExecution.count({
-        where: {
-          startedAt: {
-            lt: new Date(now.getTime() - maintenanceSettings.workflowExecutionsRetention * 24 * 60 * 60 * 1000)
-          }
-        }
-      }),
-      prisma.nodeExecution.count({
-        where: {
-          startedAt: {
-            lt: new Date(now.getTime() - maintenanceSettings.workflowExecutionsRetention * 24 * 60 * 60 * 1000)
-          }
-        }
-      })
-    ]);
-
-    res.json({
-      success: true,
-      data: {
-        executionLogs: executionLogsToDelete,
-        workflowExecutions: oldExecutions,
-        nodeExecutions: oldNodeExecutions,
-        total: executionLogsToDelete + oldExecutions + oldNodeExecutions
       }
-    });
-  } catch (error: any) {
-    logger.error('Get purge preview error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+    }),
+    prisma.workflowExecution.count({
+      where: {
+        startedAt: {
+          lt: new Date(now.getTime() - maintenanceSettings.workflowExecutionsRetention * 24 * 60 * 60 * 1000)
+        }
+      }
+    }),
+    prisma.nodeExecution.count({
+      where: {
+        startedAt: {
+          lt: new Date(now.getTime() - maintenanceSettings.workflowExecutionsRetention * 24 * 60 * 60 * 1000)
+        }
+      }
+    })
+  ]);
+
+  res.json({
+    success: true,
+    data: {
+      executionLogs: executionLogsToDelete,
+      workflowExecutions: oldExecutions,
+      nodeExecutions: oldNodeExecutions,
+      total: executionLogsToDelete + oldExecutions + oldNodeExecutions
+    }
+  });
+}));
 
 // Run the purge operation
 async function runPurge() {
@@ -405,206 +380,181 @@ if (maintenanceSettings.enableAutoPurge) {
 // ========================================================================
 
 // Get security settings
-router.get('/security', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      data: securitySettings
-    });
-  } catch (error: any) {
-    logger.error('Get security settings error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+router.get('/security', authMiddleware, adminMiddleware, asyncHandler(async (req, res) => {
+  res.json({
+    success: true,
+    data: securitySettings
+  });
+}));
 
 // Update security settings
-router.patch('/security', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const {
-      requireCodeNodeApproval,
-      sessionTimeout,
-      maxLoginAttempts,
-      requireEmailVerification
-    } = req.body;
+router.patch('/security', authMiddleware, adminMiddleware, asyncHandler(async (req, res) => {
+  const {
+    requireCodeNodeApproval,
+    sessionTimeout,
+    maxLoginAttempts,
+    requireEmailVerification
+  } = req.body;
 
-    if (requireCodeNodeApproval !== undefined) {
-      if (typeof requireCodeNodeApproval !== 'boolean') {
-        return errorResponse(res, 'requireCodeNodeApproval must be a boolean', 400);
-      }
-      securitySettings.requireCodeNodeApproval = requireCodeNodeApproval;
-      logger.info(`[Security] Code node approval requirement set to: ${securitySettings.requireCodeNodeApproval}`);
+  if (requireCodeNodeApproval !== undefined) {
+    if (typeof requireCodeNodeApproval !== 'boolean') {
+      return errorResponse(res, 'requireCodeNodeApproval must be a boolean', 400);
     }
-
-    if (sessionTimeout !== undefined) {
-      const timeout = parseInt(sessionTimeout, 10);
-      if (isNaN(timeout) || timeout < 5 || timeout > 480) {
-        return errorResponse(res, 'Session timeout must be a number between 5 and 480 minutes', 400);
-      }
-      securitySettings.sessionTimeout = timeout;
-    }
-
-    if (maxLoginAttempts !== undefined) {
-      const attempts = parseInt(maxLoginAttempts, 10);
-      if (isNaN(attempts) || attempts < 3 || attempts > 10) {
-        return errorResponse(res, 'Max login attempts must be a number between 3 and 10', 400);
-      }
-      securitySettings.maxLoginAttempts = attempts;
-    }
-
-    if (requireEmailVerification !== undefined) {
-      if (typeof requireEmailVerification !== 'boolean') {
-        return errorResponse(res, 'requireEmailVerification must be a boolean', 400);
-      }
-      securitySettings.requireEmailVerification = requireEmailVerification;
-    }
-
-    res.json({
-      success: true,
-      data: securitySettings
-    });
-  } catch (error: any) {
-    logger.error('Update security settings error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    securitySettings.requireCodeNodeApproval = requireCodeNodeApproval;
+    logger.info(`[Security] Code node approval requirement set to: ${securitySettings.requireCodeNodeApproval}`);
   }
-});
+
+  if (sessionTimeout !== undefined) {
+    const timeout = parseInt(sessionTimeout, 10);
+    if (isNaN(timeout) || timeout < 5 || timeout > 480) {
+      return errorResponse(res, 'Session timeout must be a number between 5 and 480 minutes', 400);
+    }
+    securitySettings.sessionTimeout = timeout;
+  }
+
+  if (maxLoginAttempts !== undefined) {
+    const attempts = parseInt(maxLoginAttempts, 10);
+    if (isNaN(attempts) || attempts < 3 || attempts > 10) {
+      return errorResponse(res, 'Max login attempts must be a number between 3 and 10', 400);
+    }
+    securitySettings.maxLoginAttempts = attempts;
+  }
+
+  if (requireEmailVerification !== undefined) {
+    if (typeof requireEmailVerification !== 'boolean') {
+      return errorResponse(res, 'requireEmailVerification must be a boolean', 400);
+    }
+    securitySettings.requireEmailVerification = requireEmailVerification;
+  }
+
+  res.json({
+    success: true,
+    data: securitySettings
+  });
+}));
 
 // ========================================================================
 // Email Settings Routes
 // ========================================================================
 
 // Get email settings
-router.get('/email', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    // Don't return the actual password, just mask it
-    const safeSettings = {
-      ...emailSettings,
-      smtpPassword: emailPasswordCiphertext ? '********' : ''
-    };
-    res.json({
-      success: true,
-      data: safeSettings
-    });
-  } catch (error: any) {
-    logger.error('Get email settings error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+router.get('/email', authMiddleware, adminMiddleware, asyncHandler(async (req, res) => {
+  // Don't return the actual password, just mask it
+  const safeSettings = {
+    ...emailSettings,
+    smtpPassword: emailPasswordCiphertext ? '********' : ''
+  };
+  res.json({
+    success: true,
+    data: safeSettings
+  });
+}));
 
 // Update email settings
-router.patch('/email', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const {
-      smtpHost,
-      smtpPort,
-      smtpUser,
-      smtpPassword,
-      smtpSecure,
-      fromEmail,
-      fromName,
-      enabled
-    } = req.body;
+router.patch('/email', authMiddleware, adminMiddleware, asyncHandler(async (req, res) => {
+  const {
+    smtpHost,
+    smtpPort,
+    smtpUser,
+    smtpPassword,
+    smtpSecure,
+    fromEmail,
+    fromName,
+    enabled
+  } = req.body;
 
-    if (smtpHost !== undefined) {
-      emailSettings.smtpHost = smtpHost;
-    }
-
-    if (smtpPort !== undefined) {
-      const port = parseInt(smtpPort, 10);
-      if (isNaN(port) || port < 1 || port > 65535) {
-        return errorResponse(res, 'Invalid SMTP port', 400);
-      }
-      emailSettings.smtpPort = port;
-    }
-
-    if (smtpUser !== undefined) {
-      emailSettings.smtpUser = smtpUser;
-    }
-
-    if (smtpPassword !== undefined) {
-      if (smtpPassword === '') {
-        emailPasswordCiphertext = null;
-      } else {
-        emailPasswordCiphertext = encrypt(smtpPassword);
-      }
-    }
-
-    if (smtpSecure !== undefined) {
-      emailSettings.smtpSecure = Boolean(smtpSecure);
-    }
-
-    if (fromEmail !== undefined) {
-      emailSettings.fromEmail = fromEmail;
-    }
-
-    if (fromName !== undefined) {
-      emailSettings.fromName = fromName;
-    }
-
-    if (enabled !== undefined) {
-      emailSettings.enabled = Boolean(enabled);
-    }
-
-    logger.info(`[Email] Settings updated. Enabled: ${emailSettings.enabled}, Host: ${emailSettings.smtpHost}`);
-
-    // Clear transporter cache so new settings take effect
-    clearEmailTransporter();
-
-    // Return safe settings (masked password)
-    const safeSettings = {
-      ...emailSettings,
-      smtpPassword: emailPasswordCiphertext ? '********' : ''
-    };
-
-    res.json({
-      success: true,
-      data: safeSettings
-    });
-  } catch (error: any) {
-    logger.error('Update email settings error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  if (smtpHost !== undefined) {
+    emailSettings.smtpHost = smtpHost;
   }
-});
+
+  if (smtpPort !== undefined) {
+    const port = parseInt(smtpPort, 10);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      return errorResponse(res, 'Invalid SMTP port', 400);
+    }
+    emailSettings.smtpPort = port;
+  }
+
+  if (smtpUser !== undefined) {
+    emailSettings.smtpUser = smtpUser;
+  }
+
+  if (smtpPassword !== undefined) {
+    if (smtpPassword === '') {
+      emailPasswordCiphertext = null;
+    } else {
+      emailPasswordCiphertext = encrypt(smtpPassword);
+    }
+  }
+
+  if (smtpSecure !== undefined) {
+    emailSettings.smtpSecure = Boolean(smtpSecure);
+  }
+
+  if (fromEmail !== undefined) {
+    emailSettings.fromEmail = fromEmail;
+  }
+
+  if (fromName !== undefined) {
+    emailSettings.fromName = fromName;
+  }
+
+  if (enabled !== undefined) {
+    emailSettings.enabled = Boolean(enabled);
+  }
+
+  logger.info(`[Email] Settings updated. Enabled: ${emailSettings.enabled}, Host: ${emailSettings.smtpHost}`);
+
+  // Clear transporter cache so new settings take effect
+  clearEmailTransporter();
+
+  // Return safe settings (masked password)
+  const safeSettings = {
+    ...emailSettings,
+    smtpPassword: emailPasswordCiphertext ? '********' : ''
+  };
+
+  res.json({
+    success: true,
+    data: safeSettings
+  });
+}));
 
 // Test email configuration
-router.post('/email/test', authMiddleware, adminMiddleware, rateLimit({ windowMs: 60_000, max: 10, message: 'Too many test email requests, please try again later.' }), async (req, res) => {
-  try {
-    const { testEmail } = req.body;
+router.post('/email/test', authMiddleware, adminMiddleware, rateLimit({ windowMs: 60_000, max: 10, message: 'Too many test email requests, please try again later.' }), asyncHandler(async (req, res) => {
+  const { testEmail } = req.body;
 
-    if (!emailSettings.enabled) {
-      return errorResponse(res, 'Email is not enabled. Please configure and enable email settings first.', 400);
-    }
-
-    if (!emailSettings.smtpHost || !emailSettings.smtpUser || !emailPasswordCiphertext) {
-      return errorResponse(res, 'Email settings are incomplete. Please configure SMTP host, user, and password.', 400);
-    }
-
-    // First verify the configuration
-    const verifyResult = await verifyEmailConfig();
-    if (!verifyResult.valid) {
-      return errorResponse(res, `Email configuration error: ${verifyResult.error}`, 400);
-    }
-
-    // Send actual test email
-    const result = await sendTestEmail(testEmail);
-    
-    if (!result.success) {
-      return errorResponse(res, `Failed to send test email: ${result.error}`, 500);
-    }
-
-    res.json({
-      success: true,
-      data: {
-        message: 'Test email sent successfully',
-        messageId: result.messageId,
-        recipient: testEmail,
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error: any) {
-    logger.error('Test email error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  if (!emailSettings.enabled) {
+    return errorResponse(res, 'Email is not enabled. Please configure and enable email settings first.', 400);
   }
-});
+
+  if (!emailSettings.smtpHost || !emailSettings.smtpUser || !emailPasswordCiphertext) {
+    return errorResponse(res, 'Email settings are incomplete. Please configure SMTP host, user, and password.', 400);
+  }
+
+  // First verify the configuration
+  const verifyResult = await verifyEmailConfig();
+  if (!verifyResult.valid) {
+    return errorResponse(res, `Email configuration error: ${verifyResult.error}`, 400);
+  }
+
+  // Send actual test email
+  const result = await sendTestEmail(testEmail);
+  
+  if (!result.success) {
+    return errorResponse(res, `Failed to send test email: ${result.error}`, 500);
+  }
+
+  res.json({
+    success: true,
+    data: {
+      message: 'Test email sent successfully',
+      messageId: result.messageId,
+      recipient: testEmail,
+      timestamp: new Date().toISOString()
+    }
+  });
+}));
 
 // Export function to get email settings for use in other modules
 export function getEmailSettings() {
@@ -621,63 +571,53 @@ export function getEmailSettings() {
 // ========================================================================
 
 // Get general settings
-router.get('/general', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      data: generalSettings
-    });
-  } catch (error: any) {
-    logger.error('Get general settings error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+router.get('/general', authMiddleware, adminMiddleware, asyncHandler(async (req, res) => {
+  res.json({
+    success: true,
+    data: generalSettings
+  });
+}));
 
 // Update general settings
-router.patch('/general', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const {
-      siteName,
-      baseUrl,
-      allowRegistration,
-      defaultUserRole
-    } = req.body;
+router.patch('/general', authMiddleware, adminMiddleware, asyncHandler(async (req, res) => {
+  const {
+    siteName,
+    baseUrl,
+    allowRegistration,
+    defaultUserRole
+  } = req.body;
 
-    if (siteName !== undefined) {
-      generalSettings.siteName = siteName;
-    }
-
-    if (baseUrl !== undefined) {
-      // Validate URL format
-      try {
-        new URL(baseUrl);
-        generalSettings.baseUrl = baseUrl;
-      } catch {
-        return errorResponse(res, 'Invalid base URL format. Must be a valid URL like https://example.com', 400);
-      }
-    }
-
-    if (allowRegistration !== undefined) {
-      generalSettings.allowRegistration = Boolean(allowRegistration);
-    }
-
-    if (defaultUserRole !== undefined) {
-      if (!['user', 'admin'].includes(defaultUserRole)) {
-        return errorResponse(res, 'Default user role must be "user" or "admin"', 400);
-      }
-      generalSettings.defaultUserRole = defaultUserRole;
-    }
-
-    logger.info(`[General] Settings updated. Base URL: ${generalSettings.baseUrl}`);
-
-    res.json({
-      success: true,
-      data: generalSettings
-    });
-  } catch (error: any) {
-    logger.error('Update general settings error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  if (siteName !== undefined) {
+    generalSettings.siteName = siteName;
   }
-});
+
+  if (baseUrl !== undefined) {
+    // Validate URL format
+    try {
+      new URL(baseUrl);
+      generalSettings.baseUrl = baseUrl;
+    } catch {
+      return errorResponse(res, 'Invalid base URL format. Must be a valid URL like https://example.com', 400);
+    }
+  }
+
+  if (allowRegistration !== undefined) {
+    generalSettings.allowRegistration = Boolean(allowRegistration);
+  }
+
+  if (defaultUserRole !== undefined) {
+    if (!['user', 'admin'].includes(defaultUserRole)) {
+      return errorResponse(res, 'Default user role must be "user" or "admin"', 400);
+    }
+    generalSettings.defaultUserRole = defaultUserRole;
+  }
+
+  logger.info(`[General] Settings updated. Base URL: ${generalSettings.baseUrl}`);
+
+  res.json({
+    success: true,
+    data: generalSettings
+  });
+}));
 
 export default router;

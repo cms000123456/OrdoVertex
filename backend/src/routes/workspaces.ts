@@ -19,399 +19,358 @@ function generateSlug(name: string): string {
 }
 
 // List user's workspaces
-router.get('/', authenticateToken, async (req, res) => {
-  try {
-    const workspaces = await prisma.workspace.findMany({
-      where: {
-        OR: [
-          { ownerId: req.user!.id },
-          { members: { some: { userId: req.user!.id } } }
-        ]
+router.get('/', authenticateToken, asyncHandler(async (req, res) => {
+  const workspaces = await prisma.workspace.findMany({
+    where: {
+      OR: [
+        { ownerId: req.user!.id },
+        { members: { some: { userId: req.user!.id } } }
+      ]
+    },
+    include: {
+      owner: {
+        select: { id: true, name: true, email: true }
       },
-      include: {
-        owner: {
-          select: { id: true, name: true, email: true }
-        },
-        members: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true }
-            }
+      members: {
+        include: {
+          user: {
+            select: { id: true, name: true, email: true }
           }
-        },
-        _count: {
-          select: { workflows: true, members: true }
         }
       },
-      orderBy: { updatedAt: 'desc' }
-    });
+      _count: {
+        select: { workflows: true, members: true }
+      }
+    },
+    orderBy: { updatedAt: 'desc' }
+  });
 
-    res.json({ success: true, data: workspaces });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+  res.json({ success: true, data: workspaces });
+}));
 
 // Create workspace
 router.post('/', authenticateToken, [
   body('name').trim().notEmpty().isLength({ max: 100 }).withMessage('Name is required and must be ≤ 100 characters'),
   body('description').optional().trim().isLength({ max: 500 }).withMessage('Description must be ≤ 500 characters')
-], async (req: AuthRequest, res: Response) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return errorResponse(res, 'Validation failed', 400, errors.array());
-    }
+], asyncHandler(async (req: AuthRequest, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return errorResponse(res, 'Validation failed', 400, errors.array());
+  }
 
-    const { name, description } = req.body;
+  const { name, description } = req.body;
 
-    // Create workspace and owner membership atomically
-    const workspace = await prisma.$transaction(async (tx) => {
-      const ws = await tx.workspace.create({
-        data: {
-          name,
-          description,
-          slug: generateSlug(name),
-          ownerId: req.user!.id
-        }
-      });
-      await tx.workspaceMember.create({
-        data: {
-          workspaceId: ws.id,
-          userId: req.user!.id,
-          role: 'owner' as WorkspaceRole
-        }
-      });
-      return ws;
-    });
-
-    // Re-fetch with relations for response
-    const workspaceWithRelations = await prisma.workspace.findUnique({
-      where: { id: workspace.id },
-      include: {
-        owner: { select: { id: true, name: true, email: true } },
-        members: { include: { user: { select: { id: true, name: true, email: true } } } }
+  // Create workspace and owner membership atomically
+  const workspace = await prisma.$transaction(async (tx) => {
+    const ws = await tx.workspace.create({
+      data: {
+        name,
+        description,
+        slug: generateSlug(name),
+        ownerId: req.user!.id
       }
     });
+    await tx.workspaceMember.create({
+      data: {
+        workspaceId: ws.id,
+        userId: req.user!.id,
+        role: 'owner' as WorkspaceRole
+      }
+    });
+    return ws;
+  });
 
-    return successResponse(res, workspaceWithRelations, 201);
-  } catch (error: any) {
-    logger.error('Create workspace error:', error);
-    return errorResponse(res, 'Failed to create workspace', 500);
-  }
-});
+  // Re-fetch with relations for response
+  const workspaceWithRelations = await prisma.workspace.findUnique({
+    where: { id: workspace.id },
+    include: {
+      owner: { select: { id: true, name: true, email: true } },
+      members: { include: { user: { select: { id: true, name: true, email: true } } } }
+    }
+  });
+
+  return successResponse(res, workspaceWithRelations, 201);
+}));
 
 // Get workspace by ID
-router.get('/:id', authenticateToken, async (req, res) => {
-  try {
-    const workspace = await prisma.workspace.findFirst({
-      where: {
-        id: req.params.id,
-        OR: [
-          { ownerId: req.user!.id },
-          { members: { some: { userId: req.user!.id } } }
-        ]
+router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
+  const workspace = await prisma.workspace.findFirst({
+    where: {
+      id: req.params.id,
+      OR: [
+        { ownerId: req.user!.id },
+        { members: { some: { userId: req.user!.id } } }
+      ]
+    },
+    include: {
+      owner: {
+        select: { id: true, name: true, email: true }
       },
-      include: {
-        owner: {
-          select: { id: true, name: true, email: true }
-        },
-        members: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true }
-            }
+      members: {
+        include: {
+          user: {
+            select: { id: true, name: true, email: true }
           }
-        },
-        workflows: {
-          select: {
-            id: true,
-            name: true,
-            active: true,
-            createdAt: true,
-            updatedAt: true,
-            _count: { select: { executions: true } }
-          }
-        },
-        credentials: {
-          where: { workspaceId: req.params.id },
-          select: { id: true, name: true, type: true, createdAt: true }
-        },
-        _count: {
-          select: { workflows: true, members: true }
         }
+      },
+      workflows: {
+        select: {
+          id: true,
+          name: true,
+          active: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: { select: { executions: true } }
+        }
+      },
+      credentials: {
+        where: { workspaceId: req.params.id },
+        select: { id: true, name: true, type: true, createdAt: true }
+      },
+      _count: {
+        select: { workflows: true, members: true }
       }
-    });
-
-    if (!workspace) {
-      return res.status(404).json({ success: false, error: 'Workspace not found' });
     }
+  });
 
-    res.json({ success: true, data: workspace });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  if (!workspace) {
+    return res.status(404).json({ success: false, error: 'Workspace not found' });
   }
-});
+
+  res.json({ success: true, data: workspace });
+}));
 
 // Update workspace
-router.patch('/:id', authenticateToken, async (req, res) => {
-  try {
-    const { name, description } = req.body;
+router.patch('/:id', authenticateToken, asyncHandler(async (req, res) => {
+  const { name, description } = req.body;
 
-    // Check permissions (only owner or admin can update)
-    const member = await prisma.workspaceMember.findFirst({
-      where: {
-        workspaceId: req.params.id,
-        userId: req.user!.id,
-        role: { in: ['owner', 'admin'] }
-      }
-    });
-
-    const isOwner = await prisma.workspace.findFirst({
-      where: { id: req.params.id, ownerId: req.user!.id }
-    });
-
-    if (!member && !isOwner) {
-      return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+  // Check permissions (only owner or admin can update)
+  const member = await prisma.workspaceMember.findFirst({
+    where: {
+      workspaceId: req.params.id,
+      userId: req.user!.id,
+      role: { in: ['owner', 'admin'] }
     }
+  });
 
-    const workspace = await prisma.workspace.update({
-      where: { id: req.params.id },
-      data: { name, description },
-      include: {
-        owner: { select: { id: true, name: true, email: true } },
-        members: {
-          include: { user: { select: { id: true, name: true, email: true } } }
-        }
-      }
-    });
+  const isOwner = await prisma.workspace.findFirst({
+    where: { id: req.params.id, ownerId: req.user!.id }
+  });
 
-    res.json({ success: true, data: workspace });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  if (!member && !isOwner) {
+    return res.status(403).json({ success: false, error: 'Insufficient permissions' });
   }
-});
+
+  const workspace = await prisma.workspace.update({
+    where: { id: req.params.id },
+    data: { name, description },
+    include: {
+      owner: { select: { id: true, name: true, email: true } },
+      members: {
+        include: { user: { select: { id: true, name: true, email: true } } }
+      }
+    }
+  });
+
+  res.json({ success: true, data: workspace });
+}));
 
 // Delete workspace
-router.delete('/:id', authenticateToken, async (req, res) => {
-  try {
-    const workspace = await prisma.workspace.findFirst({
-      where: { id: req.params.id, ownerId: req.user!.id }
-    });
+router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: req.params.id, ownerId: req.user!.id }
+  });
 
-    if (!workspace) {
-      return res.status(404).json({ success: false, error: 'Workspace not found or not owner' });
-    }
-
-    await prisma.workspace.delete({
-      where: { id: req.params.id }
-    });
-
-    res.json({ success: true, message: 'Workspace deleted' });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  if (!workspace) {
+    return res.status(404).json({ success: false, error: 'Workspace not found or not owner' });
   }
-});
+
+  await prisma.workspace.delete({
+    where: { id: req.params.id }
+  });
+
+  res.json({ success: true, message: 'Workspace deleted' });
+}));
 
 // Add member to workspace
-router.post('/:id/members', authenticateToken, async (req, res) => {
-  try {
-    const { email, role = 'viewer' } = req.body;
+router.post('/:id/members', authenticateToken, asyncHandler(async (req, res) => {
+  const { email, role = 'viewer' } = req.body;
 
-    // Check permissions
-    const workspace = await prisma.workspace.findFirst({
-      where: { id: req.params.id },
-      include: {
-        members: {
-          where: { userId: req.user!.id }
-        }
+  // Check permissions
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: req.params.id },
+    include: {
+      members: {
+        where: { userId: req.user!.id }
       }
-    });
-
-    if (!workspace) {
-      return res.status(404).json({ success: false, error: 'Workspace not found' });
     }
+  });
 
-    const isOwner = workspace.ownerId === req.user!.id;
-    const userMember = workspace.members[0];
-    const canManage = isOwner || (userMember && ['admin'].includes(userMember.role));
-
-    if (!canManage) {
-      return res.status(403).json({ success: false, error: 'Insufficient permissions' });
-    }
-
-    // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-
-    // Check if already a member
-    const existing = await prisma.workspaceMember.findUnique({
-      where: {
-        workspaceId_userId: {
-          workspaceId: req.params.id,
-          userId: user.id
-        }
-      }
-    });
-
-    if (existing) {
-      return res.status(400).json({ success: false, error: 'User is already a member' });
-    }
-
-    const member = await prisma.workspaceMember.create({
-      data: {
-        workspaceId: req.params.id,
-        userId: user.id,
-        role: role as WorkspaceRole
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true } }
-      }
-    });
-
-    res.json({ success: true, data: member });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  if (!workspace) {
+    return res.status(404).json({ success: false, error: 'Workspace not found' });
   }
-});
+
+  const isOwner = workspace.ownerId === req.user!.id;
+  const userMember = workspace.members[0];
+  const canManage = isOwner || (userMember && ['admin'].includes(userMember.role));
+
+  if (!canManage) {
+    return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+  }
+
+  // Find user by email
+  const user = await prisma.user.findUnique({
+    where: { email }
+  });
+
+  if (!user) {
+    return res.status(404).json({ success: false, error: 'User not found' });
+  }
+
+  // Check if already a member
+  const existing = await prisma.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId: req.params.id,
+        userId: user.id
+      }
+    }
+  });
+
+  if (existing) {
+    return res.status(400).json({ success: false, error: 'User is already a member' });
+  }
+
+  const member = await prisma.workspaceMember.create({
+    data: {
+      workspaceId: req.params.id,
+      userId: user.id,
+      role: role as WorkspaceRole
+    },
+    include: {
+      user: { select: { id: true, name: true, email: true } }
+    }
+  });
+
+  res.json({ success: true, data: member });
+}));
 
 // Update member role
-router.patch('/:id/members/:memberId', authenticateToken, async (req, res) => {
-  try {
-    const { role } = req.body;
+router.patch('/:id/members/:memberId', authenticateToken, asyncHandler(async (req, res) => {
+  const { role } = req.body;
 
-    const workspace = await prisma.workspace.findFirst({
-      where: { id: req.params.id }
-    });
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: req.params.id }
+  });
 
-    if (!workspace) {
-      return res.status(404).json({ success: false, error: 'Workspace not found' });
-    }
-
-    const isOwner = workspace.ownerId === req.user!.id;
-    if (!isOwner) {
-      return res.status(403).json({ success: false, error: 'Only owner can change roles' });
-    }
-
-    const member = await prisma.workspaceMember.update({
-      where: { id: req.params.memberId },
-      data: { role: role as WorkspaceRole },
-      include: { user: { select: { id: true, name: true, email: true } } }
-    });
-
-    res.json({ success: true, data: member });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  if (!workspace) {
+    return res.status(404).json({ success: false, error: 'Workspace not found' });
   }
-});
+
+  const isOwner = workspace.ownerId === req.user!.id;
+  if (!isOwner) {
+    return res.status(403).json({ success: false, error: 'Only owner can change roles' });
+  }
+
+  const member = await prisma.workspaceMember.update({
+    where: { id: req.params.memberId },
+    data: { role: role as WorkspaceRole },
+    include: { user: { select: { id: true, name: true, email: true } } }
+  });
+
+  res.json({ success: true, data: member });
+}));
 
 // Remove member from workspace
-router.delete('/:id/members/:memberId', authenticateToken, async (req, res) => {
-  try {
-    const workspace = await prisma.workspace.findFirst({
-      where: { id: req.params.id }
-    });
+router.delete('/:id/members/:memberId', authenticateToken, asyncHandler(async (req, res) => {
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: req.params.id }
+  });
 
-    if (!workspace) {
-      return res.status(404).json({ success: false, error: 'Workspace not found' });
-    }
-
-    const isOwner = workspace.ownerId === req.user!.id;
-    const memberToRemove = await prisma.workspaceMember.findFirst({
-      where: { id: req.params.memberId }
-    });
-
-    if (!memberToRemove) {
-      return res.status(404).json({ success: false, error: 'Member not found' });
-    }
-
-    // Can remove if owner, or if removing self
-    const canRemove = isOwner || memberToRemove.userId === req.user!.id;
-
-    if (!canRemove) {
-      return res.status(403).json({ success: false, error: 'Insufficient permissions' });
-    }
-
-    await prisma.workspaceMember.delete({
-      where: { id: req.params.memberId }
-    });
-
-    res.json({ success: true, message: 'Member removed' });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  if (!workspace) {
+    return res.status(404).json({ success: false, error: 'Workspace not found' });
   }
-});
+
+  const isOwner = workspace.ownerId === req.user!.id;
+  const memberToRemove = await prisma.workspaceMember.findFirst({
+    where: { id: req.params.memberId }
+  });
+
+  if (!memberToRemove) {
+    return res.status(404).json({ success: false, error: 'Member not found' });
+  }
+
+  // Can remove if owner, or if removing self
+  const canRemove = isOwner || memberToRemove.userId === req.user!.id;
+
+  if (!canRemove) {
+    return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+  }
+
+  await prisma.workspaceMember.delete({
+    where: { id: req.params.memberId }
+  });
+
+  res.json({ success: true, message: 'Member removed' });
+}));
 
 // Get workspace workflows
-router.get('/:id/workflows', authenticateToken, async (req, res) => {
-  try {
-    // Verify user is a member of the workspace
-    const workspace = await prisma.workspace.findFirst({
-      where: {
-        id: req.params.id,
-        OR: [
-          { ownerId: req.user!.id },
-          { members: { some: { userId: req.user!.id } } }
-        ]
-      }
-    });
-
-    if (!workspace) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
+router.get('/:id/workflows', authenticateToken, asyncHandler(async (req, res) => {
+  // Verify user is a member of the workspace
+  const workspace = await prisma.workspace.findFirst({
+    where: {
+      id: req.params.id,
+      OR: [
+        { ownerId: req.user!.id },
+        { members: { some: { userId: req.user!.id } } }
+      ]
     }
+  });
 
-    const workflows = await prisma.workflow.findMany({
-      where: { workspaceId: req.params.id },
-      include: {
-        _count: { select: { executions: true } }
-      }
-    });
-
-    res.json({ success: true, data: workflows });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  if (!workspace) {
+    return res.status(403).json({ success: false, error: 'Access denied' });
   }
-});
+
+  const workflows = await prisma.workflow.findMany({
+    where: { workspaceId: req.params.id },
+    include: {
+      _count: { select: { executions: true } }
+    }
+  });
+
+  res.json({ success: true, data: workflows });
+}));
 
 // Add workflow to workspace
-router.post('/:id/workflows/:workflowId', authenticateToken, async (req, res) => {
-  try {
-    const workspace = await prisma.workspace.findFirst({
-      where: { id: req.params.id }
-    });
+router.post('/:id/workflows/:workflowId', authenticateToken, asyncHandler(async (req, res) => {
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: req.params.id }
+  });
 
-    if (!workspace) {
-      return res.status(404).json({ success: false, error: 'Workspace not found' });
-    }
-
-    // Check if user has permission to add workflows
-    const isOwner = workspace.ownerId === req.user!.id;
-    const member = await prisma.workspaceMember.findFirst({
-      where: {
-        workspaceId: req.params.id,
-        userId: req.user!.id,
-        role: { in: ['admin', 'editor'] }
-      }
-    });
-
-    if (!isOwner && !member) {
-      return res.status(403).json({ success: false, error: 'Insufficient permissions' });
-    }
-
-    const workflow = await prisma.workflow.update({
-      where: { id: req.params.workflowId },
-      data: { workspaceId: req.params.id }
-    });
-
-    res.json({ success: true, data: workflow });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  if (!workspace) {
+    return res.status(404).json({ success: false, error: 'Workspace not found' });
   }
-});
+
+  // Check if user has permission to add workflows
+  const isOwner = workspace.ownerId === req.user!.id;
+  const member = await prisma.workspaceMember.findFirst({
+    where: {
+      workspaceId: req.params.id,
+      userId: req.user!.id,
+      role: { in: ['admin', 'editor'] }
+    }
+  });
+
+  if (!isOwner && !member) {
+    return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+  }
+
+  const workflow = await prisma.workflow.update({
+    where: { id: req.params.workflowId },
+    data: { workspaceId: req.params.id }
+  });
+
+  res.json({ success: true, data: workflow });
+}));
 
 export default router;
