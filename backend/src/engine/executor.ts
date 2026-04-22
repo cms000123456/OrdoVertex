@@ -1,6 +1,7 @@
 import { prisma } from '../prisma';
 import { nodeRegistry } from '../nodes';
 import logger from '../utils/logger';
+import { getErrorMessage, getErrorStack } from '../utils/error-helper';
 import { 
   WorkflowDefinition, 
   WorkflowNode, 
@@ -183,17 +184,19 @@ export class WorkflowExecutor {
         output: finalOutput
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(`❌ Workflow execution failed:`, error);
+      const errMsg = getErrorMessage(error);
+      const errStack = getErrorStack(error);
       
       // Log workflow failure
       await writeExecutionLog(
         this.executionId,
         'error',
-        `Workflow execution failed: ${error.message}`,
+        `Workflow execution failed: ${errMsg}`,
         undefined,
         undefined,
-        { error: error.message, stack: error.stack }
+        { error: errMsg, stack: errStack }
       );
 
       await prisma.workflowExecution.update({
@@ -201,13 +204,13 @@ export class WorkflowExecutor {
         data: {
           status: 'failed',
           finishedAt: new Date(),
-          error: error.message
+          error: errMsg
         }
       });
 
       return {
         success: false,
-        error: error.message
+        error: errMsg
       };
     }
   }
@@ -342,19 +345,21 @@ export class WorkflowExecutor {
 
       return output;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(`❌ Node ${node.name} failed:`, error);
+      const nodeErrMsg = getErrorMessage(error);
+      const nodeErrStack = getErrorStack(error);
       
       // Write error log with input data for debugging
       await writeExecutionLog(
         this.executionId,
         'error',
-        `Node ${node.name} failed: ${error.message}`,
+        `Node ${node.name} failed: ${nodeErrMsg}`,
         node.id,
         node.name,
         { 
-          error: error.message, 
-          stack: error.stack,
+          error: nodeErrMsg, 
+          stack: nodeErrStack,
           input: inputItems.slice(0, 3).map(item => item.json),
           parameters: node.parameters
         }
@@ -365,12 +370,12 @@ export class WorkflowExecutor {
         data: {
           status: 'failed',
           finishedAt: new Date(),
-          error: error.message
+          error: nodeErrMsg
         }
       });
 
       if (this.context.hooks.onNodeExecuteError) {
-        await this.context.hooks.onNodeExecuteError(node.id, error);
+        await this.context.hooks.onNodeExecuteError(node.id, error instanceof Error ? error : new Error(nodeErrMsg));
       }
 
       throw error;

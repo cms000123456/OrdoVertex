@@ -11,6 +11,7 @@ import { registerAllNodes } from './nodes';
 import { scheduler } from './engine/scheduler';
 import { rateLimit } from './utils/rate-limit';
 import logger, { logStream } from './utils/logger';
+import { getErrorMessage } from './utils/error-helper';
 import { errorSanitizerMiddleware, sanitizedErrorHandler } from './utils/security';
 
 import authRoutes from './routes/auth';
@@ -159,9 +160,9 @@ app.get('/api/admin/workflows', authenticateToken, async (req, res) => {
     });
     
     res.json({ success: true, data: workflows });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Admin workflows error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 });
 
@@ -180,9 +181,9 @@ app.delete('/api/admin/workflows/:id', authenticateToken, async (req, res) => {
     });
     
     res.json({ success: true, message: 'Workflow deleted' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Admin delete workflow error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 });
 
@@ -235,9 +236,9 @@ app.post('/api/admin/workflows/:id/move', authenticateToken, async (req, res) =>
       message: workspaceId ? 'Workflow moved to workspace' : 'Workflow moved to personal',
       data: updated 
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Admin move workflow error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 });
 
@@ -284,9 +285,9 @@ app.patch('/api/admin/workflows/:id/toggle', authenticateToken, async (req, res)
     });
     
     res.json({ success: true, data: updated });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Admin toggle workflow error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 });
 
@@ -347,9 +348,9 @@ app.get('/api/admin/system-stats', authenticateToken, async (req, res) => {
     };
     
     res.json({ success: true, data: stats });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('System stats error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 });
 

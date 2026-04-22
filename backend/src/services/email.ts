@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { getEmailSettings } from '../routes/system';
 import logger from '../utils/logger';
+import { getErrorMessage } from '../utils/error-helper';
 
 /**
  * Email Service for OrdoVertex
@@ -66,8 +67,8 @@ export async function verifyEmailConfig(): Promise<{ valid: boolean; error?: str
   try {
     await transport.verify();
     return { valid: true };
-  } catch (error: any) {
-    return { valid: false, error: error.message };
+  } catch (error: unknown) {
+    return { valid: false, error: getErrorMessage(error) };
   }
 }
 
@@ -153,9 +154,9 @@ Time: ${new Date().toISOString()}
 
     logger.info(`[Email] Test email sent: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Email] Failed to send test email:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -246,9 +247,9 @@ The OrdoVertex Team
 
     logger.info(`[Email] Verification email sent to ${to}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Email] Failed to send verification email:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -340,9 +341,9 @@ The OrdoVertex Team
 
     logger.info(`[Email] Password reset email sent to ${to}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Email] Failed to send password reset email:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -440,9 +441,9 @@ View execution details in OrdoVertex.
 
     logger.info(`[Email] Alert email sent to ${to}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Email] Failed to send alert email:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 

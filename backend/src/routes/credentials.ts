@@ -271,7 +271,7 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
         updatedAt: credential.updatedAt
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error updating credential:', error);
     return errorResponse(res, 'Failed to update credential', 500);
   }

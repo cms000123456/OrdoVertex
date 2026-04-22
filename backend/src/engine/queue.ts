@@ -73,7 +73,7 @@ export function createWorker() {
         }
         
         return result;
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error(`❌ Workflow job ${job.id} failed:`, error);
         throw error;
       }

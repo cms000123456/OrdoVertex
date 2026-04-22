@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PythonShell } from 'python-shell';
 import logger from '../utils/logger';
+import { getErrorMessage } from './error-helper';
 
 /**
  * Secure Code Sandbox for OrdoVertex
@@ -309,9 +310,9 @@ export function executeSandboxedJavaScript(
     }
 
     return { success: true, output };
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Sanitize error message to not leak implementation details
-    let errorMessage = error.message || 'Unknown error';
+    let errorMessage = getErrorMessage(error);
     
     // Replace specific error patterns with generic messages
     if (errorMessage.includes('timeout') || errorMessage.includes('Timeout')) {
@@ -557,7 +558,7 @@ except Exception as e:
       // Send the script
       pyshell.send(pythonScript);
       pyshell.end((err: any) => { if (err) logger.error(err); });
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (!isFinished) {
         isFinished = true;
         clearTimeout(timeoutId);
@@ -565,7 +566,7 @@ except Exception as e:
         resolve({
           success: false,
           output: [],
-          error: `Failed to start Python execution: ${error.message}`,
+          error: `Failed to start Python execution: ${getErrorMessage(error)}`,
         });
       }
     }

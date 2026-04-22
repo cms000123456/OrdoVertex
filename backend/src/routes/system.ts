@@ -8,6 +8,7 @@ import { encrypt, decrypt, EncryptedData } from '../utils/encryption';
 import { rateLimit } from '../utils/rate-limit';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
+import { getErrorMessage } from '../utils/error-helper';
 
 const router = Router();
 
@@ -281,8 +282,8 @@ async function runPurge() {
       }
     });
     results.executionLogs = executionLogsResult.count;
-  } catch (err: any) {
-    results.errors.push(`Execution logs purge failed: ${err.message}`);
+  } catch (err: unknown) {
+    results.errors.push(`Execution logs purge failed: ${getErrorMessage(err)}`);
   }
 
   try {
@@ -295,8 +296,8 @@ async function runPurge() {
       }
     });
     results.nodeExecutions = nodeExecutionResult.count;
-  } catch (err: any) {
-    results.errors.push(`Node executions purge failed: ${err.message}`);
+  } catch (err: unknown) {
+    results.errors.push(`Node executions purge failed: ${getErrorMessage(err)}`);
   }
 
   try {
@@ -309,8 +310,8 @@ async function runPurge() {
       }
     });
     results.workflowExecutions = executionResult.count;
-  } catch (err: any) {
-    results.errors.push(`Workflow executions purge failed: ${err.message}`);
+  } catch (err: unknown) {
+    results.errors.push(`Workflow executions purge failed: ${getErrorMessage(err)}`);
   }
 
   // Update last purge time
