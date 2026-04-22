@@ -1,3 +1,6 @@
+import { validateEnvOrExit } from './utils/env-validation';
+validateEnvOrExit();
+
 import { prisma } from './prisma';
 import { Worker, Job } from 'bullmq';
 import { registerAllNodes } from './nodes';

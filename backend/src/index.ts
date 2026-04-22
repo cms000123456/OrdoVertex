@@ -1,7 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import { validateEnvOrExit } from './utils/env-validation';
 import { prisma } from './prisma';
+
+// Validate environment before anything else
+validateEnvOrExit();
 
 import { registerAllNodes } from './nodes';
 import { scheduler } from './engine/scheduler';

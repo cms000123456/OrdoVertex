@@ -58,6 +58,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: production
     container_name: ordovertex-api
     restart: always
     environment:
@@ -164,13 +165,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: production
       args:
         # Build-time environment variables
-        REACT_APP_API_URL: ${API_URL:-/api}
+        VITE_API_URL: ${API_URL:-/api}
     container_name: ordovertex-frontend
     restart: always
     ports:
-      - "127.0.0.1:3000:80"  # Bind to localhost, use reverse proxy
+      - "127.0.0.1:3000:8080"  # Bind to localhost, use reverse proxy
     depends_on:
       - api
     networks:
