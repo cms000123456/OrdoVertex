@@ -64,13 +64,21 @@ describe('API Routes Coverage', () => {
   });
   
   afterEach(async () => {
-    // Cleanup test data
-    await prisma.workflowExecution.deleteMany({
-      where: { workflow: { userId: testUser.id } }
-    });
-    await prisma.workflow.deleteMany({ where: { userId: testUser.id } });
-    await prisma.apiKey.deleteMany({ where: { userId: testUser.id } });
-    await prisma.user.delete({ where: { id: testUser.id } });
+    // Cleanup test data — robust deletion that handles partial cleanup from previous failures
+    try {
+      await prisma.workflowExecution.deleteMany({
+        where: { workflow: { userId: testUser.id } }
+      });
+    } catch { /* ignore */ }
+    try {
+      await prisma.workflow.deleteMany({ where: { userId: testUser.id } });
+    } catch { /* ignore */ }
+    try {
+      await prisma.apiKey.deleteMany({ where: { userId: testUser.id } });
+    } catch { /* ignore */ }
+    try {
+      await prisma.user.deleteMany({ where: { id: testUser.id } });
+    } catch { /* ignore */ }
   });
   
   afterAll(async () => {
