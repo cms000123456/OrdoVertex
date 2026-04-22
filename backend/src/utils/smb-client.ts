@@ -120,9 +120,18 @@ export async function smbCommand(conn: SmbConnection, command: string): Promise<
   );
 }
 
+const SMB_PATH_FORBIDDEN = /[";|&$`\n\r\x00]/;
+
+export function validateSmbPath(path: string, name = 'path'): string {
+  if (SMB_PATH_FORBIDDEN.test(path)) {
+    throw new Error(`Invalid characters in SMB ${name}`);
+  }
+  return path.replace(/\//g, '\\');
+}
+
 export async function smbDownload(conn: SmbConnection, remotePath: string): Promise<Buffer> {
   const tmpPath = join(tmpdir(), `smb-dl-${randomBytes(8).toString('hex')}`);
-  const remote = remotePath.replace(/\//g, '\\');
+  const remote = validateSmbPath(remotePath, 'remotePath');
   try {
     await smbCommand(conn, `get "${remote}" "${tmpPath}"`);
     return await fs.readFile(tmpPath);
@@ -133,7 +142,7 @@ export async function smbDownload(conn: SmbConnection, remotePath: string): Prom
 
 export async function smbUpload(conn: SmbConnection, remotePath: string, data: Buffer): Promise<void> {
   const tmpPath = join(tmpdir(), `smb-ul-${randomBytes(8).toString('hex')}`);
-  const remote = remotePath.replace(/\//g, '\\');
+  const remote = validateSmbPath(remotePath, 'remotePath');
   try {
     await fs.writeFile(tmpPath, data);
     await smbCommand(conn, `put "${tmpPath}" "${remote}"`);

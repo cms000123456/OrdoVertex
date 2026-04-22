@@ -1,5 +1,5 @@
 import { NodeType } from '../../types';
-import { SmbConnection, smbCommand, smbDownload, smbUpload, parseLsOutput } from '../../utils/smb-client';
+import { SmbConnection, smbCommand, smbDownload, smbUpload, parseLsOutput, validateSmbPath } from '../../utils/smb-client';
 
 export const smbNode: NodeType = {
   name: 'smb',
@@ -205,8 +205,11 @@ export const smbNode: NodeType = {
     try {
       const useCredential = context.getNodeParameter('useCredential', true) as boolean;
       const operation = context.getNodeParameter('operation', 'download') as string;
-      const remotePath = (context.getNodeParameter('remotePath', '') as string)
-        .replace(/\//g, '\\').replace(/^\\+/, '');
+      const remotePath = validateSmbPath(
+        (context.getNodeParameter('remotePath', '') as string)
+          .replace(/\//g, '\\').replace(/^\\+/, ''),
+        'remotePath'
+      );
 
       let conn: SmbConnection;
 
@@ -290,8 +293,11 @@ export const smbNode: NodeType = {
         }
 
         case 'move': {
-          const newPath = (context.getNodeParameter('newPath', '') as string)
-            .replace(/\//g, '\\').replace(/^\\+/, '');
+          const newPath = validateSmbPath(
+            (context.getNodeParameter('newPath', '') as string)
+              .replace(/\//g, '\\').replace(/^\\+/, ''),
+            'newPath'
+          );
           await smbCommand(conn, `rename "${remotePath}" "${newPath}"`);
           result = { moved: true, from: remotePath, to: newPath };
           break;

@@ -8,6 +8,17 @@ interface RateLimitStore {
 }
 
 const store: RateLimitStore = {};
+const MAX_STORE_KEYS = 10_000;
+
+// Periodic cleanup of expired entries to prevent unbounded memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const key of Object.keys(store)) {
+    if (store[key].resetTime < now) {
+      delete store[key];
+    }
+  }
+}, 5 * 60 * 1000);
 
 interface RateLimitOptions {
   windowMs?: number;
@@ -31,6 +42,16 @@ export function rateLimit(options: RateLimitOptions = {}) {
 
     // Initialize or update rate limit data
     if (!store[key]) {
+      // Prevent unbounded memory growth from spoofed IPs
+      if (Object.keys(store).length >= MAX_STORE_KEYS) {
+        return res.status(429).json({
+          success: false,
+          error: {
+            message: 'Rate limit store capacity exceeded. Please try again later.',
+            retryAfter: Math.ceil(windowMs / 1000)
+          }
+        });
+      }
       store[key] = {
         count: 1,
         resetTime: now + windowMs
