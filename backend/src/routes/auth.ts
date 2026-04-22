@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import crypto from 'crypto';
 import { hashPassword, verifyPassword, generateToken, authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
@@ -9,7 +9,6 @@ import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email
 import { getSecuritySettings, getBaseUrl } from './system';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Apply rate limiting to auth endpoints
 router.use(authRateLimit());

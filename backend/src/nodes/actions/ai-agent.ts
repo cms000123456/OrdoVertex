@@ -1,15 +1,60 @@
 import { NodeType } from '../../types';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../prisma';
 import { validateExpression } from '../../utils/safe-eval';
 import { decryptJSON } from '../../utils/encryption';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const prisma = new PrismaClient();
 
-// AI Agent memory storage (in production, use Redis or database)
-const agentMemory = new Map<string, any[]>();
+// AI Agent memory storage with LRU eviction and TTL
+const MAX_MEMORY_ENTRIES = 1000;
+const MEMORY_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+interface MemoryEntry {
+  messages: any[];
+  lastAccessed: number;
+}
+
+const agentMemory = new Map<string, MemoryEntry>();
+
+function cleanupExpiredMemory() {
+  const now = Date.now();
+  for (const [key, entry] of agentMemory) {
+    if (now - entry.lastAccessed > MEMORY_TTL_MS) {
+      agentMemory.delete(key);
+    }
+  }
+}
+
+function getMemory(key: string): any[] | undefined {
+  cleanupExpiredMemory();
+  const entry = agentMemory.get(key);
+  if (entry) {
+    entry.lastAccessed = Date.now();
+    return entry.messages;
+  }
+  return undefined;
+}
+
+function setMemory(key: string, messages: any[]) {
+  cleanupExpiredMemory();
+  // Evict oldest if at capacity
+  if (agentMemory.size >= MAX_MEMORY_ENTRIES && !agentMemory.has(key)) {
+    let oldestKey: string | null = null;
+    let oldestTime = Infinity;
+    for (const [k, entry] of agentMemory) {
+      if (entry.lastAccessed < oldestTime) {
+        oldestTime = entry.lastAccessed;
+        oldestKey = k;
+      }
+    }
+    if (oldestKey) {
+      agentMemory.delete(oldestKey);
+    }
+  }
+  agentMemory.set(key, { messages, lastAccessed: Date.now() });
+}
 
 interface Tool {
   name: string;
@@ -404,7 +449,7 @@ export const aiAgentNode: NodeType = {
       // Get or initialize memory
       let messages: any[] = [];
       if (enableMemory) {
-        messages = agentMemory.get(memoryKey) || [];
+        messages = getMemory(memoryKey) || [];
         if (messages.length === 0 && systemPrompt) {
           messages.push({ role: 'system', content: systemPrompt });
         }
@@ -496,7 +541,7 @@ export const aiAgentNode: NodeType = {
             response = message.content || '';
             if (enableMemory) {
               currentMessages.push({ role: 'assistant', content: response });
-              agentMemory.set(memoryKey, currentMessages);
+              setMemory(memoryKey, currentMessages);
             }
             break;
           }
@@ -525,7 +570,7 @@ export const aiAgentNode: NodeType = {
 
         if (enableMemory) {
           messages.push({ role: 'assistant', content: response });
-          agentMemory.set(memoryKey, messages);
+          setMemory(memoryKey, messages);
         }
 
       } else if (provider === 'gemini') {
@@ -566,7 +611,7 @@ export const aiAgentNode: NodeType = {
 
         if (enableMemory) {
           messages.push({ role: 'assistant', content: response });
-          agentMemory.set(memoryKey, messages);
+          setMemory(memoryKey, messages);
         }
 
       } else if (provider === 'kimi') {
@@ -634,7 +679,7 @@ export const aiAgentNode: NodeType = {
             response = message.content || '';
             if (enableMemory) {
               currentMessages.push({ role: 'assistant', content: response });
-              agentMemory.set(memoryKey, currentMessages);
+              setMemory(memoryKey, currentMessages);
             }
             break;
           }
@@ -663,7 +708,7 @@ export const aiAgentNode: NodeType = {
 
         if (enableMemory) {
           messages.push({ role: 'assistant', content: response });
-          agentMemory.set(memoryKey, messages);
+          setMemory(memoryKey, messages);
         }
 
       } else {
@@ -683,7 +728,7 @@ export const aiAgentNode: NodeType = {
 
         if (enableMemory) {
           messages.push({ role: 'assistant', content: response });
-          agentMemory.set(memoryKey, messages);
+          setMemory(memoryKey, messages);
         }
       }
 

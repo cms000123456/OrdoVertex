@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma';
 
 import { registerAllNodes } from './nodes';
 import { scheduler } from './engine/scheduler';
@@ -29,7 +29,6 @@ import schedulerRoutes from './routes/scheduler';
 import queueRoutes from './routes/queue';
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 
 // Middleware

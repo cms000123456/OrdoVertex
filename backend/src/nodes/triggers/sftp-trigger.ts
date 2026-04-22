@@ -199,9 +199,8 @@ export const sftpTriggerNode: NodeType = {
       let config: any;
 
       if (useCredential) {
-        const { PrismaClient } = await import('@prisma/client');
+        const { prisma } = await import('../../prisma');
         const { decryptJSON } = await import('../../utils/encryption');
-        const prisma = new PrismaClient();
         
         const credentialId = context.getNodeParameter('credentialId', '') as string;
         const credential = await prisma.credential.findFirst({

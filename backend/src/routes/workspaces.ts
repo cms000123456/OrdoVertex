@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { PrismaClient, WorkspaceRole } from '@prisma/client';
+import { WorkspaceRole } from '@prisma/client';
+import { prisma } from '../prisma';
 import { authMiddleware } from '../utils/auth';
 const authenticateToken = authMiddleware;
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Helper to generate slug
 function generateSlug(name: string): string {
@@ -333,6 +333,21 @@ router.delete('/:id/members/:memberId', authenticateToken, async (req, res) => {
 // Get workspace workflows
 router.get('/:id/workflows', authenticateToken, async (req, res) => {
   try {
+    // Verify user is a member of the workspace
+    const workspace = await prisma.workspace.findFirst({
+      where: {
+        id: req.params.id,
+        OR: [
+          { ownerId: req.user!.id },
+          { members: { some: { userId: req.user!.id } } }
+        ]
+      }
+    });
+
+    if (!workspace) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
     const workflows = await prisma.workflow.findMany({
       where: { workspaceId: req.params.id },
       include: {

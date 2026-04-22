@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { queueWorkflowExecution } from '../engine/queue';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Webhook handler - no auth required for external webhooks
 router.all('/:workflowId/:path?', async (req: Request, res: Response) => {

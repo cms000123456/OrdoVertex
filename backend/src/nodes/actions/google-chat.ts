@@ -1,8 +1,7 @@
 import { NodeType } from '../../types';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../prisma';
 import { decryptJSON } from '../../utils/encryption';
 
-const prisma = new PrismaClient();
 
 export const googleChatNode: NodeType = {
   name: 'googleChat',

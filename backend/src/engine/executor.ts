@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { nodeRegistry } from '../nodes';
 import { 
   WorkflowDefinition, 
@@ -9,7 +9,6 @@ import {
   ExecutionHooks 
 } from '../types';
 
-const prisma = new PrismaClient();
 
 // Helper to truncate large objects for logging
 function truncateForLog(obj: any, maxDepth = 3, maxLength = 1000): any {

@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { executeWorkflow } from '../engine/executor';
@@ -9,7 +9,6 @@ import { workflowContainsCodeNodes } from '../utils/code-sandbox';
 import { isCodeNodeApprovalRequired } from './system';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Helper to verify user exists (handles case where DB was reset but token is still valid)
 async function verifyUserExists(userId: string) {

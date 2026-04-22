@@ -1,10 +1,9 @@
 import axios, { AxiosRequestConfig, Method } from 'axios';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../prisma';
 import { NodeType } from '../../types';
 import { decryptJSON } from '../../utils/encryption';
 import { isInternalUrl } from '../../utils/security';
 
-const prisma = new PrismaClient();
 
 export const httpRequestNode: NodeType = {
   name: 'httpRequest',

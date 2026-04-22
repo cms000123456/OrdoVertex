@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { PrismaClient, WorkspaceRole } from '@prisma/client';
+import { WorkspaceRole } from '@prisma/client';
+import { prisma } from '../prisma';
 import { authMiddleware } from '../utils/auth';
 const authenticateToken = authMiddleware;
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Get all groups (admin sees all, users see groups they belong to)
 router.get('/', authenticateToken, async (req, res) => {

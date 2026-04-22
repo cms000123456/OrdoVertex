@@ -1,10 +1,9 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { authMiddleware } from '../utils/auth';
 const authenticateToken = authMiddleware;
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Get execution logs
 router.get('/', authenticateToken, async (req, res) => {

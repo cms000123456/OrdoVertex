@@ -1,12 +1,11 @@
 import { Router, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import crypto from 'crypto';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Generate a secure API key
 function generateApiKey(): string {

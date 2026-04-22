@@ -1,10 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma';
 import { Worker, Job } from 'bullmq';
 import { registerAllNodes } from './nodes';
 import { scheduler } from './engine/scheduler';
 import { createWorker, redis, SchedulerControlJob } from './engine/queue';
 
-const prisma = new PrismaClient();
 const HEARTBEAT_KEY = 'worker:heartbeat';
 const HEARTBEAT_INTERVAL_MS = 30_000;
 

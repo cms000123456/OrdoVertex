@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 
 const authenticateToken = authMiddleware;
@@ -7,7 +7,6 @@ import { encryptJSON, decryptJSON } from '../utils/encryption';
 import { getVaultSecret, validateVaultConnection, VaultConfig } from '../utils/vault';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Helper to verify user exists (handles case where DB was reset but token is still valid)
 async function verifyUserExists(userId: string) {

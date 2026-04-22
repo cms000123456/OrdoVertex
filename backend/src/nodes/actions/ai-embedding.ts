@@ -1,9 +1,8 @@
 import { NodeType } from '../../types';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../prisma';
 import { decryptJSON } from '../../utils/encryption';
 import OpenAI from 'openai';
 
-const prisma = new PrismaClient();
 
 export const aiEmbeddingNode: NodeType = {
   name: 'aiEmbedding',

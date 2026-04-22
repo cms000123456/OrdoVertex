@@ -1,12 +1,11 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import cron from 'node-cron';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { sendTestEmail, verifyEmailConfig, clearEmailTransporter } from '../services/email';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Default maintenance settings
 const DEFAULT_MAINTENANCE_SETTINGS = {

@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import cron from 'node-cron';
 import { queueWorkflowExecution } from './queue';
 
-const prisma = new PrismaClient();
 
 interface ScheduledJob {
   id: string;

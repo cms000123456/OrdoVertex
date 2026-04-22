@@ -6,41 +6,87 @@ import * as mysql from 'mysql2/promise';
 import * as mssql from 'mssql';
 import { Database as SQLiteDatabase } from 'sqlite3';
 import { open } from 'sqlite';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../prisma';
 import { decryptJSON } from '../../utils/encryption';
 
-const prisma = new PrismaClient();
 
 // Connection pools cache
 const postgresPools: Map<string, PostgresPool> = new Map();
 const mysqlPools: Map<string, mysql.Pool> = new Map();
 const mssqlPools: Map<string, mssql.ConnectionPool> = new Map();
 
+// In-flight creation promises to prevent race conditions
+const postgresPoolPromises: Map<string, Promise<PostgresPool>> = new Map();
+const mysqlPoolPromises: Map<string, Promise<mysql.Pool>> = new Map();
+const mssqlPoolPromises: Map<string, Promise<mssql.ConnectionPool>> = new Map();
+
 async function getPostgresPool(connectionString: string): Promise<PostgresPool> {
-  if (!postgresPools.has(connectionString)) {
+  const existing = postgresPools.get(connectionString);
+  if (existing) return existing;
+
+  const inFlight = postgresPoolPromises.get(connectionString);
+  if (inFlight) return inFlight;
+
+  const promise = (async () => {
     const pool = new PostgresPool({ connectionString });
     postgresPools.set(connectionString, pool);
+    return pool;
+  })();
+
+  postgresPoolPromises.set(connectionString, promise);
+  try {
+    const pool = await promise;
+    return pool;
+  } finally {
+    postgresPoolPromises.delete(connectionString);
   }
-  return postgresPools.get(connectionString)!;
 }
 
 async function getMySQLPool(config: mysql.PoolOptions): Promise<mysql.Pool> {
   const key = JSON.stringify(config);
-  if (!mysqlPools.has(key)) {
+  const existing = mysqlPools.get(key);
+  if (existing) return existing;
+
+  const inFlight = mysqlPoolPromises.get(key);
+  if (inFlight) return inFlight;
+
+  const promise = (async () => {
     const pool = mysql.createPool(config);
     mysqlPools.set(key, pool);
+    return pool;
+  })();
+
+  mysqlPoolPromises.set(key, promise);
+  try {
+    const pool = await promise;
+    return pool;
+  } finally {
+    mysqlPoolPromises.delete(key);
   }
-  return mysqlPools.get(key)!;
 }
 
 async function getMSSQLPool(config: mssql.config): Promise<mssql.ConnectionPool> {
   const key = JSON.stringify(config);
-  if (!mssqlPools.has(key)) {
+  const existing = mssqlPools.get(key);
+  if (existing) return existing;
+
+  const inFlight = mssqlPoolPromises.get(key);
+  if (inFlight) return inFlight;
+
+  const promise = (async () => {
     const pool = new mssql.ConnectionPool(config);
     await pool.connect();
     mssqlPools.set(key, pool);
+    return pool;
+  })();
+
+  mssqlPoolPromises.set(key, promise);
+  try {
+    const pool = await promise;
+    return pool;
+  } finally {
+    mssqlPoolPromises.delete(key);
   }
-  return mssqlPools.get(key)!;
 }
 
 async function executePostgres(connectionString: string, query: string, parameters: any[]): Promise<any> {

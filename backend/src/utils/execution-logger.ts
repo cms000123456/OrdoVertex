@@ -1,6 +1,6 @@
-import { PrismaClient, LogLevel } from '@prisma/client';
+import { LogLevel } from '@prisma/client';
+import { prisma } from '../prisma';
 
-const prisma = new PrismaClient();
 
 interface LogEntry {
   executionId: string;

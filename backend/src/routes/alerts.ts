@@ -1,10 +1,9 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { authMiddleware } from '../utils/auth';
 import { sendEmail } from '../utils/email-sender';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Get all alerts for user
 router.get('/', authMiddleware, async (req, res) => {

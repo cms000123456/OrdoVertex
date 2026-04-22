@@ -1,11 +1,10 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { redis, sendSchedulerControl, queueWorkflowExecution } from '../engine/queue';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 router.use(authMiddleware);
 

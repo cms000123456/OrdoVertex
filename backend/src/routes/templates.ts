@@ -1,11 +1,10 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { authMiddleware } from '../utils/auth';
 import crypto from 'crypto';
 import { workflowTemplates } from '../data/templates';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // List all templates
 router.get('/', authMiddleware, async (req, res) => {

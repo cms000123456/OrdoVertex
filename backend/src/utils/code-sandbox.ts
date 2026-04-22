@@ -1,4 +1,6 @@
 import * as vm from 'vm';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PythonShell } from 'python-shell';
 
 /**
@@ -343,6 +345,11 @@ export function executeSandboxedPython(
     return Promise.resolve({ success: false, output: [], error: validation.error });
   }
 
+  // Write input data to a temp JSON file to avoid string interpolation attacks
+  const inputFileName = `ordovertex_input_${Date.now()}_${Math.random().toString(36).slice(2)}.json`;
+  const inputFilePath = path.join('/tmp', inputFileName);
+  fs.writeFileSync(inputFilePath, JSON.stringify(inputData), 'utf8');
+
   return new Promise((resolve) => {
     // Create a restricted Python script with security wrapper
     const allowedModulesStr = ALLOWED_PYTHON_MODULES.join(', ');
@@ -383,9 +390,13 @@ class DisabledIO:
 
 open = DisabledIO
 
-# Input data from Node.js
-items_json = '''${JSON.stringify(inputData).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n')}'''
-items = json.loads(items_json)
+# Read input data from temp JSON file passed as first argument
+input_file_path = sys.argv[1] if len(sys.argv) > 1 else None
+if input_file_path:
+    with open(input_file_path, 'r') as f:
+        items = json.load(f)
+else:
+    items = []
 
 # Helper functions for data access
 def get_item(index=0):
@@ -432,6 +443,8 @@ except Exception as e:
     const timeoutId = setTimeout(() => {
       if (!isFinished) {
         isFinished = true;
+        // Clean up temp file on timeout
+        try { fs.unlinkSync(inputFilePath); } catch {}
         resolve({
           success: false,
           output: [],
@@ -445,7 +458,7 @@ except Exception as e:
         mode: 'text',
         pythonPath: 'python3',
         scriptPath: '/tmp',
-        args: [],
+        args: [inputFilePath],
       });
 
       pyshell.on('message', (message: string) => {
@@ -481,6 +494,7 @@ except Exception as e:
         if (isFinished) return;
         isFinished = true;
         clearTimeout(timeoutId);
+        try { fs.unlinkSync(inputFilePath); } catch {}
         resolve({
           success: false,
           output: [],
@@ -492,6 +506,7 @@ except Exception as e:
         if (isFinished) return;
         isFinished = true;
         clearTimeout(timeoutId);
+        try { fs.unlinkSync(inputFilePath); } catch {}
 
         if (errorOutput && !jsonResult) {
           resolve({
@@ -546,6 +561,7 @@ except Exception as e:
       if (!isFinished) {
         isFinished = true;
         clearTimeout(timeoutId);
+        try { fs.unlinkSync(inputFilePath); } catch {}
         resolve({
           success: false,
           output: [],

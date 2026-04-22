@@ -1,11 +1,11 @@
 import { Router, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest, hashPassword } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Middleware to check if user is admin
 function adminMiddleware(req: AuthRequest, res: any, next: any) {
