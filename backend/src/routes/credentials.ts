@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 
@@ -20,12 +20,12 @@ async function verifyUserExists(userId: string) {
 }
 
 // Success response helper
-const successResponse = (res: any, data: any, status = 200) => {
+const successResponse = (res: Response, data: unknown, status = 200) => {
   res.status(status).json({ success: true, data });
 };
 
 // Error response helper
-const errorResponse = (res: any, message: string, status = 400) => {
+const errorResponse = (res: Response, message: string, status = 400) => {
   res.status(status).json({ success: false, error: message });
 };
 

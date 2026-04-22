@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { UserRole } from '@prisma/client';
 import { prisma } from '../prisma';
@@ -10,7 +10,7 @@ import { asyncHandler } from '../utils/async-handler';
 const router = Router();
 
 // Middleware to check if user is admin
-function adminMiddleware(req: AuthRequest, res: any, next: any) {
+function adminMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
   if (!req.user || req.user.role !== 'admin') {
     return errorResponse(res, 'Admin access required', 403);
   }

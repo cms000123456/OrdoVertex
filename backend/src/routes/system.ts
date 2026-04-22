@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { prisma } from '../prisma';
 import cron from 'node-cron';
 import { authMiddleware, AuthRequest } from '../utils/auth';
@@ -73,7 +73,7 @@ export function getSecuritySettings() {
 }
 
 // Middleware to check admin
-function adminMiddleware(req: AuthRequest, res: any, next: any) {
+function adminMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
   if (req.user?.role !== 'admin') {
     return errorResponse(res, 'Admin access required', 403);
   }

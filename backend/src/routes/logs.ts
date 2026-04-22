@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import fs from 'fs';
@@ -15,7 +15,7 @@ const ALLOWED_LOGS = ['api', 'worker', 'scheduler', 'system'];
 const MAX_LINES = 1000;
 
 // Middleware to check admin
-function adminMiddleware(req: AuthRequest, res: any, next: any) {
+function adminMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
   if (req.user?.role !== 'admin') {
     return errorResponse(res, 'Admin access required', 403);
   }
