@@ -4,6 +4,8 @@ import cron from 'node-cron';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { sendTestEmail, verifyEmailConfig, clearEmailTransporter } from '../services/email';
+import { encrypt, decrypt, EncryptedData } from '../utils/encryption';
+import { rateLimit } from '../utils/rate-limit';
 
 const router = Router();
 
@@ -51,6 +53,7 @@ let securitySettings = { ...DEFAULT_SECURITY_SETTINGS };
 let emailSettings = { ...DEFAULT_EMAIL_SETTINGS };
 let generalSettings = { ...DEFAULT_GENERAL_SETTINGS };
 let scheduledPurgeTask: cron.ScheduledTask | null = null;
+let emailPasswordCiphertext: EncryptedData | null = null;
 
 // Export function to check if code nodes require admin approval
 export function isCodeNodeApprovalRequired(): boolean {
@@ -465,7 +468,7 @@ router.get('/email', authMiddleware, adminMiddleware, async (req, res) => {
     // Don't return the actual password, just mask it
     const safeSettings = {
       ...emailSettings,
-      smtpPassword: emailSettings.smtpPassword ? '********' : ''
+      smtpPassword: emailPasswordCiphertext ? '********' : ''
     };
     res.json({
       success: true,
@@ -508,7 +511,11 @@ router.patch('/email', authMiddleware, adminMiddleware, async (req, res) => {
     }
 
     if (smtpPassword !== undefined) {
-      emailSettings.smtpPassword = smtpPassword;
+      if (smtpPassword === '') {
+        emailPasswordCiphertext = null;
+      } else {
+        emailPasswordCiphertext = encrypt(smtpPassword);
+      }
     }
 
     if (smtpSecure !== undefined) {
@@ -535,7 +542,7 @@ router.patch('/email', authMiddleware, adminMiddleware, async (req, res) => {
     // Return safe settings (masked password)
     const safeSettings = {
       ...emailSettings,
-      smtpPassword: emailSettings.smtpPassword ? '********' : ''
+      smtpPassword: emailPasswordCiphertext ? '********' : ''
     };
 
     res.json({
@@ -549,7 +556,7 @@ router.patch('/email', authMiddleware, adminMiddleware, async (req, res) => {
 });
 
 // Test email configuration
-router.post('/email/test', authMiddleware, adminMiddleware, async (req, res) => {
+router.post('/email/test', authMiddleware, adminMiddleware, rateLimit({ windowMs: 60_000, max: 10, message: 'Too many test email requests, please try again later.' }), async (req, res) => {
   try {
     const { testEmail } = req.body;
 
@@ -557,7 +564,7 @@ router.post('/email/test', authMiddleware, adminMiddleware, async (req, res) => 
       return errorResponse(res, 'Email is not enabled. Please configure and enable email settings first.', 400);
     }
 
-    if (!emailSettings.smtpHost || !emailSettings.smtpUser || !emailSettings.smtpPassword) {
+    if (!emailSettings.smtpHost || !emailSettings.smtpUser || !emailPasswordCiphertext) {
       return errorResponse(res, 'Email settings are incomplete. Please configure SMTP host, user, and password.', 400);
     }
 
@@ -591,7 +598,12 @@ router.post('/email/test', authMiddleware, adminMiddleware, async (req, res) => 
 
 // Export function to get email settings for use in other modules
 export function getEmailSettings() {
-  return { ...emailSettings };
+  return {
+    ...emailSettings,
+    smtpPassword: emailPasswordCiphertext
+      ? decrypt(emailPasswordCiphertext.encrypted, emailPasswordCiphertext.iv)
+      : ''
+  };
 }
 
 // ========================================================================

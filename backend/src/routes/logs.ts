@@ -65,7 +65,8 @@ router.get('/', authMiddleware, adminMiddleware, async (req: AuthRequest, res) =
 router.get('/:logName', authMiddleware, adminMiddleware, async (req: AuthRequest, res) => {
   try {
     const { logName } = req.params;
-    const lines = Math.min(parseInt(req.query.lines as string) || 100, MAX_LINES);
+    const linesRaw = parseInt(req.query.lines as string, 10);
+    const lines = Math.min(isNaN(linesRaw) ? 100 : linesRaw, MAX_LINES);
     const search = (req.query.search as string) || '';
     
     // Validate log name

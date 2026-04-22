@@ -32,6 +32,7 @@ import { Onboarding } from './components/Onboarding';
 import { WorkspaceManager } from './components/WorkspaceManager';
 import { SchedulerManager } from './components/SchedulerManager';
 import { VerifyEmail } from './components/VerifyEmail';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ResendVerification } from './components/ResendVerification';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAuthSession } from './hooks/useAuthSession';
@@ -206,6 +207,7 @@ function App() {
       
       <SessionExpiredBanner />
       
+      <ErrorBoundary>
       <Routes>
         <Route
           path="/login"
@@ -260,6 +262,7 @@ function App() {
         </Route>
         <Route path="/" element={<Navigate to="/workflows" />} />
       </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

@@ -19,8 +19,10 @@ router.get('/stats', async (req: AuthRequest, res) => {
 router.get('/failed', async (req: AuthRequest, res) => {
   try {
     if (req.user?.role !== 'admin') return errorResponse(res, 'Admin access required', 403);
-    const start = parseInt(req.query.start as string) || 0;
-    const end = parseInt(req.query.end as string) || 49;
+    const startVal = parseInt(req.query.start as string, 10);
+    const start = isNaN(startVal) ? 0 : startVal;
+    const endVal = parseInt(req.query.end as string, 10);
+    const end = isNaN(endVal) ? 49 : endVal;
     return successResponse(res, await getFailedJobs(start, end));
   } catch (error: any) {
     return errorResponse(res, 'Failed to get failed jobs', 500);

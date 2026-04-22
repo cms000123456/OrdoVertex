@@ -3,6 +3,7 @@ import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { redis, sendSchedulerControl, queueWorkflowExecution } from '../engine/queue';
+import { rateLimit } from '../utils/rate-limit';
 
 const router = Router();
 
@@ -17,8 +18,8 @@ router.get('/status', async (req: AuthRequest, res) => {
       redis.get('worker:heartbeat')
     ]);
 
-    const heartbeatMs = heartbeatRaw ? parseInt(heartbeatRaw) : null;
-    const workerAlive = heartbeatMs ? (Date.now() - heartbeatMs) < 120_000 : false;
+    const heartbeatMs = heartbeatRaw ? parseInt(heartbeatRaw, 10) : null;
+    const workerAlive = heartbeatMs !== null ? (Date.now() - heartbeatMs) < 120_000 : false;
 
     return successResponse(res, {
       worker: { alive: workerAlive, lastSeen: heartbeatMs ? new Date(heartbeatMs).toISOString() : null },
@@ -92,7 +93,7 @@ router.patch('/triggers/:id', async (req: AuthRequest, res) => {
 });
 
 // POST /api/scheduler/triggers/:id/run — manually fire a scheduled trigger now
-router.post('/triggers/:id/run', async (req: AuthRequest, res) => {
+router.post('/triggers/:id/run', rateLimit({ windowMs: 60_000, max: 20, message: 'Too many manual trigger requests, please try again later.' }), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     const trigger = await prisma.trigger.findUnique({

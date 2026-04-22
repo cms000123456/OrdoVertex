@@ -322,8 +322,10 @@ router.post('/:id/execute', async (req: AuthRequest, res) => {
 router.get('/:id/executions', async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const limitVal = parseInt(req.query.limit as string, 10);
+    const limit = isNaN(limitVal) ? 20 : limitVal;
+    const offsetVal = parseInt(req.query.offset as string, 10);
+    const offset = isNaN(offsetVal) ? 0 : offsetVal;
 
     // Verify ownership
     const workflow = await prisma.workflow.findFirst({

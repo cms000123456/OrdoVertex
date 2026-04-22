@@ -22,8 +22,10 @@ router.get('/stats', async (req: AuthRequest, res) => {
 // Get recent executions across all workflows
 router.get('/', async (req: AuthRequest, res) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 20;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const limitVal = parseInt(req.query.limit as string, 10);
+    const limit = isNaN(limitVal) ? 20 : limitVal;
+    const offsetVal = parseInt(req.query.offset as string, 10);
+    const offset = isNaN(offsetVal) ? 0 : offsetVal;
     const status = req.query.status as string | undefined;
 
     const where: any = {

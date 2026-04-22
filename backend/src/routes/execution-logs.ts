@@ -20,8 +20,10 @@ router.get('/', authenticateToken, async (req, res) => {
       limit = '50'
     } = req.query;
 
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-    const take = parseInt(limit as string);
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.max(1, parseInt(limit as string) || 50);
+    const skip = (pageNum - 1) * limitNum;
+    const take = limitNum;
 
     // Get user's accessible workflow IDs
     const userWorkflows = await prisma.workflow.findMany({
