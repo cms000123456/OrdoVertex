@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { URL } from 'url';
+import logger from '../utils/logger';
 
 /**
  * Security utilities for OrdoVertex
@@ -80,7 +81,7 @@ export function errorSanitizerMiddleware(
   sanitizedError.stack = undefined;
   
   // Log the original error for debugging
-  console.error('[Security] Original error:', err.message, err.stack);
+  logger.error('[Security] Original error:', err.message, err.stack);
 
   return next(sanitizedError);
 }
@@ -100,7 +101,7 @@ export function sanitizedErrorHandler(
   // In production, don't expose internal error details
   if (process.env.NODE_ENV === 'production') {
     // Log detailed error server-side
-    console.error(`[Error ${statusCode}] ${req.method} ${req.path}:`, {
+    logger.error(`[Error ${statusCode}] ${req.method} ${req.path}:`, {
       message: err.message,
       stack: err.stack,
       user: (req as any).user?.id,

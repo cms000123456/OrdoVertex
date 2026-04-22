@@ -5,6 +5,7 @@ import { authMiddleware, AuthRequest } from '../utils/auth';
 const authenticateToken = authMiddleware;
 import { encryptJSON, decryptJSON } from '../utils/encryption';
 import { getVaultSecret, validateVaultConnection, VaultConfig } from '../utils/vault';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -77,7 +78,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
 
     return successResponse(res, { credentials: sanitizedCredentials });
   } catch (error: any) {
-    console.error('Error listing credentials:', error);
+    logger.error('Error listing credentials:', error);
     return errorResponse(res, 'Failed to list credentials', 500);
   }
 });
@@ -115,7 +116,7 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
     try {
       data = decryptJSON(credential.data, credential.iv);
     } catch (e) {
-      console.error('Error decrypting credential:', e);
+      logger.error('Error decrypting credential:', e);
     }
 
     // Return only non-sensitive fields (mask sensitive values)
@@ -147,7 +148,7 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
       }
     });
   } catch (error: any) {
-    console.error('Error getting credential:', error);
+    logger.error('Error getting credential:', error);
     return errorResponse(res, 'Failed to get credential', 500);
   }
 });
@@ -161,10 +162,10 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
     const userId = req.user!.id;
     const { name, type, data } = req.body;
 
-    console.log('Creating credential:', { name, type, dataKeys: Object.keys(data || {}) });
+    logger.info('Creating credential:', { name, type, dataKeys: Object.keys(data || {}) });
 
     if (!name || !type || !data) {
-      console.log('Validation failed:', { name: !!name, type: !!type, data: !!data });
+      logger.info('Validation failed:', { name: !!name, type: !!type, data: !!data });
       return errorResponse(res, 'Name, type, and data are required');
     }
 
@@ -185,9 +186,9 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       const encryptionResult = encryptJSON(data);
       encrypted = encryptionResult.encrypted;
       iv = encryptionResult.iv;
-      console.log('Encryption successful');
+      logger.info('Encryption successful');
     } catch (encryptError: any) {
-      console.error('Encryption failed:', encryptError);
+      logger.error('Encryption failed:', encryptError);
       return errorResponse(res, `Encryption failed: ${encryptError.message}`, 500);
     }
 
@@ -209,7 +210,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       }
     }
 
-    console.log('Creating credential in DB:', { name, type, userId, workspaceId: workspaceId || null });
+    logger.info('Creating credential in DB:', { name, type, userId, workspaceId: workspaceId || null });
     
     const credential = await prisma.credential.create({
       data: {
@@ -222,7 +223,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       }
     });
 
-    console.log('Credential created:', credential.id);
+    logger.info('Credential created:', credential.id);
 
     return successResponse(res, {
       credential: {
@@ -233,8 +234,8 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       }
     }, 201);
   } catch (error: any) {
-    console.error('Error creating credential:', error);
-    console.error('Error details:', error.message, error.stack);
+    logger.error('Error creating credential:', error);
+    logger.error('Error details:', error.message, error.stack);
     return errorResponse(res, `Failed to create credential: ${error.message}`, 500);
   }
 });
@@ -286,7 +287,7 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
       }
     });
   } catch (error: any) {
-    console.error('Error updating credential:', error);
+    logger.error('Error updating credential:', error);
     return errorResponse(res, 'Failed to update credential', 500);
   }
 });
@@ -314,7 +315,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res) => {
 
     return successResponse(res, { message: 'Credential deleted successfully' });
   } catch (error: any) {
-    console.error('Error deleting credential:', error);
+    logger.error('Error deleting credential:', error);
     return errorResponse(res, 'Failed to delete credential', 500);
   }
 });
@@ -382,7 +383,7 @@ router.post('/:id/decrypt', authenticateToken, async (req: AuthRequest, res) => 
       }
     });
   } catch (error: any) {
-    console.error('Error decrypting credential:', error);
+    logger.error('Error decrypting credential:', error);
     return errorResponse(res, 'Failed to decrypt credential', 500);
   }
 });
@@ -403,7 +404,7 @@ router.post('/test-vault', authenticateToken, async (req: AuthRequest, res) => {
       return errorResponse(res, 'Failed to connect to Vault - check URL and token', 400);
     }
   } catch (error: any) {
-    console.error('Vault test error:', error);
+    logger.error('Vault test error:', error);
     return errorResponse(res, `Vault connection failed: ${error.message}`, 500);
   }
 });

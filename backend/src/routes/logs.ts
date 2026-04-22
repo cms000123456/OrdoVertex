@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from '../utils/response';
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
+import logger from '../utils/logger';
 
 const router = Router();
 const logsDir = process.env.LOGS_DIR || '/app/logs';
@@ -56,7 +57,7 @@ router.get('/', authMiddleware, adminMiddleware, async (req: AuthRequest, res) =
     });
 
   } catch (error: any) {
-    console.error('Get logs list error:', error);
+    logger.error('Get logs list error:', error);
     return errorResponse(res, error.message || 'Failed to retrieve logs list', 500);
   }
 });
@@ -114,7 +115,7 @@ router.get('/:logName', authMiddleware, adminMiddleware, async (req: AuthRequest
     });
 
   } catch (error: any) {
-    console.error('Get log contents error:', error);
+    logger.error('Get log contents error:', error);
     return errorResponse(res, error.message || 'Failed to retrieve logs', 500);
   }
 });
@@ -141,7 +142,7 @@ router.get('/:logName/download', authMiddleware, adminMiddleware, async (req: Au
     fileStream.pipe(res);
 
   } catch (error: any) {
-    console.error('Download log error:', error);
+    logger.error('Download log error:', error);
     return errorResponse(res, error.message || 'Failed to download logs', 500);
   }
 });
@@ -164,7 +165,7 @@ router.delete('/:logName', authMiddleware, adminMiddleware, async (req: AuthRequ
     return successResponse(res, { message: 'Log file cleared' });
 
   } catch (error: any) {
-    console.error('Clear log error:', error);
+    logger.error('Clear log error:', error);
     return errorResponse(res, error.message || 'Failed to clear logs', 500);
   }
 });

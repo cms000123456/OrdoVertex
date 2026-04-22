@@ -156,7 +156,7 @@ app.get('/api/admin/workflows', authenticateToken, async (req, res) => {
     
     res.json({ success: true, data: workflows });
   } catch (error: any) {
-    console.error('Admin workflows error:', error);
+    logger.error('Admin workflows error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -177,7 +177,7 @@ app.delete('/api/admin/workflows/:id', authenticateToken, async (req, res) => {
     
     res.json({ success: true, message: 'Workflow deleted' });
   } catch (error: any) {
-    console.error('Admin delete workflow error:', error);
+    logger.error('Admin delete workflow error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -232,7 +232,7 @@ app.post('/api/admin/workflows/:id/move', authenticateToken, async (req, res) =>
       data: updated 
     });
   } catch (error: any) {
-    console.error('Admin move workflow error:', error);
+    logger.error('Admin move workflow error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -281,7 +281,7 @@ app.patch('/api/admin/workflows/:id/toggle', authenticateToken, async (req, res)
     
     res.json({ success: true, data: updated });
   } catch (error: any) {
-    console.error('Admin toggle workflow error:', error);
+    logger.error('Admin toggle workflow error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -344,7 +344,7 @@ app.get('/api/admin/system-stats', authenticateToken, async (req, res) => {
     
     res.json({ success: true, data: stats });
   } catch (error: any) {
-    console.error('System stats error:', error);
+    logger.error('System stats error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -373,11 +373,11 @@ async function main() {
 
     // Test database connection
     await prisma.$connect();
-    console.log('✅ Database connected');
+    logger.info('✅ Database connected');
 
     // Start server
     app.listen(PORT, () => {
-      console.log(`
+      logger.info(`
 🚀 OrdoVertex API Server running on port ${PORT}
 
 API Endpoints:
@@ -393,21 +393,21 @@ API Endpoints:
     });
 
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 }
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully...');
+  logger.info('SIGTERM received, shutting down gracefully...');
   await scheduler.shutdown();
   await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully...');
+  logger.info('SIGINT received, shutting down gracefully...');
   await scheduler.shutdown();
   await prisma.$disconnect();
   process.exit(0);

@@ -1,11 +1,12 @@
 import { NodeType } from '../types';
+import logger from '../utils/logger';
 
 class NodeRegistry {
   private nodes: Map<string, NodeType> = new Map();
 
   register(nodeType: NodeType): void {
     this.nodes.set(nodeType.name, nodeType);
-    console.log(`✓ Registered node: ${nodeType.displayName} (${nodeType.name})`);
+    logger.info(`✓ Registered node: ${nodeType.displayName} (${nodeType.name})`);
   }
 
   get(name: string): NodeType | undefined {

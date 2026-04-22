@@ -4,6 +4,7 @@ import { UserRole } from '@prisma/client';
 import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest, hashPassword } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -76,7 +77,7 @@ router.post(
 
       return successResponse(res, { user }, 201);
     } catch (error: any) {
-      console.error('Create user error:', error);
+      logger.error('Create user error:', error);
       return errorResponse(res, 'Failed to create user', 500);
     }
   }
@@ -116,7 +117,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res) => {
 
     return successResponse(res, { users });
   } catch (error: any) {
-    console.error('Get users error:', error);
+    logger.error('Get users error:', error);
     return errorResponse(res, 'Failed to get users', 500);
   }
 });
@@ -168,7 +169,7 @@ router.patch(
 
       return successResponse(res, { user });
     } catch (error: any) {
-      console.error('Update user role error:', error);
+      logger.error('Update user role error:', error);
       return errorResponse(res, 'Failed to update user role', 500);
     }
   }
@@ -209,7 +210,7 @@ router.delete(
 
       return successResponse(res, { message: 'User deleted successfully' });
     } catch (error: any) {
-      console.error('Delete user error:', error);
+      logger.error('Delete user error:', error);
       return errorResponse(res, 'Failed to delete user', 500);
     }
   }

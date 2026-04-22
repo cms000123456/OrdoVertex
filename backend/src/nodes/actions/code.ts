@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import logger from '../../utils/logger';
 import { 
   executeSandboxedJavaScript, 
   executeSandboxedPython,
@@ -156,7 +157,7 @@ results`,
 
       // Note: Code execution is sandboxed and safe.
       // Workflow creation/update with code nodes is controlled by system settings.
-      console.log(`[Security] Code execution by user ${context.userId || 'unknown'}`);
+      logger.info(`[Security] Code execution by user ${context.userId || 'unknown'}`);
 
       let result: { success: boolean; output: any[]; error?: string };
 
@@ -184,7 +185,7 @@ results`,
       };
 
     } catch (error: any) {
-      console.error('[Code Node] Execution error:', error);
+      logger.error('[Code Node] Execution error:', error);
       
       if (context.continueOnFail()) {
         return {

@@ -8,6 +8,7 @@ import { Database as SQLiteDatabase } from 'sqlite3';
 import { open } from 'sqlite';
 import { prisma } from '../../prisma';
 import { decryptJSON } from '../../utils/encryption';
+import logger from '../../utils/logger';
 
 
 // Connection pools cache
@@ -701,7 +702,7 @@ export const sqlDatabaseNode: NodeType = {
 
           return decryptJSON(credential.data, credential.iv);
         } catch (error) {
-          console.error('Error loading credential:', error);
+          logger.error('Error loading credential:', error);
           return null;
         }
       };

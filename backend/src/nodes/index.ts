@@ -45,6 +45,7 @@ import { textSplitterNode } from './actions/text-splitter';
 import { imageDisplayNode } from './actions/image-display';
 import { textParserNode } from './actions/text-parser';
 import { googleChatNode } from './actions/google-chat';
+import logger from '../utils/logger';
 
 // Register all nodes
 export function registerAllNodes() {
@@ -94,7 +95,7 @@ export function registerAllNodes() {
   nodeRegistry.register(textParserNode);
   nodeRegistry.register(googleChatNode);
 
-  console.log(`✅ Registered ${nodeRegistry.getAll().length} nodes`);
+  logger.info(`✅ Registered ${nodeRegistry.getAll().length} nodes`);
 }
 
 export { nodeRegistry };

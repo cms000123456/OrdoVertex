@@ -1,5 +1,6 @@
 import { prisma } from '../prisma';
 import { nodeRegistry } from '../nodes';
+import logger from '../utils/logger';
 import { 
   WorkflowDefinition, 
   WorkflowNode, 
@@ -60,7 +61,7 @@ async function writeExecutionLog(
       }
     });
   } catch (err) {
-    console.error('Failed to write execution log:', err);
+    logger.error('Failed to write execution log:', err);
   }
 }
 
@@ -165,7 +166,7 @@ export class WorkflowExecutor {
       });
 
       const duration = Date.now() - startTime;
-      console.log(`✅ Workflow ${this.workflow.id} executed successfully in ${duration}ms`);
+      logger.info(`✅ Workflow ${this.workflow.id} executed successfully in ${duration}ms`);
       
       // Log workflow success
       await writeExecutionLog(
@@ -183,7 +184,7 @@ export class WorkflowExecutor {
       };
 
     } catch (error: any) {
-      console.error(`❌ Workflow execution failed:`, error);
+      logger.error(`❌ Workflow execution failed:`, error);
       
       // Log workflow failure
       await writeExecutionLog(
@@ -221,7 +222,7 @@ export class WorkflowExecutor {
   private async executeNode(node: WorkflowNode, inputItems: any[]): Promise<any[]> {
     // Prevent infinite loops
     if (this.visitedNodes.has(node.id)) {
-      console.log(`⚠️ Node ${node.name} already visited, skipping`);
+      logger.info(`⚠️ Node ${node.name} already visited, skipping`);
       return this.nodeOutputs.get(node.id) || [];
     }
     this.visitedNodes.add(node.id);
@@ -231,7 +232,7 @@ export class WorkflowExecutor {
       throw new Error(`Unknown node type: ${node.type}`);
     }
 
-    console.log(`▶️ Executing node: ${node.name} (${node.type})`);
+    logger.info(`▶️ Executing node: ${node.name} (${node.type})`);
     
     // Log node parameters (resolved)
     const resolvedParams: Record<string, any> = {};
@@ -317,7 +318,7 @@ export class WorkflowExecutor {
       }
 
       const duration = Date.now() - startTime;
-      console.log(`✅ Node ${node.name} completed in ${duration}ms`);
+      logger.info(`✅ Node ${node.name} completed in ${duration}ms`);
       
       // Write success log with output data
       await writeExecutionLog(
@@ -342,7 +343,7 @@ export class WorkflowExecutor {
       return output;
 
     } catch (error: any) {
-      console.error(`❌ Node ${node.name} failed:`, error);
+      logger.error(`❌ Node ${node.name} failed:`, error);
       
       // Write error log with input data for debugging
       await writeExecutionLog(

@@ -1,8 +1,10 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
+import { body, validationResult } from 'express-validator';
 import { prisma } from '../prisma';
-import { authMiddleware } from '../utils/auth';
+import { authMiddleware, AuthRequest } from '../utils/auth';
 import crypto from 'crypto';
 import { workflowTemplates } from '../data/templates';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -41,8 +43,16 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // Create workflow from template
-router.post('/:id/create', authMiddleware, async (req, res) => {
+router.post('/:id/create', authMiddleware, [
+  body('name').optional().trim().isLength({ max: 100 }).withMessage('Name must be ≤ 100 characters'),
+  body('description').optional().trim().isLength({ max: 500 }).withMessage('Description must be ≤ 500 characters')
+], async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, error: 'Validation failed', details: errors.array() });
+    }
+
     const template = (workflowTemplates as any)[req.params.id];
 
     if (!template) {
@@ -97,7 +107,7 @@ router.post('/:id/create', authMiddleware, async (req, res) => {
 
     res.json({ success: true, data: workflow });
   } catch (error: any) {
-    console.error('Template creation error:', error);
+    logger.error('Template creation error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

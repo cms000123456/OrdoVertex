@@ -1,6 +1,7 @@
 import { prisma } from '../prisma';
 import cron from 'node-cron';
 import { queueWorkflowExecution } from './queue';
+import logger from '../utils/logger';
 
 
 interface ScheduledJob {
@@ -15,7 +16,7 @@ class WorkflowScheduler {
   async initialize() {
     if (this.isInitialized) return;
 
-    console.log('🕐 Initializing workflow scheduler...');
+    logger.info('🕐 Initializing workflow scheduler...');
 
     // Load all active schedule triggers from database
     const triggers = await prisma.trigger.findMany({
@@ -33,14 +34,14 @@ class WorkflowScheduler {
     }
 
     this.isInitialized = true;
-    console.log(`✅ Scheduler initialized with ${this.jobs.size} scheduled workflows`);
+    logger.info(`✅ Scheduler initialized with ${this.jobs.size} scheduled workflows`);
   }
 
   async scheduleWorkflow(workflowId: string, config: { cron: string; timezone?: string }) {
     try {
       // Validate cron expression
       if (!cron.validate(config.cron)) {
-        console.error(`❌ Invalid cron expression: ${config.cron}`);
+        logger.error(`❌ Invalid cron expression: ${config.cron}`);
         return false;
       }
 
@@ -57,7 +58,7 @@ class WorkflowScheduler {
       const rawTz = (config.timezone || 'UTC').trim();
       const timezone = resolveTimezone(rawTz);
       if (timezone !== rawTz) {
-        console.warn(`⚠️  Timezone "${rawTz}" converted to IANA format "${timezone}"`);
+        logger.warn(`⚠️  Timezone "${rawTz}" converted to IANA format "${timezone}"`);
       }
 
       // Stop existing job if any
@@ -67,11 +68,11 @@ class WorkflowScheduler {
       const task = cron.schedule(
         config.cron,
         async () => {
-          console.log(`⏰ Scheduled trigger fired for workflow: ${workflowId}`);
+          logger.info(`⏰ Scheduled trigger fired for workflow: ${workflowId}`);
           try {
             const workflow = await prisma.workflow.findUnique({ where: { id: workflowId }, select: { userId: true } });
             if (!workflow) {
-              console.error(`❌ Workflow ${workflowId} not found, skipping scheduled execution`);
+              logger.error(`❌ Workflow ${workflowId} not found, skipping scheduled execution`);
               return;
             }
             await queueWorkflowExecution(workflowId, workflow.userId, {}, 'schedule');
@@ -82,7 +83,7 @@ class WorkflowScheduler {
               data: { lastTriggered: new Date() }
             });
           } catch (error) {
-            console.error(`❌ Scheduled execution failed for workflow ${workflowId}:`, error);
+            logger.error(`❌ Scheduled execution failed for workflow ${workflowId}:`, error);
           }
         },
         {
@@ -96,10 +97,10 @@ class WorkflowScheduler {
         task
       });
 
-      console.log(`✅ Scheduled workflow ${workflowId} with cron: ${config.cron}`);
+      logger.info(`✅ Scheduled workflow ${workflowId} with cron: ${config.cron}`);
       return true;
     } catch (error) {
-      console.error(`❌ Failed to schedule workflow ${workflowId}:`, error);
+      logger.error(`❌ Failed to schedule workflow ${workflowId}:`, error);
       return false;
     }
   }
@@ -109,7 +110,7 @@ class WorkflowScheduler {
     if (job) {
       job.task.stop();
       this.jobs.delete(workflowId);
-      console.log(`✅ Unscheduled workflow: ${workflowId}`);
+      logger.info(`✅ Unscheduled workflow: ${workflowId}`);
       return true;
     }
     return false;
@@ -128,10 +129,10 @@ class WorkflowScheduler {
   }
 
   async shutdown() {
-    console.log('🛑 Shutting down scheduler...');
+    logger.info('🛑 Shutting down scheduler...');
     for (const [id, job] of this.jobs) {
       job.task.stop();
-      console.log(`✅ Stopped scheduled job: ${id}`);
+      logger.info(`✅ Stopped scheduled job: ${id}`);
     }
     this.jobs.clear();
     this.isInitialized = false;

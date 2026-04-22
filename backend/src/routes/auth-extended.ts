@@ -8,6 +8,7 @@ import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { authRateLimit } from '../utils/rate-limit';
 import crypto from 'crypto';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -59,7 +60,7 @@ router.post('/mfa/setup', authMiddleware, async (req: AuthRequest, res) => {
       manualEntryKey: secret.base32
     });
   } catch (error: any) {
-    console.error('MFA setup error:', error);
+    logger.error('MFA setup error:', error);
     return errorResponse(res, 'Failed to setup MFA', 500);
   }
 });
@@ -116,7 +117,7 @@ router.post('/mfa/verify', authMiddleware, async (req: AuthRequest, res) => {
       backupCodes
     });
   } catch (error: any) {
-    console.error('MFA verify error:', error);
+    logger.error('MFA verify error:', error);
     return errorResponse(res, 'Failed to verify MFA', 500);
   }
 });
@@ -177,7 +178,7 @@ router.post('/mfa/disable', authMiddleware, async (req: AuthRequest, res) => {
 
     return successResponse(res, { message: 'MFA disabled successfully' });
   } catch (error: any) {
-    console.error('MFA disable error:', error);
+    logger.error('MFA disable error:', error);
     return errorResponse(res, 'Failed to disable MFA', 500);
   }
 });
@@ -199,7 +200,7 @@ router.get('/mfa/status', authMiddleware, async (req: AuthRequest, res) => {
       lastVerifiedAt: mfaSettings?.lastVerifiedAt
     });
   } catch (error: any) {
-    console.error('MFA status error:', error);
+    logger.error('MFA status error:', error);
     return errorResponse(res, 'Failed to get MFA status', 500);
   }
 });
@@ -258,7 +259,7 @@ router.post('/mfa/backup', authRateLimit(), async (req, res) => {
       backupCodesRemaining: codes.length
     });
   } catch (error: any) {
-    console.error('Backup code error:', error);
+    logger.error('Backup code error:', error);
     return errorResponse(res, 'Failed to use backup code', 500);
   }
 });
@@ -288,7 +289,7 @@ router.get('/saml/config', authMiddleware, async (req: AuthRequest, res) => {
 
     return successResponse(res, configs);
   } catch (error: any) {
-    console.error('SAML config error:', error);
+    logger.error('SAML config error:', error);
     return errorResponse(res, 'Failed to get SAML config', 500);
   }
 });
@@ -338,7 +339,7 @@ router.post('/saml/config', authMiddleware, async (req: AuthRequest, res) => {
       }
     });
   } catch (error: any) {
-    console.error('SAML config create error:', error);
+    logger.error('SAML config create error:', error);
     return errorResponse(res, 'Failed to create SAML config', 500);
   }
 });
@@ -363,7 +364,7 @@ router.patch('/saml/config/:id', authMiddleware, async (req: AuthRequest, res) =
       config
     });
   } catch (error: any) {
-    console.error('SAML config update error:', error);
+    logger.error('SAML config update error:', error);
     return errorResponse(res, 'Failed to update SAML config', 500);
   }
 });
@@ -381,7 +382,7 @@ router.delete('/saml/config/:id', authMiddleware, async (req: AuthRequest, res) 
 
     return successResponse(res, { message: 'SAML configuration deleted' });
   } catch (error: any) {
-    console.error('SAML config delete error:', error);
+    logger.error('SAML config delete error:', error);
     return errorResponse(res, 'Failed to delete SAML config', 500);
   }
 });
@@ -400,7 +401,7 @@ router.get('/saml/providers', async (req, res) => {
 
     return successResponse(res, providers);
   } catch (error: any) {
-    console.error('SAML providers error:', error);
+    logger.error('SAML providers error:', error);
     return errorResponse(res, 'Failed to get SAML providers', 500);
   }
 });

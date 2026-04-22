@@ -1,7 +1,10 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
+import { body, validationResult } from 'express-validator';
 import { WorkspaceRole } from '@prisma/client';
 import { prisma } from '../prisma';
-import { authMiddleware } from '../utils/auth';
+import { authMiddleware, AuthRequest } from '../utils/auth';
+import { successResponse, errorResponse } from '../utils/response';
+import logger from '../utils/logger';
 const authenticateToken = authMiddleware;
 
 const router = Router();
@@ -49,38 +52,51 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Create workspace
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, [
+  body('name').trim().notEmpty().isLength({ max: 100 }).withMessage('Name is required and must be ≤ 100 characters'),
+  body('description').optional().trim().isLength({ max: 500 }).withMessage('Description must be ≤ 500 characters')
+], async (req: AuthRequest, res: Response) => {
   try {
-    const { name, description } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ success: false, error: 'Name is required' });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return errorResponse(res, 'Validation failed', 400, errors.array());
     }
 
-    const workspace = await prisma.workspace.create({
-      data: {
-        name,
-        description,
-        slug: generateSlug(name),
-        ownerId: req.user!.id
-      },
-      include: {
-        owner: {
-          select: { id: true, name: true, email: true }
-        },
-        members: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true }
-            }
-          }
+    const { name, description } = req.body;
+
+    // Create workspace and owner membership atomically
+    const workspace = await prisma.$transaction(async (tx) => {
+      const ws = await tx.workspace.create({
+        data: {
+          name,
+          description,
+          slug: generateSlug(name),
+          ownerId: req.user!.id
         }
+      });
+      await tx.workspaceMember.create({
+        data: {
+          workspaceId: ws.id,
+          userId: req.user!.id,
+          role: 'owner' as WorkspaceRole
+        }
+      });
+      return ws;
+    });
+
+    // Re-fetch with relations for response
+    const workspaceWithRelations = await prisma.workspace.findUnique({
+      where: { id: workspace.id },
+      include: {
+        owner: { select: { id: true, name: true, email: true } },
+        members: { include: { user: { select: { id: true, name: true, email: true } } } }
       }
     });
 
-    res.json({ success: true, data: workspace });
+    return successResponse(res, workspaceWithRelations, 201);
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Create workspace error:', error);
+    return errorResponse(res, 'Failed to create workspace', 500);
   }
 });
 

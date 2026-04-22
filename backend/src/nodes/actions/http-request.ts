@@ -3,6 +3,7 @@ import { prisma } from '../../prisma';
 import { NodeType } from '../../types';
 import { decryptJSON } from '../../utils/encryption';
 import { isInternalUrl } from '../../utils/security';
+import logger from '../../utils/logger';
 
 
 export const httpRequestNode: NodeType = {
@@ -241,7 +242,7 @@ export const httpRequestNode: NodeType = {
       }
       
       // Log the actual URL being called for debugging
-      console.log(`[HTTP Request] ${method} ${url}`);
+      logger.info(`[HTTP Request] ${method} ${url}`);
 
       // SSRF Protection - Block internal URLs
       if (isInternalUrl(url)) {
@@ -288,7 +289,7 @@ export const httpRequestNode: NodeType = {
               credentialData = decryptJSON(credential.data, credential.iv);
             }
           } catch (error) {
-            console.error('Error loading credential:', error);
+            logger.error('Error loading credential:', error);
           }
         }
       }

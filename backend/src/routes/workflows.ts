@@ -7,6 +7,7 @@ import { executeWorkflow } from '../engine/executor';
 import { queueWorkflowExecution, sendSchedulerControl } from '../engine/queue';
 import { workflowContainsCodeNodes } from '../utils/code-sandbox';
 import { isCodeNodeApprovalRequired } from './system';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -45,7 +46,7 @@ router.get('/', async (req: AuthRequest, res) => {
 
     return successResponse(res, workflows);
   } catch (error: any) {
-    console.error('Get workflows error:', error);
+    logger.error('Get workflows error:', error);
     return errorResponse(res, 'Failed to get workflows', 500);
   }
 });
@@ -82,7 +83,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
 
     return successResponse(res, workflow);
   } catch (error: any) {
-    console.error('Get workflow error:', error);
+    logger.error('Get workflow error:', error);
     return errorResponse(res, 'Failed to get workflow', 500);
   }
 });
@@ -139,7 +140,7 @@ router.post(
 
       return successResponse(res, workflow, 201);
     } catch (error: any) {
-      console.error('Create workflow error:', error);
+      logger.error('Create workflow error:', error);
       return errorResponse(res, 'Failed to create workflow', 500);
     }
   }
@@ -256,7 +257,7 @@ router.patch(
 
       return successResponse(res, workflow);
     } catch (error: any) {
-      console.error('Update workflow error:', error);
+      logger.error('Update workflow error:', error);
       return errorResponse(res, 'Failed to update workflow', 500);
     }
   }
@@ -285,7 +286,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 
     return successResponse(res, { deleted: true });
   } catch (error: any) {
-    console.error('Delete workflow error:', error);
+    logger.error('Delete workflow error:', error);
     return errorResponse(res, 'Failed to delete workflow', 500);
   }
 });
@@ -313,7 +314,7 @@ router.post('/:id/execute', async (req: AuthRequest, res) => {
       message: 'Workflow execution queued'
     }, 202);
   } catch (error: any) {
-    console.error('Execute workflow error:', error);
+    logger.error('Execute workflow error:', error);
     return errorResponse(res, 'Failed to execute workflow', 500);
   }
 });
@@ -356,7 +357,7 @@ router.get('/:id/executions', async (req: AuthRequest, res) => {
       }
     });
   } catch (error: any) {
-    console.error('Get executions error:', error);
+    logger.error('Get executions error:', error);
     return errorResponse(res, 'Failed to get executions', 500);
   }
 });
@@ -391,7 +392,7 @@ router.get('/:id/executions/:executionId', async (req: AuthRequest, res) => {
 
     return successResponse(res, execution);
   } catch (error: any) {
-    console.error('Get execution error:', error);
+    logger.error('Get execution error:', error);
     return errorResponse(res, 'Failed to get execution', 500);
   }
 });
@@ -430,7 +431,7 @@ router.get('/:id/export', async (req: AuthRequest, res) => {
     
     return res.json(exportData);
   } catch (error: any) {
-    console.error('Export workflow error:', error);
+    logger.error('Export workflow error:', error);
     return errorResponse(res, 'Failed to export workflow', 500);
   }
 });
@@ -472,7 +473,7 @@ router.post('/import', async (req: AuthRequest, res) => {
       workflow
     });
   } catch (error: any) {
-    console.error('Import workflow error:', error);
+    logger.error('Import workflow error:', error);
     return errorResponse(res, 'Failed to import workflow', 500);
   }
 });
@@ -495,7 +496,7 @@ router.post('/import/validate', async (req: AuthRequest, res) => {
       connectionCount: workflowData.connections?.length || 0
     });
   } catch (error: any) {
-    console.error('Validate workflow error:', error);
+    logger.error('Validate workflow error:', error);
     return errorResponse(res, 'Failed to validate workflow', 500);
   }
 });
@@ -560,7 +561,7 @@ router.post('/:id/move', async (req: AuthRequest, res) => {
       workflow: updated 
     });
   } catch (error: any) {
-    console.error('Move workflow error:', error);
+    logger.error('Move workflow error:', error);
     return errorResponse(res, 'Failed to move workflow', 500);
   }
 });

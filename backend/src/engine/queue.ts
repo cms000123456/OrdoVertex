@@ -1,6 +1,7 @@
 import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import { executeWorkflow } from './executor';
+import logger from '../utils/logger';
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 const redis = new IORedis(redisUrl, { maxRetriesPerRequest: null });
@@ -58,7 +59,7 @@ export function createWorker() {
     async (job: Job<WorkflowJob>) => {
       const { workflowId, userId, data, mode } = job.data;
       
-      console.log(`🚀 Processing workflow job ${job.id}: ${workflowId} (${mode})`);
+      logger.info(`🚀 Processing workflow job ${job.id}: ${workflowId} (${mode})`);
       
       try {
         const result = await executeWorkflow(workflowId, userId, data, mode);
@@ -73,7 +74,7 @@ export function createWorker() {
         
         return result;
       } catch (error: any) {
-        console.error(`❌ Workflow job ${job.id} failed:`, error);
+        logger.error(`❌ Workflow job ${job.id} failed:`, error);
         throw error;
       }
     },
@@ -88,14 +89,14 @@ export function createWorker() {
   );
 
   worker.on('completed', (job) => {
-    console.log(`✅ Job ${job.id} completed`);
+    logger.info(`✅ Job ${job.id} completed`);
   });
 
   worker.on('failed', (job, err) => {
-    console.error(`❌ Job ${job?.id} failed:`, err);
+    logger.error(`❌ Job ${job?.id} failed:`, err);
   });
 
-  console.log('✅ Workflow worker started');
+  logger.info('✅ Workflow worker started');
   return worker;
 }
 

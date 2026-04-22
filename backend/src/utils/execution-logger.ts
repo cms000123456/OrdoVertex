@@ -1,5 +1,6 @@
 import { LogLevel } from '@prisma/client';
 import { prisma } from '../prisma';
+import logger from '../utils/logger';
 
 
 interface LogEntry {
@@ -85,7 +86,7 @@ export class ExecutionLogger {
         }))
       });
     } catch (err) {
-      console.error('Failed to write execution logs:', err);
+      logger.error('Failed to write execution logs:', err);
       // Put logs back in buffer to retry
       this.buffer.unshift(...logsToWrite);
     }

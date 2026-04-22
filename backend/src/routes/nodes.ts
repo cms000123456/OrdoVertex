@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { nodeRegistry } from '../nodes';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -25,7 +26,7 @@ router.get('/', (req: AuthRequest, res) => {
 
     return successResponse(res, nodes);
   } catch (error: any) {
-    console.error('Get nodes error:', error);
+    logger.error('Get nodes error:', error);
     return errorResponse(res, 'Failed to get nodes', 500);
   }
 });
@@ -49,7 +50,7 @@ router.get('/categories', (req: AuthRequest, res) => {
 
     return successResponse(res, categories);
   } catch (error: any) {
-    console.error('Get categories error:', error);
+    logger.error('Get categories error:', error);
     return errorResponse(res, 'Failed to get categories', 500);
   }
 });
@@ -77,7 +78,7 @@ router.get('/:name', (req: AuthRequest, res) => {
       credentials: node.credentials
     });
   } catch (error: any) {
-    console.error('Get node error:', error);
+    logger.error('Get node error:', error);
     return errorResponse(res, 'Failed to get node', 500);
   }
 });

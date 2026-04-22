@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { queueWorkflowExecution } from '../engine/queue';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -102,7 +103,7 @@ router.all('/:workflowId/:path?', async (req: Request, res: Response) => {
     }
 
   } catch (error: any) {
-    console.error('Webhook error:', error);
+    logger.error('Webhook error:', error);
     res.status(500).json({ error: 'Webhook processing failed' });
   }
 });

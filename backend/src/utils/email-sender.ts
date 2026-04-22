@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import logger from '../utils/logger';
 
 interface EmailOptions {
   to: string;
@@ -16,7 +17,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   const fromEmail = process.env.FROM_EMAIL || 'alerts@ordovertex.local';
 
   if (!smtpHost || !smtpUser || !smtpPass) {
-    console.warn('SMTP not configured, email not sent:', options.subject);
+    logger.warn('SMTP not configured, email not sent:', options.subject);
     return;
   }
 

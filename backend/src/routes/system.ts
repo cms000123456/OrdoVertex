@@ -6,6 +6,7 @@ import { successResponse, errorResponse } from '../utils/response';
 import { sendTestEmail, verifyEmailConfig, clearEmailTransporter } from '../services/email';
 import { encrypt, decrypt, EncryptedData } from '../utils/encryption';
 import { rateLimit } from '../utils/rate-limit';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -128,7 +129,7 @@ router.get('/stats', authMiddleware, adminMiddleware, async (req, res) => {
       }
     });
   } catch (error: any) {
-    console.error('Get system stats error:', error);
+    logger.error('Get system stats error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -141,7 +142,7 @@ router.get('/maintenance', authMiddleware, adminMiddleware, async (req, res) => 
       data: maintenanceSettings
     });
   } catch (error: any) {
-    console.error('Get maintenance settings error:', error);
+    logger.error('Get maintenance settings error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -212,7 +213,7 @@ router.patch('/maintenance', authMiddleware, adminMiddleware, async (req, res) =
       data: maintenanceSettings
     });
   } catch (error: any) {
-    console.error('Update maintenance settings error:', error);
+    logger.error('Update maintenance settings error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -231,7 +232,7 @@ router.post('/maintenance/purge', authMiddleware, adminMiddleware, async (req, r
       }
     });
   } catch (error: any) {
-    console.error('Manual purge error:', error);
+    logger.error('Manual purge error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -279,7 +280,7 @@ router.get('/maintenance/purge-preview', authMiddleware, adminMiddleware, async 
       }
     });
   } catch (error: any) {
-    console.error('Get purge preview error:', error);
+    logger.error('Get purge preview error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -357,7 +358,7 @@ function scheduleAutoPurge() {
   
   // Validate cron expression
   if (!cron.validate(maintenanceSettings.purgeSchedule)) {
-    console.error('[Maintenance] Invalid cron expression:', maintenanceSettings.purgeSchedule);
+    logger.error('[Maintenance] Invalid cron expression:', maintenanceSettings.purgeSchedule);
     return;
   }
   
@@ -365,15 +366,15 @@ function scheduleAutoPurge() {
   scheduledPurgeTask = cron.schedule(
     maintenanceSettings.purgeSchedule,
     async () => {
-      console.log('[Maintenance] Running scheduled purge...');
+      logger.info('[Maintenance] Running scheduled purge...');
       const results = await runPurge();
-      console.log('[Maintenance] Purge completed:', results);
+      logger.info('[Maintenance] Purge completed:', results);
     },
     { scheduled: true }
   );
 
   maintenanceSettings.nextPurgeRun = calculateNextRun(maintenanceSettings.purgeSchedule);
-  console.log('[Maintenance] Auto-purge scheduled:', maintenanceSettings.purgeSchedule);
+  logger.info('[Maintenance] Auto-purge scheduled:', maintenanceSettings.purgeSchedule);
 }
 
 // Calculate next run time from cron
@@ -410,7 +411,7 @@ router.get('/security', authMiddleware, adminMiddleware, async (req, res) => {
       data: securitySettings
     });
   } catch (error: any) {
-    console.error('Get security settings error:', error);
+    logger.error('Get security settings error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -426,26 +427,34 @@ router.patch('/security', authMiddleware, adminMiddleware, async (req, res) => {
     } = req.body;
 
     if (requireCodeNodeApproval !== undefined) {
-      securitySettings.requireCodeNodeApproval = Boolean(requireCodeNodeApproval);
-      console.log(`[Security] Code node approval requirement set to: ${securitySettings.requireCodeNodeApproval}`);
+      if (typeof requireCodeNodeApproval !== 'boolean') {
+        return errorResponse(res, 'requireCodeNodeApproval must be a boolean', 400);
+      }
+      securitySettings.requireCodeNodeApproval = requireCodeNodeApproval;
+      logger.info(`[Security] Code node approval requirement set to: ${securitySettings.requireCodeNodeApproval}`);
     }
 
     if (sessionTimeout !== undefined) {
-      if (sessionTimeout < 5 || sessionTimeout > 480) {
-        return errorResponse(res, 'Session timeout must be between 5 and 480 minutes', 400);
+      const timeout = parseInt(sessionTimeout, 10);
+      if (isNaN(timeout) || timeout < 5 || timeout > 480) {
+        return errorResponse(res, 'Session timeout must be a number between 5 and 480 minutes', 400);
       }
-      securitySettings.sessionTimeout = sessionTimeout;
+      securitySettings.sessionTimeout = timeout;
     }
 
     if (maxLoginAttempts !== undefined) {
-      if (maxLoginAttempts < 3 || maxLoginAttempts > 10) {
-        return errorResponse(res, 'Max login attempts must be between 3 and 10', 400);
+      const attempts = parseInt(maxLoginAttempts, 10);
+      if (isNaN(attempts) || attempts < 3 || attempts > 10) {
+        return errorResponse(res, 'Max login attempts must be a number between 3 and 10', 400);
       }
-      securitySettings.maxLoginAttempts = maxLoginAttempts;
+      securitySettings.maxLoginAttempts = attempts;
     }
 
     if (requireEmailVerification !== undefined) {
-      securitySettings.requireEmailVerification = Boolean(requireEmailVerification);
+      if (typeof requireEmailVerification !== 'boolean') {
+        return errorResponse(res, 'requireEmailVerification must be a boolean', 400);
+      }
+      securitySettings.requireEmailVerification = requireEmailVerification;
     }
 
     res.json({
@@ -453,7 +462,7 @@ router.patch('/security', authMiddleware, adminMiddleware, async (req, res) => {
       data: securitySettings
     });
   } catch (error: any) {
-    console.error('Update security settings error:', error);
+    logger.error('Update security settings error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -475,7 +484,7 @@ router.get('/email', authMiddleware, adminMiddleware, async (req, res) => {
       data: safeSettings
     });
   } catch (error: any) {
-    console.error('Get email settings error:', error);
+    logger.error('Get email settings error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -534,7 +543,7 @@ router.patch('/email', authMiddleware, adminMiddleware, async (req, res) => {
       emailSettings.enabled = Boolean(enabled);
     }
 
-    console.log(`[Email] Settings updated. Enabled: ${emailSettings.enabled}, Host: ${emailSettings.smtpHost}`);
+    logger.info(`[Email] Settings updated. Enabled: ${emailSettings.enabled}, Host: ${emailSettings.smtpHost}`);
 
     // Clear transporter cache so new settings take effect
     clearEmailTransporter();
@@ -550,7 +559,7 @@ router.patch('/email', authMiddleware, adminMiddleware, async (req, res) => {
       data: safeSettings
     });
   } catch (error: any) {
-    console.error('Update email settings error:', error);
+    logger.error('Update email settings error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -591,7 +600,7 @@ router.post('/email/test', authMiddleware, adminMiddleware, rateLimit({ windowMs
       }
     });
   } catch (error: any) {
-    console.error('Test email error:', error);
+    logger.error('Test email error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -618,7 +627,7 @@ router.get('/general', authMiddleware, adminMiddleware, async (req, res) => {
       data: generalSettings
     });
   } catch (error: any) {
-    console.error('Get general settings error:', error);
+    logger.error('Get general settings error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -658,14 +667,14 @@ router.patch('/general', authMiddleware, adminMiddleware, async (req, res) => {
       generalSettings.defaultUserRole = defaultUserRole;
     }
 
-    console.log(`[General] Settings updated. Base URL: ${generalSettings.baseUrl}`);
+    logger.info(`[General] Settings updated. Base URL: ${generalSettings.baseUrl}`);
 
     res.json({
       success: true,
       data: generalSettings
     });
   } catch (error: any) {
-    console.error('Update general settings error:', error);
+    logger.error('Update general settings error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

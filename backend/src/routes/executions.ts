@@ -3,6 +3,7 @@ import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { getQueueStats } from '../engine/queue';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -14,7 +15,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
     const stats = await getQueueStats();
     return successResponse(res, stats);
   } catch (error: any) {
-    console.error('Get stats error:', error);
+    logger.error('Get stats error:', error);
     return errorResponse(res, 'Failed to get stats', 500);
   }
 });
@@ -64,7 +65,7 @@ router.get('/', async (req: AuthRequest, res) => {
       }
     });
   } catch (error: any) {
-    console.error('Get executions error:', error);
+    logger.error('Get executions error:', error);
     return errorResponse(res, 'Failed to get executions', 500);
   }
 });
@@ -101,7 +102,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
 
     return successResponse(res, execution);
   } catch (error: any) {
-    console.error('Get execution error:', error);
+    logger.error('Get execution error:', error);
     return errorResponse(res, 'Failed to get execution', 500);
   }
 });
@@ -131,7 +132,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 
     return successResponse(res, { deleted: true });
   } catch (error: any) {
-    console.error('Delete execution error:', error);
+    logger.error('Delete execution error:', error);
     return errorResponse(res, 'Failed to delete execution', 500);
   }
 });
@@ -185,7 +186,7 @@ router.get('/:executionId/nodes/:nodeId', async (req: AuthRequest, res) => {
       }
     });
   } catch (error: any) {
-    console.error('Get node execution error:', error);
+    logger.error('Get node execution error:', error);
     return errorResponse(res, 'Failed to get node execution data', 500);
   }
 });

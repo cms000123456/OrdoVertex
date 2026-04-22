@@ -1,7 +1,10 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
+import { body, validationResult } from 'express-validator';
 import { WorkspaceRole } from '@prisma/client';
 import { prisma } from '../prisma';
-import { authMiddleware } from '../utils/auth';
+import { authMiddleware, AuthRequest } from '../utils/auth';
+import logger from '../utils/logger';
+import { successResponse, errorResponse } from '../utils/response';
 const authenticateToken = authMiddleware;
 
 const router = Router();
@@ -54,7 +57,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     res.json({ success: true, data: groups });
   } catch (error: any) {
-    console.error('Get groups error:', error);
+    logger.error('Get groups error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -93,14 +96,23 @@ router.get('/workspace/:workspaceId', authenticateToken, async (req, res) => {
 
     res.json({ success: true, data: groups });
   } catch (error: any) {
-    console.error('Get groups error:', error);
+    logger.error('Get groups error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // Create a new group
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, [
+  body('name').trim().notEmpty().isLength({ max: 100 }).withMessage('Name is required and must be ≤ 100 characters'),
+  body('description').optional().trim().isLength({ max: 500 }).withMessage('Description must be ≤ 500 characters'),
+  body('workspaceIds').optional().isArray().withMessage('workspaceIds must be an array')
+], async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return errorResponse(res, 'Validation failed', 400, errors.array());
+    }
+
     const { name, description, workspaceIds = [] } = req.body;
     const userId = req.user!.id;
     const isAdmin = req.user!.role === 'admin';
@@ -112,46 +124,48 @@ router.post('/', authenticateToken, async (req, res) => {
           where: { workspaceId: wsId, userId }
         });
         if (!membership) {
-          return res.status(403).json({ success: false, error: `No access to workspace ${wsId}` });
+          return errorResponse(res, `No access to workspace ${wsId}`, 403);
         }
       }
     }
 
     // Require admin to create groups with cross-workspace access
     if (workspaceIds.length > 1 && !isAdmin) {
-      return res.status(403).json({ success: false, error: 'Admin required for multi-workspace groups' });
+      return errorResponse(res, 'Admin required for multi-workspace groups', 403);
     }
 
-    const group = await prisma.userGroup.create({
-      data: {
-        name,
-        description,
-        workspaceId: workspaceIds[0] || null, // Optional primary workspace
-        workspaceAccess: workspaceIds.length > 0 ? {
-          create: workspaceIds.map((wsId: string) => ({
-            workspaceId: wsId,
-            role: 'viewer' as WorkspaceRole
-          }))
-        } : undefined
-      },
-      include: {
-        members: {
-          include: {
-            user: { select: { id: true, email: true, name: true } }
-          }
+    const group = await prisma.$transaction(async (tx) => {
+      return tx.userGroup.create({
+        data: {
+          name,
+          description,
+          workspaceId: workspaceIds[0] || null,
+          workspaceAccess: workspaceIds.length > 0 ? {
+            create: workspaceIds.map((wsId: string) => ({
+              workspaceId: wsId,
+              role: 'viewer' as WorkspaceRole
+            }))
+          } : undefined
         },
-        workspaceAccess: {
-          include: {
-            workspace: { select: { id: true, name: true } }
+        include: {
+          members: {
+            include: {
+              user: { select: { id: true, email: true, name: true } }
+            }
+          },
+          workspaceAccess: {
+            include: {
+              workspace: { select: { id: true, name: true } }
+            }
           }
         }
-      }
+      });
     });
 
-    res.json({ success: true, data: group });
+    return successResponse(res, group, 201);
   } catch (error: any) {
-    console.error('Create group error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Create group error:', error);
+    return errorResponse(res, 'Failed to create group', 500);
   }
 });
 
@@ -224,7 +238,7 @@ router.patch('/:id', authenticateToken, async (req, res) => {
 
     res.json({ success: true, data: updated });
   } catch (error: any) {
-    console.error('Update group error:', error);
+    logger.error('Update group error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -257,7 +271,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     res.json({ success: true, message: 'Group deleted' });
   } catch (error: any) {
-    console.error('Delete group error:', error);
+    logger.error('Delete group error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -309,7 +323,7 @@ router.post('/:id/members', authenticateToken, async (req, res) => {
 
     res.json({ success: true, data: member });
   } catch (error: any) {
-    console.error('Add group member error:', error);
+    logger.error('Add group member error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -341,7 +355,7 @@ router.delete('/:id/members/:memberId', authenticateToken, async (req, res) => {
 
     res.json({ success: true, message: 'Member removed' });
   } catch (error: any) {
-    console.error('Remove group member error:', error);
+    logger.error('Remove group member error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -371,7 +385,7 @@ router.post('/:id/workspaces', authenticateToken, async (req, res) => {
 
     res.json({ success: true, data: access });
   } catch (error: any) {
-    console.error('Add workspace access error:', error);
+    logger.error('Add workspace access error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -392,7 +406,7 @@ router.delete('/:id/workspaces/:accessId', authenticateToken, async (req, res) =
 
     res.json({ success: true, message: 'Workspace access removed' });
   } catch (error: any) {
-    console.error('Remove workspace access error:', error);
+    logger.error('Remove workspace access error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

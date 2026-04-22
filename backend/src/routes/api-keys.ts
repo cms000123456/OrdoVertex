@@ -4,6 +4,7 @@ import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import crypto from 'crypto';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -42,7 +43,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res) => {
 
     return successResponse(res, { apiKeys });
   } catch (error: any) {
-    console.error('Get API keys error:', error);
+    logger.error('Get API keys error:', error);
     return errorResponse(res, 'Failed to get API keys', 500);
   }
 });
@@ -93,7 +94,7 @@ router.post(
 
       return successResponse(res, { apiKey }, 201);
     } catch (error: any) {
-      console.error('Create API key error:', error);
+      logger.error('Create API key error:', error);
       return errorResponse(res, 'Failed to create API key', 500);
     }
   }
@@ -129,7 +130,7 @@ router.delete(
 
       return successResponse(res, { message: 'API key deleted successfully' });
     } catch (error: any) {
-      console.error('Delete API key error:', error);
+      logger.error('Delete API key error:', error);
       return errorResponse(res, 'Failed to delete API key', 500);
     }
   }

@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { getEmailSettings } from '../routes/system';
+import logger from '../utils/logger';
 
 /**
  * Email Service for OrdoVertex
@@ -150,10 +151,10 @@ Time: ${new Date().toISOString()}
       `,
     });
 
-    console.log(`[Email] Test email sent: ${info.messageId}`);
+    logger.info(`[Email] Test email sent: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
-    console.error('[Email] Failed to send test email:', error);
+    logger.error('[Email] Failed to send test email:', error);
     return { success: false, error: error.message };
   }
 }
@@ -243,10 +244,10 @@ The OrdoVertex Team
       `,
     });
 
-    console.log(`[Email] Verification email sent to ${to}: ${info.messageId}`);
+    logger.info(`[Email] Verification email sent to ${to}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
-    console.error('[Email] Failed to send verification email:', error);
+    logger.error('[Email] Failed to send verification email:', error);
     return { success: false, error: error.message };
   }
 }
@@ -337,10 +338,10 @@ The OrdoVertex Team
       `,
     });
 
-    console.log(`[Email] Password reset email sent to ${to}: ${info.messageId}`);
+    logger.info(`[Email] Password reset email sent to ${to}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
-    console.error('[Email] Failed to send password reset email:', error);
+    logger.error('[Email] Failed to send password reset email:', error);
     return { success: false, error: error.message };
   }
 }
@@ -437,10 +438,10 @@ View execution details in OrdoVertex.
       `,
     });
 
-    console.log(`[Email] Alert email sent to ${to}: ${info.messageId}`);
+    logger.info(`[Email] Alert email sent to ${to}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
-    console.error('[Email] Failed to send alert email:', error);
+    logger.error('[Email] Failed to send alert email:', error);
     return { success: false, error: error.message };
   }
 }
@@ -451,5 +452,5 @@ View execution details in OrdoVertex.
 export function clearEmailTransporter(): void {
   transporter = null;
   lastSettingsHash = '';
-  console.log('[Email] Transporter cache cleared');
+  logger.info('[Email] Transporter cache cleared');
 }

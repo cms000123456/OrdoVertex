@@ -7,6 +7,7 @@ import { successResponse, errorResponse } from '../utils/response';
 import { authRateLimit } from '../utils/rate-limit';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email';
 import { getSecuritySettings, getBaseUrl } from './system';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -87,7 +88,7 @@ router.post(
         );
 
         if (!emailResult.success) {
-          console.error('[Auth] Failed to send verification email:', emailResult.error);
+          logger.error('[Auth] Failed to send verification email:', emailResult.error);
         }
 
         return successResponse(res, {
@@ -102,7 +103,7 @@ router.post(
 
       return successResponse(res, { user, token }, 201);
     } catch (error: any) {
-      console.error('Registration error:', error);
+      logger.error('Registration error:', error);
       return errorResponse(res, 'Registration failed', 500);
     }
   }
@@ -202,7 +203,7 @@ router.post(
         token
       });
     } catch (error: any) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
       return errorResponse(res, 'Login failed', 500);
     }
   }
@@ -262,7 +263,7 @@ router.post(
         token
       });
     } catch (error: any) {
-      console.error('Onboarding error:', error);
+      logger.error('Onboarding error:', error);
       return errorResponse(res, 'Failed to complete onboarding', 500);
     }
   }
@@ -291,7 +292,7 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
 
     return successResponse(res, { user });
   } catch (error: any) {
-    console.error('Get user error:', error);
+    logger.error('Get user error:', error);
     return errorResponse(res, 'Failed to get user', 500);
   }
 });
@@ -358,7 +359,7 @@ router.post('/verify-email', async (req, res) => {
       }
     });
   } catch (error: any) {
-    console.error('Email verification error:', error);
+    logger.error('Email verification error:', error);
     return errorResponse(res, 'Failed to verify email', 500);
   }
 });
@@ -419,14 +420,14 @@ router.post('/resend-verification', authRateLimit(), async (req, res) => {
     );
 
     if (!emailResult.success) {
-      console.error('[Auth] Failed to send verification email:', emailResult.error);
+      logger.error('[Auth] Failed to send verification email:', emailResult.error);
     }
 
     return successResponse(res, {
       message: 'If an account exists with this email, a verification link has been sent.'
     });
   } catch (error: any) {
-    console.error('Resend verification error:', error);
+    logger.error('Resend verification error:', error);
     return errorResponse(res, 'Failed to resend verification email', 500);
   }
 });

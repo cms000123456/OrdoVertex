@@ -2,6 +2,7 @@ import * as vm from 'vm';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PythonShell } from 'python-shell';
+import logger from '../utils/logger';
 
 /**
  * Secure Code Sandbox for OrdoVertex
@@ -145,10 +146,10 @@ function createSecureContext(items: any[]): any {
     
     // Safe console (redirected to server logs)
     console: {
-      log: (...args: any[]) => console.log('[Code Node]', ...args),
-      error: (...args: any[]) => console.error('[Code Node]', ...args),
-      warn: (...args: any[]) => console.warn('[Code Node]', ...args),
-      info: (...args: any[]) => console.info('[Code Node]', ...args),
+      log: (...args: any[]) => logger.info('[Code Node]', ...args),
+      error: (...args: any[]) => logger.error('[Code Node]', ...args),
+      warn: (...args: any[]) => logger.warn('[Code Node]', ...args),
+      info: (...args: any[]) => logger.info('[Code Node]', ...args),
     },
     
     // Safe built-in objects (no prototype pollution)
@@ -358,7 +359,6 @@ export function executeSandboxedPython(
 # SECURITY WRAPPER - Restricted Execution Environment
 import sys
 import json
-
 # Remove dangerous modules from sys.modules if present
 for mod in ['os', 'sys', 'subprocess', 'socket', 'urllib', 'http', 'ftplib', 'smtplib', 'ssl', 'ctypes', 'mmap', 'code', 'codeop', 'runpy', 'importlib']:
     if mod in sys.modules:
@@ -556,7 +556,7 @@ except Exception as e:
 
       // Send the script
       pyshell.send(pythonScript);
-      pyshell.end((err: any) => { if (err) console.error(err); });
+      pyshell.end((err: any) => { if (err) logger.error(err); });
     } catch (error: any) {
       if (!isFinished) {
         isFinished = true;
