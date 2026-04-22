@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, Outlet, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
@@ -9,34 +9,45 @@ import toast from 'react-hot-toast';
 
 import { Login } from './components/Login';
 import { WorkflowsList } from './components/WorkflowsList';
-import { WorkflowEditor } from './components/WorkflowEditor';
 import { AdminMenu } from './components/AdminMenu';
-import { WorkflowSelector } from './components/WorkflowSelector';
 import { HelpMenu } from './components/HelpMenu';
-import { HelpCenter } from './components/HelpCenter';
-import { UserManagement } from './components/UserManagement';
-import { ApiKeyManagement } from './components/ApiKeyManagement';
-import { SystemSettings } from './components/SystemSettings';
 import { ThemeSelector, ThemeSelectorCompact } from './components/ThemeSelector';
-import { TemplatesGallery } from './components/TemplatesGallery';
-import { MFASetup } from './components/MFASetup';
-import { SAMLConfig } from './components/SAMLConfig';
-import { ExecutionLogs } from './components/ExecutionLogs';
-import { GroupsTeamsManager } from './components/GroupsTeamsManager';
-import { WorkspaceManagement } from './components/WorkspaceManagement';
-import { AdminWorkflows } from './components/AdminWorkflows';
-import { AdminDocumentation } from './components/AdminDocumentation';
-import { LogViewer } from './components/LogViewer';
-import { PerformanceMonitor } from './components/PerformanceMonitor';
-import { Onboarding } from './components/Onboarding';
-import { WorkspaceManager } from './components/WorkspaceManager';
-import { SchedulerManager } from './components/SchedulerManager';
 import { VerifyEmail } from './components/VerifyEmail';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ResendVerification } from './components/ResendVerification';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAuthSession } from './hooks/useAuthSession';
 import './App.css';
+
+// Lazy-loaded heavy components for code splitting
+const WorkflowEditor = React.lazy(() => import('./components/WorkflowEditor').then(m => ({ default: m.WorkflowEditor })));
+const TemplatesGallery = React.lazy(() => import('./components/TemplatesGallery').then(m => ({ default: m.TemplatesGallery })));
+const UserManagement = React.lazy(() => import('./components/UserManagement').then(m => ({ default: m.UserManagement })));
+const ApiKeyManagement = React.lazy(() => import('./components/ApiKeyManagement').then(m => ({ default: m.ApiKeyManagement })));
+const SystemSettings = React.lazy(() => import('./components/SystemSettings').then(m => ({ default: m.SystemSettings })));
+const ExecutionLogs = React.lazy(() => import('./components/ExecutionLogs').then(m => ({ default: m.ExecutionLogs })));
+const GroupsTeamsManager = React.lazy(() => import('./components/GroupsTeamsManager').then(m => ({ default: m.GroupsTeamsManager })));
+const WorkspaceManagement = React.lazy(() => import('./components/WorkspaceManagement').then(m => ({ default: m.WorkspaceManagement })));
+const AdminWorkflows = React.lazy(() => import('./components/AdminWorkflows').then(m => ({ default: m.AdminWorkflows })));
+const AdminDocumentation = React.lazy(() => import('./components/AdminDocumentation').then(m => ({ default: m.AdminDocumentation })));
+const LogViewer = React.lazy(() => import('./components/LogViewer').then(m => ({ default: m.LogViewer })));
+const PerformanceMonitor = React.lazy(() => import('./components/PerformanceMonitor').then(m => ({ default: m.PerformanceMonitor })));
+const Onboarding = React.lazy(() => import('./components/Onboarding').then(m => ({ default: m.Onboarding })));
+const WorkspaceManager = React.lazy(() => import('./components/WorkspaceManager').then(m => ({ default: m.WorkspaceManager })));
+const SchedulerManager = React.lazy(() => import('./components/SchedulerManager').then(m => ({ default: m.SchedulerManager })));
+const MFASetup = React.lazy(() => import('./components/MFASetup').then(m => ({ default: m.MFASetup })));
+const SAMLConfig = React.lazy(() => import('./components/SAMLConfig').then(m => ({ default: m.SAMLConfig })));
+const HelpCenter = React.lazy(() => import('./components/HelpCenter').then(m => ({ default: m.HelpCenter })));
+
+// Loading screen for lazy-loaded routes
+function LoadingScreen() {
+  return (
+    <div className="loading-screen">
+      <div className="spinner"></div>
+      <p>Loading...</p>
+    </div>
+  );
+}
 
 // Session Expired Banner
 function SessionExpiredBanner() {
@@ -208,6 +219,7 @@ function App() {
       <SessionExpiredBanner />
       
       <ErrorBoundary>
+      <Suspense fallback={<LoadingScreen />}>
       <Routes>
         <Route
           path="/login"
@@ -262,6 +274,7 @@ function App() {
         </Route>
         <Route path="/" element={<Navigate to="/workflows" />} />
       </Routes>
+      </Suspense>
       </ErrorBoundary>
     </BrowserRouter>
   );
