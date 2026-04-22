@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { validateExpression } from '../../utils/safe-eval';
 
 export const filterNode: NodeType = {
   name: 'filter',
@@ -173,6 +174,15 @@ export const filterNode: NodeType = {
         }
       } else {
         const condition = context.getNodeParameter('condition', 'true') as string;
+
+        // Validate condition for security
+        const validation = validateExpression(condition);
+        if (!validation.valid) {
+          return {
+            success: false,
+            error: new Error(validation.error)
+          };
+        }
 
         for (const item of items) {
           try {

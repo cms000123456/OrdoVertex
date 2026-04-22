@@ -1,5 +1,6 @@
 import { NodeType } from '../../types';
 import { PrismaClient } from '@prisma/client';
+import { validateExpression } from '../../utils/safe-eval';
 import { decryptJSON } from '../../utils/encryption';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
@@ -67,7 +68,10 @@ const builtInTools: Record<string, Tool> = {
     },
     execute: async (params: { expression: string }) => {
       try {
-        // Safe evaluation - only basic math
+        const validation = validateExpression(params.expression);
+        if (!validation.valid) {
+          return { error: validation.error };
+        }
         const result = Function('"use strict"; return (' + params.expression + ')')();
         return { result };
       } catch (error) {

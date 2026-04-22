@@ -54,7 +54,7 @@ export function ApiKeyManagement() {
     try {
       const response = await api.post('/api-keys', { name: newKeyName.trim() });
       const newKey = response.data.data.apiKey;
-      setApiKeys([newKey, ...apiKeys]);
+      setApiKeys(prev => [newKey, ...prev]);
       setNewlyCreatedKey(newKey.key);
       setNewKeyName('');
       toast.success('API key created successfully');
@@ -72,7 +72,7 @@ export function ApiKeyManagement() {
 
     try {
       await api.delete(`/api-keys/${keyId}`);
-      setApiKeys(apiKeys.filter(k => k.id !== keyId));
+      setApiKeys(prev => prev.filter(k => k.id !== keyId));
       toast.success('API key deleted successfully');
     } catch (error: any) {
       toast.error(error.response?.data?.error?.message || 'Failed to delete API key');
@@ -80,7 +80,7 @@ export function ApiKeyManagement() {
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(text).catch(() => toast.error('Clipboard access denied'));
     toast.success('Copied to clipboard');
   };
 

@@ -6,6 +6,7 @@ import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
+import { authRateLimit } from '../utils/rate-limit';
 import crypto from 'crypto';
 
 const router = Router();
@@ -205,7 +206,7 @@ router.get('/mfa/status', authMiddleware, async (req: AuthRequest, res) => {
 });
 
 // Use backup code
-router.post('/mfa/backup', async (req, res) => {
+router.post('/mfa/backup', authRateLimit(), async (req, res) => {
   try {
     const { email, backupCode } = req.body;
 

@@ -5,17 +5,12 @@ const KEY_LENGTH = 32;
 const IV_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
 
-// Get encryption key from environment or use a default for development
-// In production, this should be set via environment variable
-const DEV_FALLBACK_KEY = 'CHANGEME-32-character-random-key-for-dev-only!!';
-
+// Get encryption key from environment variable only
 const getEncryptionKey = (): Buffer => {
-  let key = process.env.ENCRYPTION_KEY;
+  const key = process.env.ENCRYPTION_KEY;
   
   if (!key) {
-    console.warn('WARNING: ENCRYPTION_KEY not set, using development fallback key');
-    console.warn('WARNING: For production, set ENCRYPTION_KEY environment variable');
-    key = DEV_FALLBACK_KEY;
+    throw new Error('ENCRYPTION_KEY environment variable is required. Set a secure 32+ character key before starting the application.');
   }
   
   if (key.length < 32) {

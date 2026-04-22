@@ -9,8 +9,8 @@ const prisma = new PrismaClient();
 
 // Middleware to check if user is admin
 function adminMiddleware(req: AuthRequest, res: any, next: any) {
-  if (!req.user) {
-    return errorResponse(res, 'Unauthorized', 401);
+  if (!req.user || req.user.role !== 'admin') {
+    return errorResponse(res, 'Admin access required', 403);
   }
   next();
 }

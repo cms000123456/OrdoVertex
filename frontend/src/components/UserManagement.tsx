@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Users, Shield, User, Trash2, Search, Loader2, AlertCircle, Plus, X, Mail, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usersApi } from '../services/api';
+import { useAuthStore } from '../store/authStore';
 import './UserManagement.css';
 
 interface User {
@@ -24,7 +25,7 @@ export function UserManagement() {
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [creatingUser, setCreatingUser] = useState(false);
-  const currentUserId = localStorage.getItem('userId');
+  const currentUserId = useAuthStore((state) => state.user?.id);
 
   // Form state for adding user
   const [newUser, setNewUser] = useState({

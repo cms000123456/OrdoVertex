@@ -82,9 +82,8 @@ export function TemplatesGallery() {
   }, [selectedCategory, searchQuery]);
 
   useEffect(() => {
-    loadTemplates();
     loadCategories();
-  }, [loadTemplates]);
+  }, []);
 
   const loadCategories = async () => {
     try {

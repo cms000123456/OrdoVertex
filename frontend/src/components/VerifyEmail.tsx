@@ -14,6 +14,8 @@ export function VerifyEmail() {
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
+    let interval: NodeJS.Timeout;
+
     const verifyToken = async () => {
       if (!token) {
         setStatus('error');
@@ -35,7 +37,7 @@ export function VerifyEmail() {
           
           // Start countdown for redirect
           let count = 5;
-          const interval = setInterval(() => {
+          interval = setInterval(() => {
             count -= 1;
             setCountdown(count);
             if (count <= 0) {
@@ -54,6 +56,10 @@ export function VerifyEmail() {
     };
 
     verifyToken();
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [token, navigate]);
 
   return (

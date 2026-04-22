@@ -69,9 +69,14 @@ router.all('/:workflowId/:path?', async (req: Request, res: Response) => {
 
     if (responseMode === 'onReceived') {
       // Respond immediately
-      const responseData = nodeConfig.responseData 
-        ? JSON.parse(nodeConfig.responseData)
-        : { success: true };
+      let responseData: any = { success: true };
+      if (nodeConfig.responseData) {
+        try {
+          responseData = JSON.parse(nodeConfig.responseData);
+        } catch {
+          return res.status(400).json({ success: false, error: 'Invalid JSON in responseData' });
+        }
+      }
       
       res.status(nodeConfig.responseCode || 200).json(responseData);
 

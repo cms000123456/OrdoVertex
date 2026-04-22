@@ -72,8 +72,12 @@ export function GroupsTeamsManager() {
   const [allUsers, setAllUsers] = useState<{ id: string; email: string; name?: string }[]>([]);
   
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    setIsAdmin(user.role === 'admin');
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      setIsAdmin(user.role === 'admin');
+    } catch {
+      setIsAdmin(false);
+    }
   }, []);
 
   const loadAllUsers = async () => {

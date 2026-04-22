@@ -16,16 +16,26 @@ import toast from 'react-hot-toast';
 import { executionLogsApi, executionsApi } from '../services/api';
 import './ExecutionLogs.css';
 
+// Escape HTML to prevent XSS when rendering JSON values
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // Syntax highlighting component for JSON
 function SyntaxHighlight({ json }: { json: any }) {
   const jsonString = JSON.stringify(json, null, 2);
   
   const highlightSyntax = (str: string) => {
     return str.split('\n').map((line, i) => {
-      // Highlight keys
-      line = line.replace(/"([^"]+)":/g, '<span class="json-key">"$1"</span>:');
-      // Highlight strings
-      line = line.replace(/: "([^"]*)"/g, ': <span class="json-string">"$1"</span>');
+      // Highlight keys (escape captured key name)
+      line = line.replace(/"([^"]+)":/g, (_m, p1) => `<span class="json-key">"${escapeHtml(p1)}"</span>:`);
+      // Highlight strings (escape captured string value)
+      line = line.replace(/: "([^"]*)"/g, (_m, p1) => `: <span class="json-string">"${escapeHtml(p1)}"</span>`);
       // Highlight numbers
       line = line.replace(/: (\d+)(,?)$/g, ': <span class="json-number">$1</span>$2');
       // Highlight booleans
@@ -407,7 +417,8 @@ export function ExecutionLogs() {
                                 className="copy-btn"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigator.clipboard.writeText(JSON.stringify(log.details, null, 2));
+                                  navigator.clipboard.writeText(JSON.stringify(log.details, null, 2))
+                                    .catch(() => toast.error('Clipboard access denied'));
                                   toast.success('Copied to clipboard');
                                 }}
                               >

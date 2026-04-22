@@ -43,9 +43,11 @@ export function PerformanceMonitor() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground) {
+        setLoading(true);
+      }
       
       // Fetch system stats using authenticated API
       try {
@@ -80,11 +82,11 @@ export function PerformanceMonitor() {
   }, []);
 
   useEffect(() => {
-    fetchStats();
+    fetchStats(false);
     
     let interval: NodeJS.Timeout;
     if (autoRefresh) {
-      interval = setInterval(fetchStats, 5000); // Refresh every 5 seconds
+      interval = setInterval(() => fetchStats(true), 5000); // Refresh every 5 seconds
     }
     
     return () => {
@@ -146,7 +148,7 @@ export function PerformanceMonitor() {
             />
             Auto-refresh
           </label>
-          <button className="btn btn-secondary" onClick={fetchStats}>
+          <button className="btn btn-secondary" onClick={() => fetchStats(false)}>
             <RefreshCw size={16} />
             Refresh
           </button>

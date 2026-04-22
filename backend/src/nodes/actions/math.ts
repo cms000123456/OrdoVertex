@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { validateExpression } from '../../utils/safe-eval';
 
 export const mathNode: NodeType = {
   name: 'math',
@@ -250,6 +251,14 @@ export const mathNode: NodeType = {
 
         } else if (mode === 'expression') {
           const expression = context.getNodeParameter('expression', '0') as string;
+
+          // Validate expression for security
+          const validation = validateExpression(expression);
+          if (!validation.valid) {
+            newItem.json = setValue(newItem.json, outputField, null);
+            newItem.json = setValue(newItem.json, `${outputField}Error`, validation.error);
+            return newItem;
+          }
 
           // Build context with all fields as variables
           const vars = { ...item.json };

@@ -255,6 +255,8 @@ export const httpRequestNode: NodeType = {
         httpsAgent: allowUnauthorizedCerts ? { rejectUnauthorized: false } : undefined,
         // Default to text response to handle various APIs
         responseType: 'text',
+        // Prevent SSRF bypass via redirects
+        maxRedirects: 0,
         // Apply user options
         ...options
       };
@@ -376,7 +378,7 @@ export const httpRequestNode: NodeType = {
       
       // Try to parse JSON if response is a string that looks like JSON
       if (typeof responseBody === 'string') {
-        const contentType = response.headers['content-type'] || '';
+        const contentType = String(response.headers['content-type'] || '');
         if (contentType.includes('json') || responseBody.trim().startsWith('{') || responseBody.trim().startsWith('[')) {
           try {
             responseBody = JSON.parse(responseBody);
