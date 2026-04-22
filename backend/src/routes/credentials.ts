@@ -33,213 +33,197 @@ const errorResponse = (res: Response, message: string, status = 400) => {
  * @route GET /api/credentials
  * @desc List all credentials for the authenticated user
  */
-router.get('/', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const userId = req.user!.id;
-    const { type, workspaceId, includeShared } = req.query;
+router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user!.id;
+  const { type, workspaceId, includeShared } = req.query;
 
-    const where: any = {
-      ...(type && { type: type as string }),
-      ...(workspaceId && { workspaceId: workspaceId as string })
-    };
+  const where: any = {
+    ...(type && { type: type as string }),
+    ...(workspaceId && { workspaceId: workspaceId as string })
+  };
 
-    // If not filtering by workspace, get personal + shared credentials
-    if (!workspaceId) {
-      if (includeShared === 'true') {
-        where.OR = [
-          { userId },
-          { workspace: { members: { some: { userId } } } }
-        ];
-      } else {
-        where.userId = userId;
-      }
+  // If not filtering by workspace, get personal + shared credentials
+  if (!workspaceId) {
+    if (includeShared === 'true') {
+      where.OR = [
+        { userId },
+        { workspace: { members: { some: { userId } } } }
+      ];
+    } else {
+      where.userId = userId;
     }
-
-    const credentials = await prisma.credential.findMany({
-      where,
-      include: {
-        workspace: {
-          select: { id: true, name: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    // Return credentials without sensitive data
-    const sanitizedCredentials = credentials.map(cred => ({
-      id: cred.id,
-      name: cred.name,
-      type: cred.type,
-      workspaceId: cred.workspaceId,
-      workspaceName: cred.workspace?.name,
-      createdAt: cred.createdAt,
-      updatedAt: cred.updatedAt,
-      lastUsed: cred.lastUsed
-    }));
-
-    return successResponse(res, { credentials: sanitizedCredentials });
-  } catch (error: any) {
-    logger.error('Error listing credentials:', error);
-    return errorResponse(res, 'Failed to list credentials', 500);
   }
-});
+
+  const credentials = await prisma.credential.findMany({
+    where,
+    include: {
+      workspace: {
+        select: { id: true, name: true }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  // Return credentials without sensitive data
+  const sanitizedCredentials = credentials.map(cred => ({
+    id: cred.id,
+    name: cred.name,
+    type: cred.type,
+    workspaceId: cred.workspaceId,
+    workspaceName: cred.workspace?.name,
+    createdAt: cred.createdAt,
+    updatedAt: cred.updatedAt,
+    lastUsed: cred.lastUsed
+  }));
+
+  return successResponse(res, { credentials: sanitizedCredentials });
+}));
 
 /**
  * @route GET /api/credentials/:id
  * @desc Get a specific credential (without sensitive data)
  */
-router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const userId = req.user!.id;
-    const { id } = req.params;
+router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user!.id;
+  const { id } = req.params;
 
-    const credential = await prisma.credential.findFirst({
-      where: {
-        id,
-        OR: [
-          { userId },
-          { workspace: { members: { some: { userId } } } }
-        ]
-      },
-      include: {
-        workspace: {
-          select: { id: true, name: true }
-        }
-      }
-    });
-
-    if (!credential) {
-      return errorResponse(res, 'Credential not found', 404);
-    }
-
-    // Decrypt data to get non-sensitive fields only
-    let data: Record<string, any> = {};
-    try {
-      data = decryptJSON(credential.data, credential.iv);
-    } catch (e) {
-      logger.error('Error decrypting credential:', e);
-    }
-
-    // Return only non-sensitive fields (mask sensitive values)
-    const sanitizedData: Record<string, any> = {};
-    for (const [key, value] of Object.entries(data)) {
-      if (typeof value === 'string' && (
-        key.toLowerCase().includes('password') ||
-        key.toLowerCase().includes('secret') ||
-        key.toLowerCase().includes('key') ||
-        key.toLowerCase().includes('token')
-      )) {
-        sanitizedData[key] = '••••••••';
-      } else {
-        sanitizedData[key] = value;
+  const credential = await prisma.credential.findFirst({
+    where: {
+      id,
+      OR: [
+        { userId },
+        { workspace: { members: { some: { userId } } } }
+      ]
+    },
+    include: {
+      workspace: {
+        select: { id: true, name: true }
       }
     }
+  });
 
-    return successResponse(res, {
-      credential: {
-        id: credential.id,
-        name: credential.name,
-        type: credential.type,
-        workspaceId: credential.workspaceId,
-        workspaceName: credential.workspace?.name,
-        data: sanitizedData,
-        createdAt: credential.createdAt,
-        updatedAt: credential.updatedAt,
-        lastUsed: credential.lastUsed
-      }
-    });
-  } catch (error: any) {
-    logger.error('Error getting credential:', error);
-    return errorResponse(res, 'Failed to get credential', 500);
+  if (!credential) {
+    return errorResponse(res, 'Credential not found', 404);
   }
-});
+
+  // Decrypt data to get non-sensitive fields only
+  let data: Record<string, any> = {};
+  try {
+    data = decryptJSON(credential.data, credential.iv);
+  } catch (e) {
+    logger.error('Error decrypting credential:', e);
+  }
+
+  // Return only non-sensitive fields (mask sensitive values)
+  const sanitizedData: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'string' && (
+      key.toLowerCase().includes('password') ||
+      key.toLowerCase().includes('secret') ||
+      key.toLowerCase().includes('key') ||
+      key.toLowerCase().includes('token')
+    )) {
+      sanitizedData[key] = '••••••••';
+    } else {
+      sanitizedData[key] = value;
+    }
+  }
+
+  return successResponse(res, {
+    credential: {
+      id: credential.id,
+      name: credential.name,
+      type: credential.type,
+      workspaceId: credential.workspaceId,
+      workspaceName: credential.workspace?.name,
+      data: sanitizedData,
+      createdAt: credential.createdAt,
+      updatedAt: credential.updatedAt,
+      lastUsed: credential.lastUsed
+    }
+  });
+}));
 
 /**
  * @route POST /api/credentials
  * @desc Create a new credential
  */
-router.post('/', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user!.id;
+  const { name, type, data } = req.body;
+
+  logger.info('Creating credential:', { name, type, dataKeys: Object.keys(data || {}) });
+
+  if (!name || !type || !data) {
+    logger.info('Validation failed:', { name: !!name, type: !!type, data: !!data });
+    return errorResponse(res, 'Name, type, and data are required');
+  }
+
+  // Verify user exists before creating credential
+  if (!(await verifyUserExists(userId))) {
+    return errorResponse(res, 'User not found. Please log out and log in again.', 401);
+  }
+
+  // Validate credential type
+  const validTypes = ['database', 'http', 'oauth2', 'apiKey', 'ssh', 'generic', 'hashicorpVault', 'openai', 'anthropic', 'gemini', 'kimi', 'smtp', 'sftp', 'smb', 'aws', 'ldap', 'webhook'];
+  if (!validTypes.includes(type)) {
+    return errorResponse(res, `Invalid credential type. Must be one of: ${validTypes.join(', ')}`);
+  }
+
+  // Encrypt the sensitive data
+  let encrypted, iv;
   try {
-    const userId = req.user!.id;
-    const { name, type, data } = req.body;
+    const encryptionResult = encryptJSON(data);
+    encrypted = encryptionResult.encrypted;
+    iv = encryptionResult.iv;
+    logger.info('Encryption successful');
+  } catch (encryptError: any) {
+    logger.error('Encryption failed:', encryptError);
+    return errorResponse(res, `Encryption failed: ${encryptError.message}`, 500);
+  }
 
-    logger.info('Creating credential:', { name, type, dataKeys: Object.keys(data || {}) });
-
-    if (!name || !type || !data) {
-      logger.info('Validation failed:', { name: !!name, type: !!type, data: !!data });
-      return errorResponse(res, 'Name, type, and data are required');
-    }
-
-    // Verify user exists before creating credential
-    if (!(await verifyUserExists(userId))) {
-      return errorResponse(res, 'User not found. Please log out and log in again.', 401);
-    }
-
-    // Validate credential type
-    const validTypes = ['database', 'http', 'oauth2', 'apiKey', 'ssh', 'generic', 'hashicorpVault', 'openai', 'anthropic', 'gemini', 'kimi', 'smtp', 'sftp', 'smb', 'aws', 'ldap', 'webhook'];
-    if (!validTypes.includes(type)) {
-      return errorResponse(res, `Invalid credential type. Must be one of: ${validTypes.join(', ')}`);
-    }
-
-    // Encrypt the sensitive data
-    let encrypted, iv;
-    try {
-      const encryptionResult = encryptJSON(data);
-      encrypted = encryptionResult.encrypted;
-      iv = encryptionResult.iv;
-      logger.info('Encryption successful');
-    } catch (encryptError: any) {
-      logger.error('Encryption failed:', encryptError);
-      return errorResponse(res, `Encryption failed: ${encryptError.message}`, 500);
-    }
-
-    const { workspaceId } = req.body;
+  const { workspaceId } = req.body;
     
-    // Check workspace permissions if workspaceId provided
-    if (workspaceId) {
-      const workspace = await prisma.workspace.findFirst({
-        where: {
-          id: workspaceId,
-          OR: [
-            { ownerId: userId },
-            { members: { some: { userId, role: { in: ['admin', 'editor'] } } } }
-          ]
-        }
-      });
-      if (!workspace) {
-        return errorResponse(res, 'Invalid workspace or insufficient permissions');
-      }
-    }
-
-    logger.info('Creating credential in DB:', { name, type, userId, workspaceId: workspaceId || null });
-    
-    const credential = await prisma.credential.create({
-      data: {
-        name,
-        type,
-        data: encrypted,
-        iv,
-        userId,
-        workspaceId: workspaceId || null
+  // Check workspace permissions if workspaceId provided
+  if (workspaceId) {
+    const workspace = await prisma.workspace.findFirst({
+      where: {
+        id: workspaceId,
+        OR: [
+          { ownerId: userId },
+          { members: { some: { userId, role: { in: ['admin', 'editor'] } } } }
+        ]
       }
     });
-
-    logger.info('Credential created:', credential.id);
-
-    return successResponse(res, {
-      credential: {
-        id: credential.id,
-        name: credential.name,
-        type: credential.type,
-        createdAt: credential.createdAt
-      }
-    }, 201);
-  } catch (error: any) {
-    logger.error('Error creating credential:', error);
-    logger.error('Error details:', error.message, error.stack);
-    return errorResponse(res, `Failed to create credential: ${error.message}`, 500);
+    if (!workspace) {
+      return errorResponse(res, 'Invalid workspace or insufficient permissions');
+    }
   }
-});
+
+  logger.info('Creating credential in DB:', { name, type, userId, workspaceId: workspaceId || null });
+    
+  const credential = await prisma.credential.create({
+    data: {
+      name,
+      type,
+      data: encrypted,
+      iv,
+      userId,
+      workspaceId: workspaceId || null
+    }
+  });
+
+  logger.info('Credential created:', credential.id);
+
+  return successResponse(res, {
+    credential: {
+      id: credential.id,
+      name: credential.name,
+      type: credential.type,
+      createdAt: credential.createdAt
+    }
+  }, 201);
+}));
 
 /**
  * @route PUT /api/credentials/:id
@@ -297,118 +281,103 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
  * @route DELETE /api/credentials/:id
  * @desc Delete a credential
  */
-router.delete('/:id', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const userId = req.user!.id;
-    const { id } = req.params;
+router.delete('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user!.id;
+  const { id } = req.params;
 
-    const existing = await prisma.credential.findFirst({
-      where: { id, userId }
-    });
+  const existing = await prisma.credential.findFirst({
+    where: { id, userId }
+  });
 
-    if (!existing) {
-      return errorResponse(res, 'Credential not found', 404);
-    }
-
-    await prisma.credential.delete({
-      where: { id }
-    });
-
-    return successResponse(res, { message: 'Credential deleted successfully' });
-  } catch (error: any) {
-    logger.error('Error deleting credential:', error);
-    return errorResponse(res, 'Failed to delete credential', 500);
+  if (!existing) {
+    return errorResponse(res, 'Credential not found', 404);
   }
-});
+
+  await prisma.credential.delete({
+    where: { id }
+  });
+
+  return successResponse(res, { message: 'Credential deleted successfully' });
+}));
 
 /**
  * @route POST /api/credentials/:id/decrypt
  * @desc Decrypt and return credential data (for node execution)
  * @access Internal use only - requires additional validation
  */
-router.post('/:id/decrypt', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const userId = req.user!.id;
-    const { id } = req.params;
+router.post('/:id/decrypt', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user!.id;
+  const { id } = req.params;
 
-    const credential = await prisma.credential.findFirst({
-      where: { id, userId }
-    });
+  const credential = await prisma.credential.findFirst({
+    where: { id, userId }
+  });
 
-    if (!credential) {
-      return errorResponse(res, 'Credential not found', 404);
-    }
-
-    // Handle HashiCorp Vault credentials differently
-    if (credential.type === 'hashicorpVault') {
-      const vaultConfig = decryptJSON(credential.data, credential.iv) as VaultConfig;
-      
-      try {
-        const secretData = await getVaultSecret(vaultConfig);
-        
-        // Update last used timestamp
-        await prisma.credential.update({
-          where: { id },
-          data: { lastUsed: new Date() }
-        });
-
-        return successResponse(res, {
-          credential: {
-            id: credential.id,
-            name: credential.name,
-            type: credential.type,
-            data: secretData,
-            source: 'hashicorpVault'
-          }
-        });
-      } catch (vaultError: any) {
-        return errorResponse(res, `Vault error: ${vaultError.message}`, 502);
-      }
-    }
-
-    // Decrypt regular credential data
-    const data = decryptJSON(credential.data, credential.iv);
-
-    // Update last used timestamp
-    await prisma.credential.update({
-      where: { id },
-      data: { lastUsed: new Date() }
-    });
-
-    return successResponse(res, {
-      credential: {
-        id: credential.id,
-        name: credential.name,
-        type: credential.type,
-        data
-      }
-    });
-  } catch (error: any) {
-    logger.error('Error decrypting credential:', error);
-    return errorResponse(res, 'Failed to decrypt credential', 500);
+  if (!credential) {
+    return errorResponse(res, 'Credential not found', 404);
   }
-});
+
+  // Handle HashiCorp Vault credentials differently
+  if (credential.type === 'hashicorpVault') {
+    const vaultConfig = decryptJSON(credential.data, credential.iv) as VaultConfig;
+      
+    try {
+      const secretData = await getVaultSecret(vaultConfig);
+        
+      // Update last used timestamp
+      await prisma.credential.update({
+        where: { id },
+        data: { lastUsed: new Date() }
+      });
+
+      return successResponse(res, {
+        credential: {
+          id: credential.id,
+          name: credential.name,
+          type: credential.type,
+          data: secretData,
+          source: 'hashicorpVault'
+        }
+      });
+    } catch (vaultError: any) {
+      return errorResponse(res, `Vault error: ${vaultError.message}`, 502);
+    }
+  }
+
+  // Decrypt regular credential data
+  const data = decryptJSON(credential.data, credential.iv);
+
+  // Update last used timestamp
+  await prisma.credential.update({
+    where: { id },
+    data: { lastUsed: new Date() }
+  });
+
+  return successResponse(res, {
+    credential: {
+      id: credential.id,
+      name: credential.name,
+      type: credential.type,
+      data
+    }
+  });
+}));
 
 /**
  * @route POST /api/credentials/test-vault
  * @desc Test HashiCorp Vault connection
  */
-router.post('/test-vault', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const { url, token, namespace } = req.body;
+router.post('/test-vault', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+  const { url, token, namespace } = req.body;
 
-    const isValid = await validateVaultConnection({ url, token, namespace });
+  const isValid = await validateVaultConnection({ url, token, namespace });
 
-    if (isValid) {
-      return successResponse(res, { message: 'Vault connection successful' });
-    } else {
-      return errorResponse(res, 'Failed to connect to Vault - check URL and token', 400);
-    }
-  } catch (error: any) {
-    logger.error('Vault test error:', error);
-    return errorResponse(res, `Vault connection failed: ${error.message}`, 500);
+  if (isValid) {
+    return successResponse(res, { message: 'Vault connection successful' });
+  } else {
+    return errorResponse(res, 'Failed to connect to Vault - check URL and token', 400);
   }
-});
+}));
 
 /**
  * @route GET /api/credentials/types

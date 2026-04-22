@@ -8,27 +8,23 @@ import { asyncHandler } from '../utils/async-handler';
 const router = Router();
 
 // Get all alerts for user
-router.get('/', authMiddleware, async (req, res) => {
-  try {
-    const alerts = await prisma.alert.findMany({
-      where: {
-        OR: [
-          { userId: req.user!.id },
-          { workspace: { members: { some: { userId: req.user!.id } } } }
-        ]
-      },
-      include: {
-        workflow: { select: { id: true, name: true } },
-        workspace: { select: { id: true, name: true } }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+router.get('/', authMiddleware, asyncHandler(async (req, res) => {
+  const alerts = await prisma.alert.findMany({
+    where: {
+      OR: [
+        { userId: req.user!.id },
+        { workspace: { members: { some: { userId: req.user!.id } } } }
+      ]
+    },
+    include: {
+      workflow: { select: { id: true, name: true } },
+      workspace: { select: { id: true, name: true } }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
 
-    res.json({ success: true, data: alerts });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+  res.json({ success: true, data: alerts });
+}));
 
 const VALID_CONDITION_TYPES = ['threshold', 'status', 'duration', 'error_rate'];
 const VALID_NOTIFY_CHANNELS = ['email', 'webhook', 'slack', 'in_app'];
@@ -65,133 +61,113 @@ function validateAlertInput(body: any): { valid: boolean; error?: string } {
 }
 
 // Create alert
-router.post('/', authMiddleware, async (req, res) => {
-  try {
-    const validation = validateAlertInput(req.body);
-    if (!validation.valid) {
-      return res.status(400).json({ success: false, error: validation.error });
-    }
+router.post('/', authMiddleware, asyncHandler(async (req, res) => {
+  const validation = validateAlertInput(req.body);
+  if (!validation.valid) {
+    return res.status(400).json({ success: false, error: validation.error });
+  }
 
-    const {
+  const {
+    name,
+    workflowId,
+    workspaceId,
+    condition,
+    conditionType,
+    notifyChannels,
+    emailRecipients,
+    webhookUrl,
+    isActive
+  } = req.body;
+
+  const alert = await prisma.alert.create({
+    data: {
       name,
-      workflowId,
-      workspaceId,
+      userId: req.user!.id,
+      workflowId: workflowId || null,
+      workspaceId: workspaceId || null,
       condition,
       conditionType,
       notifyChannels,
       emailRecipients,
       webhookUrl,
-      isActive
-    } = req.body;
+      isActive: isActive ?? true
+    }
+  });
 
-    const alert = await prisma.alert.create({
-      data: {
-        name,
-        userId: req.user!.id,
-        workflowId: workflowId || null,
-        workspaceId: workspaceId || null,
-        condition,
-        conditionType,
-        notifyChannels,
-        emailRecipients,
-        webhookUrl,
-        isActive: isActive ?? true
-      }
-    });
-
-    res.json({ success: true, data: alert });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+  res.json({ success: true, data: alert });
+}));
 
 // Update alert
-router.patch('/:id', authMiddleware, async (req, res) => {
-  try {
-    const alert = await prisma.alert.updateMany({
-      where: {
-        id: req.params.id,
-        OR: [
-          { userId: req.user!.id },
-          { workspace: { members: { some: { userId: req.user!.id, role: { in: ['admin', 'owner'] } } } } }
-        ]
-      },
-      data: req.body
-    });
+router.patch('/:id', authMiddleware, asyncHandler(async (req, res) => {
+  const alert = await prisma.alert.updateMany({
+    where: {
+      id: req.params.id,
+      OR: [
+        { userId: req.user!.id },
+        { workspace: { members: { some: { userId: req.user!.id, role: { in: ['admin', 'owner'] } } } } }
+      ]
+    },
+    data: req.body
+  });
 
-    if (alert.count === 0) {
-      return res.status(404).json({ success: false, error: 'Alert not found or insufficient permissions' });
-    }
-
-    res.json({ success: true });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  if (alert.count === 0) {
+    return res.status(404).json({ success: false, error: 'Alert not found or insufficient permissions' });
   }
-});
+
+  res.json({ success: true });
+}));
 
 // Delete alert
-router.delete('/:id', authMiddleware, async (req, res) => {
-  try {
-    const alert = await prisma.alert.deleteMany({
-      where: {
-        id: req.params.id,
-        OR: [
-          { userId: req.user!.id },
-          { workspace: { members: { some: { userId: req.user!.id, role: { in: ['admin', 'owner'] } } } } }
-        ]
-      }
-    });
-
-    if (alert.count === 0) {
-      return res.status(404).json({ success: false, error: 'Alert not found or insufficient permissions' });
+router.delete('/:id', authMiddleware, asyncHandler(async (req, res) => {
+  const alert = await prisma.alert.deleteMany({
+    where: {
+      id: req.params.id,
+      OR: [
+        { userId: req.user!.id },
+        { workspace: { members: { some: { userId: req.user!.id, role: { in: ['admin', 'owner'] } } } } }
+      ]
     }
+  });
 
-    res.json({ success: true });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  if (alert.count === 0) {
+    return res.status(404).json({ success: false, error: 'Alert not found or insufficient permissions' });
   }
-});
+
+  res.json({ success: true });
+}));
 
 // Test alert
-router.post('/:id/test', authMiddleware, rateLimit({ windowMs: 60_000, max: 10, message: 'Too many test alert requests, please try again later.' }), async (req, res) => {
-  try {
-    const alert = await prisma.alert.findFirst({
-      where: {
-        id: req.params.id,
-        OR: [
-          { userId: req.user!.id },
-          { workspace: { members: { some: { userId: req.user!.id } } } }
-        ]
-      }
-    });
-
-    if (!alert) {
-      return res.status(404).json({ success: false, error: 'Alert not found' });
+router.post('/:id/test', authMiddleware, rateLimit({ windowMs: 60_000, max: 10, message: 'Too many test alert requests, please try again later.' }), asyncHandler(async (req, res) => {
+  const alert = await prisma.alert.findFirst({
+    where: {
+      id: req.params.id,
+      OR: [
+        { userId: req.user!.id },
+        { workspace: { members: { some: { userId: req.user!.id } } } }
+      ]
     }
+  });
 
-    // Send test notification
-    await sendTestAlert(alert, req.user!);
-
-    res.json({ success: true, message: 'Test alert sent' });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  if (!alert) {
+    return res.status(404).json({ success: false, error: 'Alert not found' });
   }
-});
+
+  // Send test notification
+  await sendTestAlert(alert, req.user!);
+
+  res.json({ success: true, message: 'Test alert sent' });
+}));
 
 // Get alert history
-router.get('/:id/history', authMiddleware, async (req, res) => {
-  try {
-    const history = await prisma.alertHistory.findMany({
-      where: { alertId: req.params.id },
-      orderBy: { triggeredAt: 'desc' },
-      take: 50
-    });
+router.get('/:id/history', authMiddleware, asyncHandler(async (req, res) => {
+  const history = await prisma.alertHistory.findMany({
+    where: { alertId: req.params.id },
+    orderBy: { triggeredAt: 'desc' },
+    take: 50
+  });
 
-    res.json({ success: true, data: history });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+  res.json({ success: true, data: history });
+}));
 
 async function sendTestAlert(alert: any, user: any) {
   if (alert.notifyChannels.includes('email') && alert.emailRecipients) {
