@@ -18,7 +18,7 @@ setInterval(() => {
       delete store[key];
     }
   }
-}, 5 * 60 * 1000);
+}, 5 * 60 * 1000).unref();
 
 interface RateLimitOptions {
   windowMs?: number;
