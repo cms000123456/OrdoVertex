@@ -81,6 +81,8 @@
     "typescript": "^5.3.3"
   },
   "overrides": {
-    "tar": "^7.5.13"
+    "tar": "^7.5.13",
+    "fast-xml-parser": "^5.7.0",
+    "@azure/identity": "^4.2.1"
   }
 }
