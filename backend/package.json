@@ -83,6 +83,7 @@
   "overrides": {
     "tar": "^7.5.13",
     "fast-xml-parser": "^5.7.0",
-    "@azure/identity": "^4.2.1"
+    "@azure/identity": "^4.2.1",
+    "@tootallnate/once": "^3.0.1"
   }
 }
