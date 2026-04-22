@@ -10,6 +10,7 @@ import { stickyNoteNode } from './core/sticky-note';
 import { fileWatchTriggerNode } from './triggers/file-watch';
 import { s3TriggerNode } from './triggers/s3-trigger';
 import { sftpTriggerNode } from './triggers/sftp-trigger';
+import { smbTriggerNode } from './triggers/smb-trigger';
 
 // Action nodes
 import { httpRequestNode } from './actions/http-request';
@@ -24,6 +25,7 @@ import { sendEmailNode } from './actions/send-email';
 import { csvNode } from './actions/csv';
 import { webhookResponseNode } from './actions/webhook-response';
 import { sftpNode } from './actions/sftp';
+import { smbNode } from './actions/smb';
 import { ldapNode } from './actions/ldap';
 
 // Transform nodes
@@ -56,6 +58,7 @@ export function registerAllNodes() {
   nodeRegistry.register(fileWatchTriggerNode);
   nodeRegistry.register(s3TriggerNode);
   nodeRegistry.register(sftpTriggerNode);
+  nodeRegistry.register(smbTriggerNode);
 
   // Action nodes
   nodeRegistry.register(httpRequestNode);
@@ -70,6 +73,7 @@ export function registerAllNodes() {
   nodeRegistry.register(csvNode);
   nodeRegistry.register(webhookResponseNode);
   nodeRegistry.register(sftpNode);
+  nodeRegistry.register(smbNode);
   nodeRegistry.register(ldapNode);
 
   // Transform nodes
