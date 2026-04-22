@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { getErrorMessage } from '../../utils/error-helper';
 import { NodeType } from '../../types';
 import ldap from 'ldapjs';
 
@@ -646,7 +647,7 @@ export const ldapNode: NodeType = {
           json: result
         }]
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       client.destroy();
 
       if (context.continueOnFail()) {
@@ -654,7 +655,7 @@ export const ldapNode: NodeType = {
           success: true,
           output: [{
             json: {
-              error: error.message,
+              error: getErrorMessage(error),
               success: false
             }
           }]

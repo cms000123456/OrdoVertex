@@ -9,6 +9,7 @@ import { open } from 'sqlite';
 import { prisma } from '../../prisma';
 import { decryptJSON } from '../../utils/encryption';
 import logger from '../../utils/logger';
+import { getErrorMessage } from '../../utils/error-helper';
 
 
 // Connection pools cache
@@ -835,13 +836,13 @@ export const sqlDatabaseNode: NodeType = {
           }]
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
             json: {
-              error: error.message
+              error: getErrorMessage(error)
             }
           }]
         };

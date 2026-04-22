@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 import nodemailer from 'nodemailer';
 
 export const sendEmailNode: NodeType = {
@@ -272,13 +273,13 @@ export const sendEmailNode: NodeType = {
           }
         }]
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
             json: {
-              error: error.message,
+              error: getErrorMessage(error),
               sent: false
             }
           }]

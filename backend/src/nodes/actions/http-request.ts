@@ -4,6 +4,7 @@ import { NodeType } from '../../types';
 import { decryptJSON } from '../../utils/encryption';
 import { isInternalUrl } from '../../utils/security';
 import logger from '../../utils/logger';
+import { getErrorMessage } from '../../utils/error-helper';
 
 
 export const httpRequestNode: NodeType = {
@@ -416,15 +417,16 @@ export const httpRequestNode: NodeType = {
           }
         }]
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
+        const axiosError = error as { response?: { data?: unknown; status?: number } };
         return {
           success: true,
           output: [{
             json: {
-              error: error.message,
-              response: error.response?.data,
-              statusCode: error.response?.status
+              error: getErrorMessage(error),
+              response: axiosError.response?.data,
+              statusCode: axiosError.response?.status
             }
           }]
         };

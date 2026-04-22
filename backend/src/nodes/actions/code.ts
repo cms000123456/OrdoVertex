@@ -1,5 +1,6 @@
 import { NodeType } from '../../types';
 import logger from '../../utils/logger';
+import { getErrorMessage, getErrorStack } from '../../utils/error-helper';
 import { 
   executeSandboxedJavaScript, 
   executeSandboxedPython,
@@ -184,26 +185,28 @@ results`,
         output: result.output
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('[Code Node] Execution error:', error);
+      const errMsg = getErrorMessage(error);
+      const errStack = getErrorStack(error);
       
       if (context.continueOnFail()) {
         return {
           success: true,
           output: [{
             json: {
-              error: error.message,
+              error: errMsg,
               // Only include details in development
               ...(process.env.NODE_ENV !== 'production' && { 
-                stack: error.stack,
-                details: error.toString()
+                stack: errStack,
+                details: String(error)
               })
             }
           }]
         };
       }
       
-      throw new Error(`Code execution failed: ${error.message}`);
+      throw new Error(`Code execution failed: ${errMsg}`);
     }
   }
 };

@@ -1,4 +1,5 @@
 import { NodeType } from '../../types';
+import { getErrorMessage } from '../../utils/error-helper';
 import { SmbConnection, smbCommand, smbDownload, smbUpload, parseLsOutput, validateSmbPath } from '../../utils/smb-client';
 
 export const smbNode: NodeType = {
@@ -314,9 +315,9 @@ export const smbNode: NodeType = {
       }
 
       return { success: true, output: [{ json: result }] };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (context.continueOnFail()) {
-        return { success: true, output: [{ json: { error: error.message, success: false } }] };
+        return { success: true, output: [{ json: { error: getErrorMessage(error), success: false } }] };
       }
       throw error;
     }
