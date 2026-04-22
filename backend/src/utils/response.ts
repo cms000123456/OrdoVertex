@@ -7,7 +7,7 @@ export function successResponse<T>(res: Response, data: T, statusCode = 200) {
   });
 }
 
-export function errorResponse(res: Response, message: string, statusCode = 400, details?: any) {
+export function errorResponse(res: Response, message: string, statusCode = 400, details?: unknown) {
   return res.status(statusCode).json({
     success: false,
     error: {

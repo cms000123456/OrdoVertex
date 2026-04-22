@@ -81,8 +81,8 @@ export class ExecutionLogger {
           message: entry.message,
           nodeId: entry.nodeId,
           nodeName: entry.nodeName,
-          details: entry.details || null,
-          metadata: entry.metadata || null
+          details: entry.details,
+          metadata: entry.metadata
         }))
       });
     } catch (err) {

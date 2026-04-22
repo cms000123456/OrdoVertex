@@ -91,19 +91,20 @@ export function errorSanitizerMiddleware(
  * Place this at the end of your middleware chain
  */
 export function sanitizedErrorHandler(
-  err: any,
+  err: unknown,
   req: Request,
   res: Response,
   next: NextFunction
 ) {
-  const statusCode = err.statusCode || err.status || 500;
+  const error = err as { statusCode?: number; status?: number; message?: string; stack?: string };
+  const statusCode = error.statusCode || error.status || 500;
   
   // In production, don't expose internal error details
   if (process.env.NODE_ENV === 'production') {
     // Log detailed error server-side
     logger.error(`[Error ${statusCode}] ${req.method} ${req.path}:`, {
-      message: err.message,
-      stack: err.stack,
+      message: error.message,
+      stack: error.stack,
       user: (req as any).user?.id,
       ip: req.ip,
     });
@@ -126,9 +127,9 @@ export function sanitizedErrorHandler(
   res.status(statusCode).json({
     success: false,
     error: {
-      message: err.message,
+      message: error.message,
       code: statusCode,
-      stack: err.stack,
+      stack: error.stack,
     },
   });
 }

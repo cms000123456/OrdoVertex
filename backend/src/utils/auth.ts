@@ -38,7 +38,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function generateToken(userId: string, email: string, role?: string): string {
-  const payload: any = { id: userId, email };
+  const payload: Record<string, unknown> = { id: userId, email };
   if (role) payload.role = role;
   // Shorter token lifetime for security (24 hours instead of 7 days)
   // Can be configured via JWT_EXPIRES_IN env var
