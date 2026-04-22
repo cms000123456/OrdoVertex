@@ -24,7 +24,7 @@ router.get('/', asyncHandler(async (req: AuthRequest, res) => {
   const offset = isNaN(offsetVal) ? 0 : offsetVal;
   const status = req.query.status as string | undefined;
 
-  const where: any = {
+  const where: Record<string, unknown> = {
     workflow: {
       userId: req.user!.id
     }

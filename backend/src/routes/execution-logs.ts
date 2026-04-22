@@ -38,7 +38,7 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
 
   const workflowIds = userWorkflows.map(w => w.id);
 
-  const where: any = {
+  const where: Record<string, unknown> = {
     execution: {
       workflowId: { in: workflowIds }
     }
@@ -67,13 +67,14 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
   }
 
   if (startDate || endDate) {
-    where.timestamp = {};
+    const ts = {} as Record<string, Date>;
     if (startDate) {
-      where.timestamp.gte = new Date(startDate as string);
+      ts.gte = new Date(startDate as string);
     }
     if (endDate) {
-      where.timestamp.lte = new Date(endDate as string);
+      ts.lte = new Date(endDate as string);
     }
+    where.timestamp = ts;
   }
 
   if (search) {
@@ -158,7 +159,7 @@ router.get('/stats/overview', authenticateToken, asyncHandler(async (req, res) =
   const daysAgo = new Date();
   daysAgo.setDate(daysAgo.getDate() - parseInt(days as string));
 
-  const where: any = {
+  const where: Record<string, unknown> = {
     startedAt: {
       gte: daysAgo
     }
@@ -218,7 +219,7 @@ router.get('/stats/overview', authenticateToken, asyncHandler(async (req, res) =
 
   const stats = {
     totalExecutions,
-    statusBreakdown: statusCounts.reduce((acc: any, curr) => {
+    statusBreakdown: statusCounts.reduce((acc: Record<string, number>, curr) => {
       acc[curr.status] = curr._count.status;
       return acc;
     }, {}),
@@ -248,7 +249,7 @@ router.get('/timeline', authenticateToken, asyncHandler(async (req, res) => {
 
   const workflowIds = userWorkflows.map(w => w.id);
 
-  const where: any = {
+  const where: Record<string, unknown> = {
     startedAt: {
       gte: hoursAgo
     },

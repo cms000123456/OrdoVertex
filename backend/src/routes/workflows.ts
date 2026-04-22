@@ -183,7 +183,7 @@ router.patch(
 
     // Handle schedule triggers — upsert DB record and signal worker
     if (nodes) {
-      const triggerNode = nodes.find((n: any) => n.type === 'scheduleTrigger');
+      const triggerNode = nodes.find((n: { type?: string }) => n.type === 'scheduleTrigger');
       if (triggerNode) {
         const p = triggerNode.parameters || {};
         const buildCron = (): string => {

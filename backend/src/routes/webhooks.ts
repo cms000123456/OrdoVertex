@@ -69,7 +69,7 @@ router.all('/:workflowId/:path?', asyncHandler(async (req: Request, res: Respons
 
   if (responseMode === 'onReceived') {
     // Respond immediately
-    let responseData: any = { success: true };
+    let responseData: Record<string, unknown> = { success: true };
     if (nodeConfig.responseData) {
       try {
         responseData = JSON.parse(nodeConfig.responseData);

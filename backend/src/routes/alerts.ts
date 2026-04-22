@@ -30,15 +30,15 @@ const VALID_CONDITION_TYPES = ['threshold', 'status', 'duration', 'error_rate'];
 const VALID_NOTIFY_CHANNELS = ['email', 'webhook', 'slack', 'in_app'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validateAlertInput(body: any): { valid: boolean; error?: string } {
+function validateAlertInput(body: Record<string, unknown>): { valid: boolean; error?: string } {
   if (!body.name || typeof body.name !== 'string' || body.name.length < 1 || body.name.length > 200) {
     return { valid: false, error: 'Name is required and must be 1-200 characters' };
   }
-  if (body.conditionType !== undefined && !VALID_CONDITION_TYPES.includes(body.conditionType)) {
+  if (body.conditionType !== undefined && typeof body.conditionType === 'string' && !VALID_CONDITION_TYPES.includes(body.conditionType)) {
     return { valid: false, error: `conditionType must be one of: ${VALID_CONDITION_TYPES.join(', ')}` };
   }
   if (body.notifyChannels !== undefined) {
-    if (!Array.isArray(body.notifyChannels) || body.notifyChannels.some((c: any) => !VALID_NOTIFY_CHANNELS.includes(c))) {
+    if (!Array.isArray(body.notifyChannels) || body.notifyChannels.some((c: unknown) => typeof c === 'string' && !VALID_NOTIFY_CHANNELS.includes(c))) {
       return { valid: false, error: `notifyChannels must be an array of: ${VALID_NOTIFY_CHANNELS.join(', ')}` };
     }
   }
@@ -53,7 +53,7 @@ function validateAlertInput(body: any): { valid: boolean; error?: string } {
     }
   }
   if (body.emailRecipients !== undefined && body.emailRecipients !== null) {
-    if (!Array.isArray(body.emailRecipients) || body.emailRecipients.some((e: any) => typeof e !== 'string' || !EMAIL_REGEX.test(e))) {
+    if (!Array.isArray(body.emailRecipients) || body.emailRecipients.some((e: unknown) => typeof e !== 'string' || (typeof e === 'string' && !EMAIL_REGEX.test(e)))) {
       return { valid: false, error: 'emailRecipients must be an array of valid email addresses' };
     }
   }
@@ -169,14 +169,17 @@ router.get('/:id/history', authMiddleware, asyncHandler(async (req, res) => {
   res.json({ success: true, data: history });
 }));
 
-async function sendTestAlert(alert: any, user: any) {
-  if (alert.notifyChannels.includes('email') && alert.emailRecipients) {
-    for (const email of alert.emailRecipients) {
+async function sendTestAlert(alert: Record<string, unknown>, user: { email?: string }) {
+  const notifyChannels = alert.notifyChannels as string[] | undefined;
+  const emailRecipients = alert.emailRecipients as string[] | undefined;
+  const alertName = alert.name as string | undefined;
+  if (notifyChannels?.includes('email') && emailRecipients) {
+    for (const email of emailRecipients) {
       await sendEmail({
         to: email,
-        subject: `[TEST] Alert: ${alert.name}`,
-        text: `This is a test alert for "${alert.name}".\n\nCondition: ${alert.condition}\n\nIf you receive this, your alert is configured correctly.`,
-        html: `<h2>Test Alert: ${alert.name}</h2><p>This is a test alert. Your notification settings are working correctly.</p>`
+        subject: `[TEST] Alert: ${alertName}`,
+        text: `This is a test alert for "${alertName}".\n\nCondition: ${alert.condition}\n\nIf you receive this, your alert is configured correctly.`,
+        html: `<h2>Test Alert: ${alertName}</h2><p>This is a test alert. Your notification settings are working correctly.</p>`
       });
     }
   }

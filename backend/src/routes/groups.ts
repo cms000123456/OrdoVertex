@@ -242,7 +242,7 @@ router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, error: 'Group not found' });
   }
 
-  const isMember = group.workspace?.members?.some((m: any) => m.userId === userId);
+  const isMember = group.workspace?.members?.some((m: { userId?: string }) => m.userId === userId);
   if (!isMember && !isAdmin) {
     return res.status(403).json({ success: false, error: 'Access denied' });
   }
@@ -268,14 +268,14 @@ router.post('/:id/members', authenticateToken, asyncHandler(async (req, res) => 
     return res.status(404).json({ success: false, error: 'Group not found' });
   }
 
-  const isMember = group.workspace?.members?.some((m: any) => m.userId === userId);
+  const isMember = group.workspace?.members?.some((m: { userId?: string }) => m.userId === userId);
   if (!isMember && !isAdmin) {
     return res.status(403).json({ success: false, error: 'Access denied' });
   }
 
   // Check if target user is workspace member (only if group has a workspace)
   if (group.workspace) {
-    const targetIsMember = group.workspace.members?.some((m: any) => m.userId === memberUserId);
+    const targetIsMember = group.workspace.members?.some((m: { userId?: string }) => m.userId === memberUserId);
     if (!targetIsMember) {
       return res.status(400).json({ success: false, error: 'User must be workspace member first' });
     }
@@ -314,7 +314,7 @@ router.delete('/:id/members/:memberId', authenticateToken, asyncHandler(async (r
     return res.status(404).json({ success: false, error: 'Group not found' });
   }
 
-  const isMember = group.workspace?.members?.some((m: any) => m.userId === userId);
+  const isMember = group.workspace?.members?.some((m: { userId?: string }) => m.userId === userId);
   if (!isMember && !isAdmin) {
     return res.status(403).json({ success: false, error: 'Access denied' });
   }

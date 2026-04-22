@@ -58,7 +58,7 @@ router.post('/:id/create', authMiddleware, [
   const { name, description } = req.body;
 
   // Transform nodes - remove template IDs and ensure proper format
-  const nodes = template.nodes.map((node: any) => ({
+  const nodes = template.nodes.map((node: { id?: string; type?: string; name?: string; description?: string; position?: { x: number; y: number }; parameters?: Record<string, unknown> }) => ({
     id: crypto.randomUUID(),
     type: node.type,
     name: node.name,
@@ -68,8 +68,8 @@ router.post('/:id/create', authMiddleware, [
   }));
 
   // Transform connections - use new node IDs
-  const nodeIdMap = new Map(template.nodes.map((n: any, i: number) => [n.id, nodes[i].id]));
-  const connections = template.connections.map((conn: any) => ({
+  const nodeIdMap = new Map(template.nodes.map((n: { id?: string }, i: number) => [n.id, nodes[i].id]));
+  const connections = template.connections.map((conn: { id?: string; source?: string; target?: string; sourceHandle?: string | null; targetHandle?: string | null }) => ({
     id: crypto.randomUUID(),
     source: nodeIdMap.get(conn.source) || conn.source,
     target: nodeIdMap.get(conn.target) || conn.target,
@@ -106,7 +106,7 @@ router.post('/:id/create', authMiddleware, [
 
 // Get template categories - MUST be before /:id route
 router.get('/categories/list', authMiddleware, asyncHandler(async (req, res) => {
-  const categories = [...new Set(Object.values(workflowTemplates).map((t: any) => t.category))];
+  const categories = [...new Set(Object.values(workflowTemplates).map((t: { category?: string }) => t.category))];
   res.json({ success: true, data: categories });
 }));
 

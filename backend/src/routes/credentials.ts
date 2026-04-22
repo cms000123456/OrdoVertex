@@ -7,6 +7,7 @@ import { encryptJSON, decryptJSON } from '../utils/encryption';
 import { getVaultSecret, validateVaultConnection, VaultConfig } from '../utils/vault';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
+import { getErrorMessage } from '../utils/error-helper';
 
 const router = Router();
 
@@ -37,7 +38,7 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res) =>
   const userId = req.user!.id;
   const { type, workspaceId, includeShared } = req.query;
 
-  const where: any = {
+  const where: Record<string, unknown> = {
     ...(type && { type: type as string }),
     ...(workspaceId && { workspaceId: workspaceId as string })
   };
@@ -177,9 +178,9 @@ router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res) =
     encrypted = encryptionResult.encrypted;
     iv = encryptionResult.iv;
     logger.info('Encryption successful');
-  } catch (encryptError: any) {
+  } catch (encryptError: unknown) {
     logger.error('Encryption failed:', encryptError);
-    return errorResponse(res, `Encryption failed: ${encryptError.message}`, 500);
+    return errorResponse(res, `Encryption failed: ${getErrorMessage(encryptError)}`, 500);
   }
 
   const { workspaceId } = req.body;
@@ -243,7 +244,7 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
       return errorResponse(res, 'Credential not found', 404);
     }
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (name) {
       updateData.name = name;
@@ -339,8 +340,8 @@ router.post('/:id/decrypt', authenticateToken, asyncHandler(async (req: AuthRequ
           source: 'hashicorpVault'
         }
       });
-    } catch (vaultError: any) {
-      return errorResponse(res, `Vault error: ${vaultError.message}`, 502);
+    } catch (vaultError: unknown) {
+      return errorResponse(res, `Vault error: ${getErrorMessage(vaultError)}`, 502);
     }
   }
 
