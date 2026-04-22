@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Use relative URL to leverage the dev server proxy (when in Docker/browser)
 // or full URL when explicitly set via env variable
-const API_URL = process.env.REACT_APP_API_URL || '';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 const api = axios.create({
   baseURL: API_URL || undefined,
