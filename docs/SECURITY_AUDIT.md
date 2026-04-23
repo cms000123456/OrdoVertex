@@ -5,7 +5,7 @@
 **Scope:** Full codebase review (backend & frontend)  
 **Status:** ✅ All Issues Fixed
 
-**Last Updated:** March 22, 2026 (Code Sandbox Security Fix)
+**Last Updated:** April 23, 2026 (Webhook Rate Limiting, Email HTML Escaping, Trust Proxy)
 
 ---
 
@@ -450,6 +450,8 @@ Server startup logs endpoint URLs - minimal risk in containerized environments. 
 | JWT Forgery | ✅ Requires secret |
 | Clickjacking | ✅ Blocked (X-Frame-Options: DENY) |
 | MIME Sniffing | ✅ Blocked (X-Content-Type-Options: nosniff) |
+| Email HTML Injection | ✅ Blocked (escapeHtml helper) |
+| Webhook Abuse | ✅ Rate limited (60 req/min) |
 
 ---
 
@@ -461,6 +463,74 @@ Server startup logs endpoint URLs - minimal risk in containerized environments. 
 | **GDPR** | Data encryption, audit logs | ✅ Compliant |
 | **SOC 2 Type II** | Access controls, monitoring | ✅ Compliant |
 | **ISO 27001** | Cryptographic controls | ✅ Compliant |
+
+---
+
+## Additional Fixes (April 23, 2026)
+
+### 15. Webhook Rate Limiting 🟡
+
+**Location:** `backend/src/routes/webhooks.ts`, `backend/src/index.ts`
+
+**Issue:** Webhook routes at `/webhook/` bypassed the `/api/` rate limiter, allowing unauthenticated callers to trigger workflows without throttling.
+
+**Fix:** Added `rateLimit({ windowMs: 60_000, max: 60 })` to webhook routes and `app.set('trust proxy', 1)` for accurate client IP behind nginx.
+
+**Verification:** ✅ 60 requests per minute per IP enforced
+
+---
+
+### 16. Email HTML Injection 🟡
+
+**Location:** `backend/src/services/email.ts`
+
+**Issue:** User-controlled fields (`alertName`, `workflowName`, `errorMessage`, `name`) were interpolated directly into HTML email templates without escaping, allowing HTML/JS injection into email clients.
+
+**Fix:** Added `escapeHtml()` helper and applied it to all user-controlled fields in alert, verification, and password-reset email templates.
+
+**Verification:** ✅ `<script>` tags and HTML entities are escaped in email output
+
+---
+
+### 17. Unprotected JSON.parse in Webhook Response 🟢
+
+**Location:** `backend/src/nodes/actions/webhook-response.ts`
+
+**Issue:** Template replacement in JSON mode used `JSON.parse()` without try/catch. Invalid JSON after template replacement would crash the node execution.
+
+**Fix:** Wrapped `JSON.parse(replaced)` in try/catch with a descriptive error message.
+
+---
+
+### 18. AI Agent Tool Argument Parsing 🟢
+
+**Location:** `backend/src/nodes/actions/ai-agent.ts`
+
+**Issue:** `JSON.parse(toolCall.function.arguments)` for OpenAI/Anthropic tool calls was unprotected. Malformed JSON from the LLM would crash execution.
+
+**Fix:** Wrapped both OpenAI and Anthropic tool argument parsing in try/catch with graceful fallback (logs error to conversation and continues).
+
+---
+
+### 19. Redis Unhandled Exceptions 🟢
+
+**Location:** `backend/src/engine/queue.ts`
+
+**Issue:** IORedis client had no error event handlers. Connection failures could emit unhandled `error` events and crash the Node.js process.
+
+**Fix:** Added `redis.on('error')`, `redis.on('reconnecting')`, and `redis.on('connect')` handlers with Winston logging.
+
+---
+
+### 20. Graceful Shutdown Improvements 🟢
+
+**Location:** `backend/src/index.ts`, `backend/src/worker.ts`
+
+**Issue:** SIGTERM/SIGINT handlers disconnected Prisma but did not close the HTTP server or BullMQ workers, leaving in-flight requests and jobs abruptly terminated.
+
+**Fix:**
+- `index.ts`: Store `server` instance from `app.listen()` and call `server.close()` before Prisma disconnect
+- `worker.ts`: Close BullMQ workers (`worker.close()`) and clear heartbeat interval before shutdown
 
 ---
 

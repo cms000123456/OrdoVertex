@@ -469,11 +469,15 @@ Configure automatic cleanup of old logs:
 ## 🧪 Testing
 
 ```bash
-# Backend tests
+# Backend unit tests (139 tests, ~3s)
 cd backend
 npm test
 
-# Frontend tests
+# Backend integration tests (60 tests, ~5s, requires running DB)
+cd backend
+npm run test:integration
+
+# Frontend tests (11 tests, ~0.5s)
 cd frontend
 npm test
 ```

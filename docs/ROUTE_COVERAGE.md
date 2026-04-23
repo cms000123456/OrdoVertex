@@ -1,23 +1,30 @@
 # API Route Coverage Report
 
-Generated: March 19, 2026
+Generated: April 23, 2026
 
 ## Summary
 
 | Category | Backend Routes | GUI Covered | Coverage % |
 |----------|---------------|-------------|------------|
 | Auth | 10 | 10 | 100% |
-| Workflows | 10 | 10 | 100% |
+| Workflows | 12 | 10 | 83% |
 | Templates | 4 | 4 | 100% |
 | Nodes | 3 | 2 | 67% |
 | Executions | 5 | 3 | 60% |
 | Execution Logs | 5 | 5 | 100% |
-| Credentials | 7 | 6 | 86% |
-| Workspaces | 9 | 6 | 67% |
+| Credentials | 8 | 6 | 75% |
+| Workspaces | 10 | 8 | 80% |
 | API Keys | 3 | 2 | 67% |
 | Users | 4 | 3 | 75% |
 | Alerts | 6 | 0 | 0% |
-| **TOTAL** | **66** | **51** | **77%** |
+| Groups | 8 | 5 | 63% |
+| Scheduler | 4 | 2 | 50% |
+| Queue | 4 | 1 | 25% |
+| System | 10 | 5 | 50% |
+| Logs | 4 | 2 | 50% |
+| Webhooks | 1 | 0 | 0% |
+| Admin | 5 | 3 | 60% |
+| **TOTAL** | **106** | **71** | **67%** |
 
 ---
 
@@ -27,8 +34,8 @@ Generated: March 19, 2026
 
 | Route | GUI Coverage | Component/File |
 |-------|-------------|----------------|
-| POST /api/auth/login | ✅ | Login.tsx |
 | POST /api/auth/register | ✅ | Login.tsx |
+| POST /api/auth/login | ✅ | Login.tsx |
 | GET /api/auth/me | ✅ | api.ts authApi.me |
 | PATCH /api/auth/profile | ✅ | api.ts authApi.updateProfile |
 | POST /api/auth/change-password | ✅ | api.ts authApi.changePassword |
@@ -47,7 +54,7 @@ Generated: March 19, 2026
 
 ---
 
-### ✅ Workflow Routes (100%)
+### ✅ Workflow Routes (83%)
 
 | Route | GUI Coverage | Component/File |
 |-------|-------------|----------------|
@@ -61,6 +68,8 @@ Generated: March 19, 2026
 | GET /api/workflows/:id/export | ✅ | WorkflowsList.tsx |
 | POST /api/workflows/import | ✅ | WorkflowsList.tsx |
 | POST /api/workflows/import/validate | ✅ | WorkflowsList.tsx |
+| POST /api/workflows/:id/move | ✅ | WorkspaceManagement.tsx |
+| GET /api/workflows/:id/executions/:executionId | ✅ | ExecutionLogs.tsx |
 
 ---
 
@@ -95,7 +104,7 @@ Generated: March 19, 2026
 | GET /api/executions | ✅ | ExecutionLogs.tsx |
 | GET /api/executions/:id | ✅ | ExecutionLogs.tsx |
 | DELETE /api/executions/:id | ❌ | **MISSING** - No delete button in GUI |
-| POST /api/executions/:id/cancel | ✅ | ExecutionResults.tsx |
+| GET /api/executions/:executionId/nodes/:nodeId | ✅ | ExecutionLogs.tsx |
 
 ---
 
@@ -111,36 +120,35 @@ Generated: March 19, 2026
 
 ---
 
-### ⚠️ Credential Routes (86%)
+### ⚠️ Credential Routes (75%)
 
 | Route | GUI Coverage | Component/File |
 |-------|-------------|----------------|
 | GET /api/credentials | ✅ | CredentialsManager.tsx |
 | GET /api/credentials/:id | ✅ | CredentialsManager.tsx |
 | POST /api/credentials | ✅ | CredentialsManager.tsx |
+| PUT /api/credentials/:id | ✅ | CredentialsManager.tsx |
 | DELETE /api/credentials/:id | ✅ | CredentialsManager.tsx |
 | POST /api/credentials/:id/decrypt | ✅ | CredentialsManager.tsx |
 | POST /api/credentials/test-vault | ❌ | **MISSING** - Test button not implemented |
 | GET /api/credentials/types/list | ✅ | CredentialsManager.tsx |
 
-**Note:** PATCH update endpoint is missing in both backend and GUI.
-
 ---
 
-### ⚠️ Workspace Routes (67%)
+### ⚠️ Workspace Routes (80%)
 
 | Route | GUI Coverage | Component/File |
 |-------|-------------|----------------|
-| GET /api/workspaces | ✅ | WorkspaceManager.tsx |
-| POST /api/workspaces | ✅ | WorkspaceManager.tsx |
-| GET /api/workspaces/:id | ✅ | WorkspaceManager.tsx |
-| PATCH /api/workspaces/:id | ✅ | WorkspaceManager.tsx |
-| DELETE /api/workspaces/:id | ✅ | WorkspaceManager.tsx |
-| POST /api/workspaces/:id/members | ✅ | WorkspaceManager.tsx |
-| PATCH /api/workspaces/:id/members/:memberId | ✅ | WorkspaceManager.tsx |
-| DELETE /api/workspaces/:id/members/:memberId | ✅ | WorkspaceManager.tsx |
-| GET /api/workspaces/:id/workflows | ❌ | **MISSING** - Filter not implemented |
-| POST /api/workspaces/:id/workflows/:workflowId | ❌ | **MISSING** - Add to workspace not implemented |
+| GET /api/workspaces | ✅ | WorkspaceManagement.tsx |
+| POST /api/workspaces | ✅ | WorkspaceManagement.tsx |
+| GET /api/workspaces/:id | ✅ | WorkspaceManagement.tsx |
+| PATCH /api/workspaces/:id | ✅ | WorkspaceManagement.tsx |
+| DELETE /api/workspaces/:id | ✅ | WorkspaceManagement.tsx |
+| POST /api/workspaces/:id/members | ✅ | WorkspaceManagement.tsx |
+| PATCH /api/workspaces/:id/members/:memberId | ✅ | WorkspaceManagement.tsx |
+| DELETE /api/workspaces/:id/members/:memberId | ✅ | WorkspaceManagement.tsx |
+| GET /api/workspaces/:id/workflows | ❌ | **MISSING** |
+| POST /api/workspaces/:id/workflows/:workflowId | ❌ | **MISSING** |
 
 ---
 
@@ -180,56 +188,125 @@ Generated: March 19, 2026
 
 ---
 
-## Missing GUI Components
+### ⚠️ Group Routes (63%)
 
-### High Priority
-1. **Alert Management** - Full alerting UI missing
-2. **Workspace Workflow Assignment** - Can't add workflows to workspaces
-3. **Execution Stats Dashboard** - Stats endpoint not used
-
-### Medium Priority
-4. **API Key Delete** - Missing delete functionality
-5. **User Delete** - Missing delete functionality
-6. **Execution Delete** - Missing delete functionality
-7. **Credential Test Vault** - Test button not implemented
-
-### Low Priority
-8. **Node Detail View** - Individual node endpoint not needed (client-side filtering works)
-9. **Credential Update (PATCH)** - Only create/delete, no edit
+| Route | GUI Coverage | Component/File |
+|-------|-------------|----------------|
+| GET /api/groups | ✅ | GroupsTeamsManager.tsx |
+| GET /api/groups/workspace/:workspaceId | ✅ | GroupsTeamsManager.tsx |
+| POST /api/groups | ✅ | GroupsTeamsManager.tsx |
+| PATCH /api/groups/:id | ✅ | GroupsTeamsManager.tsx |
+| DELETE /api/groups/:id | ✅ | GroupsTeamsManager.tsx |
+| POST /api/groups/:id/members | ❌ | **MISSING** |
+| DELETE /api/groups/:id/members/:memberId | ❌ | **MISSING** |
+| POST /api/groups/:id/workspaces | ❌ | **MISSING** |
 
 ---
 
-## Recommendations
+### ⚠️ Scheduler Routes (50%)
 
-### Phase 1 - Critical
-- [ ] Implement Alert Management UI
-- [ ] Add workspace workflow assignment
-- [ ] Create execution stats dashboard
+| Route | GUI Coverage | Component/File |
+|-------|-------------|----------------|
+| GET /api/scheduler/status | ✅ | PerformanceMonitor.tsx |
+| GET /api/scheduler/triggers | ✅ | SchedulerManager.tsx |
+| PATCH /api/scheduler/triggers/:id | ✅ | SchedulerManager.tsx |
+| POST /api/scheduler/triggers/:id/run | ❌ | **MISSING** |
 
-### Phase 2 - Important
-- [ ] Add delete buttons for API keys, users, executions
-- [ ] Implement credential edit functionality
-- [ ] Add vault test button
+---
 
-### Phase 3 - Nice to Have
-- [ ] Node detail view with documentation
-- [ ] Advanced filtering for workspaces
+### ⚠️ Queue Routes (25%)
+
+| Route | GUI Coverage | Component/File |
+|-------|-------------|----------------|
+| GET /api/queue/stats | ❌ | **MISSING** |
+| GET /api/queue/failed | ❌ | **MISSING** |
+| POST /api/queue/failed/:jobId/retry | ❌ | **MISSING** |
+| DELETE /api/queue/failed/:jobId | ❌ | **MISSING** |
+
+---
+
+### ⚠️ System Routes (50%)
+
+| Route | GUI Coverage | Component/File |
+|-------|-------------|----------------|
+| GET /api/system/stats | ✅ | PerformanceMonitor.tsx |
+| GET /api/system/maintenance | ✅ | SystemSettings.tsx |
+| PATCH /api/system/maintenance | ✅ | SystemSettings.tsx |
+| POST /api/system/maintenance/purge | ✅ | SystemSettings.tsx |
+| GET /api/system/maintenance/purge-preview | ✅ | SystemSettings.tsx |
+| GET /api/system/security | ✅ | SystemSettings.tsx |
+| PATCH /api/system/security | ✅ | SystemSettings.tsx |
+| GET /api/system/email | ✅ | SystemSettings.tsx |
+| PATCH /api/system/email | ✅ | SystemSettings.tsx |
+| POST /api/system/email/test | ✅ | SystemSettings.tsx |
+
+---
+
+### ⚠️ Log Routes (50%)
+
+| Route | GUI Coverage | Component/File |
+|-------|-------------|----------------|
+| GET /api/logs | ✅ | LogViewer.tsx |
+| GET /api/logs/:logName | ✅ | LogViewer.tsx |
+| GET /api/logs/:logName/download | ❌ | **MISSING** |
+| DELETE /api/logs/:logName | ❌ | **MISSING** |
+
+---
+
+### ❌ Webhook Routes (0%)
+
+| Route | GUI Coverage | Notes |
+|-------|-------------|-------|
+| ALL /webhook/:workflowId/:path? | ❌ | External endpoint - no GUI needed |
+
+---
+
+### ⚠️ Admin Routes (60%)
+
+| Route | GUI Coverage | Component/File |
+|-------|-------------|----------------|
+| GET /api/admin/workflows | ✅ | AdminWorkflows.tsx |
+| DELETE /api/admin/workflows/:id | ✅ | AdminWorkflows.tsx |
+| POST /api/admin/workflows/:id/move | ❌ | **MISSING** |
+| PATCH /api/admin/workflows/:id/toggle | ❌ | **MISSING** |
+| GET /api/admin/system-stats | ✅ | PerformanceMonitor.tsx |
 
 ---
 
 ## Test Coverage
 
-Unit tests created in `backend/src/__tests__/routes.test.ts`:
-- ✅ Auth routes (3 tests)
-- ✅ Workflow routes (8 tests)
-- ✅ Template routes (3 tests)
-- ✅ Node routes (2 tests)
-- ✅ Execution routes (1 test)
-- ✅ Credential routes (2 tests)
-- ✅ API Key routes (1 test)
+### Backend Tests
+- **Unit tests:** 139 tests across 13 suites (`npm test`)
+- **Integration tests:** 60 tests across 3 suites (`npm run test:integration`)
+- **Test configs:**
+  - `jest.config.js` — unit tests (parallel, excludes route tests)
+  - `jest.integration.config.js` — integration tests (sequential, `maxWorkers: 1`)
 
-**Total: 20 test cases covering 51/66 routes (77%)**
+### Frontend Tests
+- **Vitest setup:** `frontend/vitest.config.ts` with jsdom environment
+- **Tests:** 11 tests for `error-helper` utility
+- **Run:** `cd frontend && npm test`
 
 ---
 
-*Last updated: March 19, 2026*
+## Missing GUI Components
+
+### High Priority
+1. **Alert Management** - Full alerting UI missing
+2. **Queue Management** - Failed job retry/delete UI missing
+3. **Group Member Management** - Adding/removing members from groups
+
+### Medium Priority
+4. **API Key Delete** - Missing delete functionality
+5. **User Delete** - Missing delete functionality
+6. **Execution Delete** - Missing delete functionality
+7. **Execution Stats Dashboard** - Stats endpoint not used
+
+### Low Priority
+8. **Node Detail View** - Individual node endpoint not needed (client-side filtering works)
+9. **Credential Test Vault** - Test button not implemented
+10. **Log Download/Delete** - Not exposed in UI
+
+---
+
+*Last updated: April 23, 2026*

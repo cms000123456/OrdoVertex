@@ -1,16 +1,15 @@
-# OrdoVertex Test Scheme v2.0
+# OrdoVertex Test Scheme v3.0
 
-> Comprehensive, actionable testing plan with automated pre-push validation.
+> Comprehensive testing plan with automated pre-push validation.
 
 ## 📊 Quick Status
 
 | Component | Tests | Status | Coverage |
 |-----------|-------|--------|----------|
-| Backend API | 23+ | 🟡 Partial | 77% |
-| Workspace API | 0 | 🔴 Missing | 0% |
-| Move Workflow | 0 | 🔴 Missing | 0% |
-| Frontend | 0 | 🔴 Missing | 0% |
-| E2E | 0 | 🔴 Missing | 0% |
+| Backend Utils | 139 | 🟢 Good | Utilities covered |
+| Integration (Routes) | 60 | 🟢 Good | 3 test suites |
+| Frontend Utils | 11 | 🟡 Starting | error-helper covered |
+| E2E | 0 | 🔴 Missing | Not implemented |
 
 ---
 
@@ -18,24 +17,26 @@
 
 **Test Before Push**: Every push must pass:
 1. ✅ TypeScript compilation (backend + frontend)
-2. ✅ API integration tests
-3. ✅ Database migration check
-4. ✅ Lint checks
+2. ✅ Backend unit tests
+3. ✅ Database schema validation
+4. ✅ Frontend build test
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-# Run all tests before pushing
-npm run test:all
+# Backend unit tests (139 tests, ~3s)
+cd backend && npm test
 
-# Run specific test suites
-npm run test:backend          # Backend API tests
-npm run test:workflows        # Workflow-specific tests
-npm run test:workspaces       # Workspace-specific tests
-npm run test:typecheck        # TypeScript checks
-npm run test:pre-push         # Full pre-push suite
+# Backend integration tests (60 tests, ~5s, requires DB)
+cd backend && npm run test:integration
+
+# Frontend tests (11 tests, ~0.5s)
+cd frontend && npm test
+
+# Full pre-push suite
+cd backend && npm run test:pre-push
 ```
 
 ---
@@ -44,127 +45,90 @@ npm run test:pre-push         # Full pre-push suite
 
 ```
 backend/src/__tests__/
-├── setup.ts                    # Test configuration
+├── setup.ts                    # Shared PrismaClient, global cleanup
 ├── utils/
-│   ├── auth.test.ts           # JWT, password hashing
-│   ├── encryption.test.ts     # AES encryption
-│   └── rate-limit.test.ts     # Rate limiting
-├── routes/
-│   ├── auth.test.ts           # Auth routes
-│   ├── workflows.test.ts      # Workflow CRUD + move
-│   ├── workspaces.test.ts     # Workspace CRUD
-│   └── credentials.test.ts    # Credential routes
-├── engine/
-│   ├── executor.test.ts       # Workflow execution
-│   └── scheduler.test.ts      # Cron scheduling
-└── integration/
-    └── full-flow.test.ts      # End-to-end scenarios
+│   ├── async-handler.test.ts   # Express async wrapper
+│   ├── auth.test.ts            # JWT, password hashing
+│   ├── email-sender.test.ts    # SMTP fallback
+│   ├── encryption.test.ts      # AES-256-GCM roundtrip
+│   ├── env-validation.test.ts  # Startup env checks
+│   ├── error-helper.test.ts    # Safe error extraction
+│   ├── logger.test.ts          # Winston transport
+│   ├── rate-limit.test.ts      # In-memory rate limiter
+│   ├── response.test.ts        # JSON response helpers
+│   ├── safe-eval.test.ts       # Expression validator
+│   ├── security.test.ts        # SSRF, input sanitization
+│   └── smb-client.test.ts      # Path validation, auth file
+├── data/
+│   └── templates.test.ts       # Template data integrity
+└── routes/
+    ├── templates.test.ts       # Template CRUD
+    └── workspaces.test.ts      # Workspace CRUD + members
+
+backend/src/__tests__/routes.test.ts   # Main integration test (23 route groups)
+
+frontend/src/__tests__/
+├── setup.ts                         # vitest + jest-dom setup
+└── utils/
+    └── error-helper.test.ts         # getErrorMessage, getAxiosErrorData
 ```
 
 ---
 
 ## 🧪 Test Categories
 
-### 1. Unit Tests (Priority: High)
+### 1. Unit Tests (Backend)
 
-#### Backend Utils
-```typescript
-// utils/auth.test.ts
-- [x] JWT generation/verification
-- [x] Password hashing (bcrypt)
-- [x] Token expiration handling
-
-// utils/encryption.test.ts
-- [ ] Encrypt/decrypt roundtrip
-- [ ] IV generation uniqueness
-- [ ] Key validation
-
-// utils/rate-limit.test.ts
-- [ ] Window expiration
-- [ ] Count tracking
-- [ ] IP identification
+#### Utils — All Passing
+```
+✅ async-handler     — Wraps async routes, forwards errors
+✅ auth              — bcrypt hashing, JWT sign/verify, token expiry
+✅ email-sender      — SMTP not configured fallback
+✅ encryption        — AES-256-GCM encrypt/decrypt, IV uniqueness
+✅ env-validation    — Missing vars, weak JWT_SECRET, invalid URLs
+✅ error-helper      — getErrorMessage, getErrorStack
+✅ logger            — Winston transports, log stream
+✅ rate-limit        — Window expiry, count tracking, cleanup interval
+✅ response          — successResponse, errorResponse
+✅ safe-eval         — validateExpression, math eval, condition eval
+✅ security          — isInternalUrl, sanitizeInput, safeIdentifier
+✅ smb-client        — validateSmbPath, withAuthFile permissions
 ```
 
-### 2. Integration Tests (Priority: High)
+### 2. Integration Tests
 
-#### Workflow Routes
-```typescript
-// routes/workflows.test.ts
-- [x] GET /api/workflows - List workflows
-- [x] POST /api/workflows - Create workflow
-- [x] GET /api/workflows/:id - Get workflow
-- [x] PATCH /api/workflows/:id - Update workflow
-- [x] DELETE /api/workflows/:id - Delete workflow
-- [x] POST /api/workflows/:id/execute - Execute workflow
-- [x] POST /api/workflows/:id/move - ⭐ NEW: Move to workspace
+#### Routes (sequential, `maxWorkers: 1`)
+```
+✅ routes.test.ts           — Health, auth, workflows, templates,
+                              nodes, executions, credentials, api-keys
+✅ routes/templates.test.ts — Template list, categories, create from template
+✅ routes/workspaces.test.ts — CRUD, members, workflow move
 ```
 
-#### Workspace Routes (NEW)
-```typescript
-// routes/workspaces.test.ts
-- [ ] GET /api/workspaces - List workspaces
-- [ ] POST /api/workspaces - Create workspace
-- [ ] GET /api/workspaces/:id - Get workspace
-- [ ] PATCH /api/workspaces/:id - Update workspace
-- [ ] DELETE /api/workspaces/:id - Delete workspace
-- [ ] POST /api/workspaces/:id/members - Add member
-- [ ] PATCH /api/workspaces/:id/members/:id - Update role
-- [ ] DELETE /api/workspaces/:id/members/:id - Remove member
-- [ ] POST /api/workspaces/:id/workflows/:id - Add workflow
+**Run:** `cd backend && npm run test:integration`
+
+### 3. Frontend Tests
+
+#### Utils
+```
+✅ error-helper — getErrorMessage (string, Error, axios, null)
+✅ error-helper — getAxiosErrorData (full, partial, missing)
 ```
 
-### 3. Feature-Specific Tests
-
-#### Move Workflow Feature
-```typescript
-describe('POST /api/workflows/:id/move', () => {
-  test('should move workflow to workspace', async () => {
-    // Create workspace
-    // Create workflow (personal)
-    // Move workflow to workspace
-    // Verify workspaceId updated
-  });
-
-  test('should move workflow to personal (null workspace)', async () => {
-    // Create workspace with workflow
-    // Move workflow to personal
-    // Verify workspaceId is null
-  });
-
-  test('should reject move to workspace without permission', async () => {
-    // Create workspace where user is viewer only
-    // Try to move workflow to workspace
-    // Expect 403 Forbidden
-  });
-
-  test('should reject move of non-owned workflow', async () => {
-    // Create workflow as user A
-    // Try to move as user B
-    // Expect 404 Not Found
-  });
-
-  test('should reject move to non-existent workspace', async () => {
-    // Try to move to fake workspace ID
-    // Expect 403/404 error
-  });
-});
-```
+**Run:** `cd frontend && npm test`
 
 ---
 
 ## 🔒 Security Tests
 
-```typescript
-describe('Security', () => {
-  test('should reject requests without auth token', async () => {});
-  test('should reject expired tokens', async () => {});
-  test('should reject invalid tokens', async () => {});
-  test('should prevent SQL injection', async () => {});
-  test('should prevent XSS in workflow names', async () => {});
-  test('should enforce rate limiting', async () => {});
-  test('should validate workspace permissions', async () => {});
-});
-```
+Backend unit tests cover:
+- ✅ SSRF blocking (localhost, private ranges, metadata endpoints)
+- ✅ Input sanitization (scripts, javascript:, event handlers, null bytes)
+- ✅ Safe identifier validation
+- ✅ Expression validation (blocked keywords, quotes, backslashes)
+- ✅ Encryption roundtrip with auth tag verification
+- ✅ Rate limiter cleanup (`.unref()` prevents Jest hangs)
+- ✅ SMB path forbidden characters
 
 ---
 
@@ -187,14 +151,14 @@ echo "Checking database schema..."
 cd backend && npx prisma validate || exit 1
 cd ..
 
-# 3. Backend tests
-echo "Running backend tests..."
-cd backend && npm test || exit 1
+# 3. Backend unit tests (excludes integration tests)
+echo "Running backend unit tests..."
+cd backend && npm test -- --testPathIgnorePatterns=routes --silent || exit 1
 cd ..
 
 # 4. Frontend build test
 echo "Testing frontend build..."
-cd frontend && npm run build || exit 1
+cd frontend && CI=true npm run build || exit 1
 cd ..
 
 echo "✅ All pre-push tests passed!"
@@ -209,79 +173,55 @@ chmod +x .git/hooks/pre-push
 
 ## 🛠️ Test Commands
 
-### package.json scripts
-```json
-{
-  "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:workspaces": "jest workspaces",
-    "test:workflows": "jest workflows",
-    "test:typecheck": "tsc --noEmit",
-    "test:pre-push": "npm run test:typecheck && npm run test"
-  }
-}
+### Backend
+```bash
+cd backend
+npm test                      # Unit tests only (parallel)
+npm run test:integration      # Integration tests (sequential)
+npm run test:coverage         # Coverage report
+npm run test:typecheck        # tsc --noEmit
+npm run test:pre-push         # Type check + unit tests
+```
+
+### Frontend
+```bash
+cd frontend
+npm test                      # Run vitest
+npm test -- --watch           # Watch mode
 ```
 
 ---
 
 ## 📈 Coverage Targets
 
-| Component | Current | Target | Priority |
-|-----------|---------|--------|----------|
-| Auth Utils | 0% | 90% | 🔴 High |
-| Workflow Routes | 60% | 90% | 🔴 High |
-| Workspace Routes | 0% | 90% | 🔴 High |
-| Move Workflow | 0% | 100% | 🔴 High |
-| Encryption | 0% | 80% | 🟡 Medium |
-| Executor | 0% | 70% | 🟡 Medium |
-
----
-
-## 🎯 Implementation Checklist
-
-### Phase 1: Fix Current Tests (Week 1)
-- [ ] Add workspace table to test cleanup
-- [ ] Fix test database isolation
-- [ ] Add TESTING.md documentation
-
-### Phase 2: Workspace Tests (Week 1-2)
-- [ ] Create `routes/workspaces.test.ts`
-- [ ] Test all workspace CRUD operations
-- [ ] Test member management
-- [ ] Test permission checks
-
-### Phase 3: Move Workflow Tests (Week 2)
-- [ ] Create workflow move tests
-- [ ] Test success cases
-- [ ] Test permission failures
-- [ ] Test edge cases
-
-### Phase 4: Pre-Push Hook (Week 2)
-- [ ] Create pre-push script
-- [ ] Add type checking
-- [ ] Add build verification
-- [ ] Document installation
-
-### Phase 5: CI/CD (Week 3)
-- [ ] GitHub Actions workflow
-- [ ] Test reporting
-- [ ] Coverage badges
+| Component | Status | Priority |
+|-----------|--------|----------|
+| Auth Utils | ✅ Covered | Done |
+| Encryption | ✅ Covered | Done |
+| Rate Limiting | ✅ Covered | Done |
+| Security Utils | ✅ Covered | Done |
+| Error Handling | ✅ Covered | Done |
+| Env Validation | ✅ Covered | Done |
+| Workflow Routes | ✅ Integration | Done |
+| Workspace Routes | ✅ Integration | Done |
+| Template Routes | ✅ Integration | Done |
+| Frontend Utils | 🟡 Starting | Medium |
+| Engine/Executor | 🔴 Not started | Low |
+| Scheduler | 🔴 Not started | Low |
 
 ---
 
 ## 🐛 Debugging Tests
 
 ```bash
-# Run specific test with debug output
-cd backend && npm test -- --verbose routes.test.ts
+# Run specific test with verbose output
+cd backend && npm test -- --verbose async-handler.test.ts
 
 # Run with coverage report
 cd backend && npm run test:coverage
 
 # Debug specific test
-cd backend && node --inspect-brk node_modules/.bin/jest routes.test.ts
+cd backend && node --inspect-brk node_modules/.bin/jest async-handler.test.ts
 
 # Check database state during tests
 # Add to test: console.log(await prisma.workflow.findMany())
@@ -289,33 +229,13 @@ cd backend && node --inspect-brk node_modules/.bin/jest routes.test.ts
 
 ---
 
-## 📝 Test Data
-
-### Test Users
-```typescript
-const testUsers = {
-  admin: { email: 'admin@test.com', role: 'admin' },
-  user: { email: 'user@test.com', role: 'user' },
-  viewer: { email: 'viewer@test.com', role: 'user' }
-};
-```
-
-### Test Workflows
-```typescript
-const testWorkflows = {
-  simple: { name: 'Simple', nodes: [], connections: [] },
-  withData: { name: 'With Data', nodes: [...], connections: [...] }
-};
-```
-
----
-
 ## 🔗 Related Files
 
-- [ROUTE_COVERAGE.md](./ROUTE_COVERAGE.md) - API coverage analysis
-- [backend/src/__tests__/](./backend/src/__tests__/) - Test files
-- [backend/jest.config.js](./backend/jest.config.js) - Jest configuration
+- [ROUTE_COVERAGE.md](./ROUTE_COVERAGE.md) — API to GUI coverage analysis
+- [backend/jest.config.js](./backend/jest.config.js) — Unit test config (parallel)
+- [backend/jest.integration.config.js](./backend/jest.integration.config.js) — Integration config (sequential)
+- [frontend/vitest.config.ts](./frontend/vitest.config.ts) — Frontend test config
 
 ---
 
-*Last updated: March 21, 2026*
+*Last updated: April 23, 2026*
