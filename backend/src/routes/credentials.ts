@@ -230,7 +230,7 @@ router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res) =
  * @route PUT /api/credentials/:id
  * @desc Update a credential
  */
-router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
+router.put('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { id } = req.params;
@@ -276,7 +276,7 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
     logger.error('Error updating credential:', error);
     return errorResponse(res, 'Failed to update credential', 500);
   }
-});
+}));
 
 /**
  * @route DELETE /api/credentials/:id
@@ -384,7 +384,7 @@ router.post('/test-vault', authenticateToken, asyncHandler(async (req: AuthReque
  * @route GET /api/credentials/types
  * @desc Get available credential types and their required fields
  */
-router.get('/types/list', authenticateToken, async (req: AuthRequest, res) => {
+router.get('/types/list', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
   const credentialTypes = {
     database: {
       name: 'Database',
@@ -546,6 +546,6 @@ router.get('/types/list', authenticateToken, async (req: AuthRequest, res) => {
   };
 
   return successResponse(res, { types: credentialTypes });
-});
+}));
 
 export default router;
