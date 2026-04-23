@@ -5,13 +5,23 @@ import { getErrorMessage } from '../utils/error-helper';
 
 /**
  * Email Service for OrdoVertex
- * 
+ *
  * Handles sending emails for:
  * - Email verification
  * - Password reset
  * - Test emails
  * - Alert notifications
  */
+
+/** Escape HTML special characters to prevent email HTML injection */
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 // Transporter cache
 let transporter: nodemailer.Transporter | null = null;
@@ -221,10 +231,10 @@ The OrdoVertex Team
       <h1>🚀 Welcome to OrdoVertex!</h1>
     </div>
     <div class="content">
-      <p>Hello <strong>${name}</strong>,</p>
-      
+      <p>Hello <strong>${escapeHtml(name)}</strong>,</p>
+
       <p>Thank you for signing up! Please verify your email address to activate your account.</p>
-      
+
       <div style="text-align: center;">
         <a href="${verificationUrl}" class="button">Verify Email Address</a>
       </div>
@@ -314,8 +324,8 @@ The OrdoVertex Team
       <h1>🔐 Password Reset Request</h1>
     </div>
     <div class="content">
-      <p>Hello <strong>${name}</strong>,</p>
-      
+      <p>Hello <strong>${escapeHtml(name)}</strong>,</p>
+
       <p>We received a request to reset your OrdoVertex password.</p>
       
       <div style="text-align: center;">
@@ -409,25 +419,25 @@ View execution details in OrdoVertex.
   <div class="container">
     <div class="header">
       <h1>${statusEmoji} Workflow Alert</h1>
-      <p>${alertName}</p>
+      <p>${escapeHtml(alertName)}</p>
     </div>
     <div class="content">
       <div class="status">${executionStatus.toUpperCase()}</div>
-      
+
       <div class="detail">
-        <span class="detail-label">Workflow:</span> ${workflowName}
+        <span class="detail-label">Workflow:</span> ${escapeHtml(workflowName)}
       </div>
-      
+
       <div class="detail">
-        <span class="detail-label">Execution ID:</span> ${executionId}
+        <span class="detail-label">Execution ID:</span> ${escapeHtml(executionId)}
       </div>
-      
+
       <div class="detail">
         <span class="detail-label">Time:</span> ${new Date().toLocaleString()}
       </div>
-      
-      ${errorMessage ? `<div class="error"><strong>Error:</strong> ${errorMessage}</div>` : ''}
-      
+
+      ${errorMessage ? `<div class="error"><strong>Error:</strong> ${escapeHtml(errorMessage)}</div>` : ''}
+
       <div class="footer">
         <p>This is an automated alert from OrdoVertex.</p>
         <p>View execution details in your OrdoVertex dashboard.</p>
