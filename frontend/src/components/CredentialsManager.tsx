@@ -114,7 +114,6 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
     try {
       setLoading(true);
       const response = await credentialApi.list();
-      console.log('Credentials response:', response.data);
       // Handle both response formats
       const creds = response.data.credentials || response.data.data?.credentials || [];
       setCredentials(creds);
@@ -183,13 +182,11 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
     try {
       setError(null);
       setSaving(true);
-      console.log('Creating credential:', { name: formName.trim(), type: formType, data: formData });
       const createResponse = await credentialApi.create({
         name: formName.trim(),
         type: formType,
         data: formData,
       });
-      console.log('Create response:', createResponse.data);
       resetForm();
       setShowCreateForm(false);
       // Small delay to ensure DB commit before fetching

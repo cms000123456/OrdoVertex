@@ -250,8 +250,6 @@ function Flow() {
           y: event.clientY - 80
         });
       }
-      console.log('Position:', position);
-
       const newNode: WorkflowNode = {
         id: generateId(),
         type: nodeType.name,

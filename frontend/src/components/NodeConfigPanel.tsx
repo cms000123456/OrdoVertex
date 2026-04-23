@@ -19,16 +19,13 @@ const isImageUrl = (url: string): boolean => {
 
 // Render JSON data with image support
 const RenderJsonData: React.FC<{ data: any }> = ({ data }) => {
-  console.log('RenderJsonData raw:', typeof data, data);
   
   // Parse if data is a string (JSON string from API)
   let parsedData = data;
   if (typeof data === 'string') {
     try {
       parsedData = JSON.parse(data);
-      console.log('Parsed string data:', parsedData);
     } catch (e) {
-      console.log('Failed to parse, rendering as text');
       return <pre className="data-json">{data}</pre>;
     }
   }
@@ -37,14 +34,11 @@ const RenderJsonData: React.FC<{ data: any }> = ({ data }) => {
   let displayData = parsedData;
   if (Array.isArray(parsedData) && parsedData.length > 0) {
     displayData = parsedData[0]?.json || parsedData[0];
-    console.log('Unwrapped array data:', displayData);
   }
   
-  console.log('Checking _display:', displayData?._display);
   
   // Check for _display hint (from Image Display node)
   if (displayData?._display?.type === 'image' && displayData._display.url) {
-    console.log('Rendering image:', displayData._display.url);
     return (
       <div className="image-display">
         <img 
@@ -158,11 +152,9 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
       
       // First get recent executions
       const executionsRes = await executionsApi.getAll();
-      console.log('Executions API response:', executionsRes.data);
       
       // Handle different response structures
       const executions = executionsRes.data?.executions || executionsRes.data?.data?.executions || [];
-      console.log('Found executions:', executions.length);
       
       // Find the most recent completed execution for this workflow
       const recentExecution = executions.find((e: any) => 
@@ -171,25 +163,20 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
       );
       
       if (!recentExecution) {
-        console.log('No recent execution found for workflow', currentWorkflow.id);
         setExecutionData(null);
         return;
       }
       
-      console.log('Found execution:', recentExecution.id, 'Looking for node:', node.id);
       
       // Get node execution data
       const nodeExecRes = await executionsApi.getNodeExecution(recentExecution.id, node.id);
-      console.log('Node execution raw response:', nodeExecRes.data);
       
       // Handle different response structures
       const nodeExecution = nodeExecRes.data?.nodeExecution || nodeExecRes.data?.data?.nodeExecution || nodeExecRes.data;
-      console.log('Processed node execution:', nodeExecution);
       setExecutionData(nodeExecution);
     } catch (err: any) {
       console.error('Error loading execution data:', err);
       if (err.response?.status === 404) {
-        console.log('Node execution not found for node:', node.id);
         setExecutionData(null);
       } else {
         setExecutionError('Failed to load execution data: ' + (err.message || 'Unknown error'));

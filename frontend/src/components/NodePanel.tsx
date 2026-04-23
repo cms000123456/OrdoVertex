@@ -50,10 +50,8 @@ export function NodePanel({ nodeTypes }: NodePanelProps) {
   };
 
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
-    console.log('Drag start:', nodeType);
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
-    console.log('Data set:', event.dataTransfer.getData('application/reactflow'));
   };
 
   return (

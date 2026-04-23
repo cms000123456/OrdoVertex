@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getErrorMessage } from './error-helper';
 
 export interface VaultConfig {
   url: string;
@@ -47,17 +48,18 @@ export async function getVaultSecret(config: VaultConfig): Promise<VaultSecret> 
     }
     // KV v1 format: data contains the actual secret directly
     return data || {};
-  } catch (error: any) {
-    if (error.response?.status === 404) {
+  } catch (error: unknown) {
+    const err = error as Record<string, any>;
+    if (err.response?.status === 404) {
       throw new Error(`Secret not found at path: ${mountPath}/${secretPath}`);
     }
-    if (error.response?.status === 403) {
+    if (err.response?.status === 403) {
       throw new Error('Access denied: Invalid Vault token or insufficient permissions');
     }
-    if (error.code === 'ECONNREFUSED') {
+    if (err.code === 'ECONNREFUSED') {
       throw new Error(`Cannot connect to Vault at ${url}`);
     }
-    throw new Error(`Vault request failed: ${error.message}`);
+    throw new Error(`Vault request failed: ${getErrorMessage(error)}`);
   }
 }
 

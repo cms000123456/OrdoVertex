@@ -145,7 +145,11 @@ export const webhookResponseNode: NodeType = {
             if (!key) return JSON.stringify(item);
             return JSON.stringify(item[key] ?? null);
           });
-          body = JSON.parse(replaced);
+          try {
+            body = JSON.parse(replaced);
+          } catch {
+            throw new Error('Invalid JSON after template replacement');
+          }
           break;
           
         case 'text':

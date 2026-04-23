@@ -38,8 +38,6 @@ export function WorkflowsList() {
   const loadWorkflows = async () => {
     try {
       const response = await workflowsApi.getAll();
-      console.log('API response:', response);
-      console.log('Response data:', response.data);
       setWorkflows(response.data.data || []);
     } catch (error: any) {
       console.error('Load workflows error:', error);

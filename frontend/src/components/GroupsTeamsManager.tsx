@@ -93,15 +93,11 @@ export function GroupsTeamsManager() {
   const loadWorkspaces = useCallback(async () => {
     try {
       const response = await workspacesApi.getAll();
-      console.log('Workspaces response:', response.data);
       const workspacesData = response.data?.data || response.data || [];
-      console.log('Parsed workspaces:', workspacesData);
       setWorkspaces(workspacesData);
       if (workspacesData.length > 0 && !selectedWorkspace) {
-        console.log('Setting selected workspace:', workspacesData[0].id);
         setSelectedWorkspace(workspacesData[0].id);
       } else {
-        console.log('No workspaces found or already selected');
         setLoading(false); // Stop loading if no workspaces
       }
       setError(null);

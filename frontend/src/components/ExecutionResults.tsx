@@ -110,15 +110,12 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
 
   // Render JSON data with image support
   const RenderJsonData: React.FC<{ data: any }> = ({ data }) => {
-    // Debug logging (remove in production)
-    console.log('RenderJsonData input:', typeof data, data);
     
     // Parse if data is a string (JSON string from API)
     let parsedData = data;
     if (typeof data === 'string') {
       try {
         parsedData = JSON.parse(data);
-        console.log('Parsed string data:', parsedData);
       } catch {
         // Not valid JSON, render as text
         return <pre className="json-data">{data}</pre>;
@@ -129,13 +126,10 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
     let displayData = parsedData;
     if (Array.isArray(parsedData) && parsedData.length > 0) {
       displayData = parsedData[0]?.json || parsedData[0];
-      console.log('Unwrapped array data:', displayData);
     }
     
     // Check for _display hint (from Image Display node)
-    console.log('Checking _display:', displayData?._display);
     if (displayData?._display?.type === 'image' && displayData._display.url) {
-      console.log('Rendering image:', displayData._display.url);
       return (
         <div className="image-display">
           <img 
