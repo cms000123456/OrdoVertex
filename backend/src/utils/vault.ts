@@ -10,7 +10,7 @@ export interface VaultConfig {
 }
 
 export interface VaultSecret {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**

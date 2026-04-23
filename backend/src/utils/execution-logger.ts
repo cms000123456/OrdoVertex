@@ -85,7 +85,7 @@ export class ExecutionLogger {
           metadata: entry.metadata
         }))
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error('Failed to write execution logs:', err);
       // Put logs back in buffer to retry
       this.buffer.unshift(...logsToWrite);
