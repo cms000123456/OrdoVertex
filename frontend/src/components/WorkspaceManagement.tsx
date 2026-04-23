@@ -3,6 +3,7 @@ import { Building2, Plus, X, Trash2, Edit2, Save, UserPlus, Loader2, AlertCircle
 import toast from 'react-hot-toast';
 import { workspacesApi, groupsApi, usersApi } from '../services/api';
 import './UserManagement.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 interface Workspace {
   id: string;
@@ -99,8 +100,8 @@ export function WorkspaceManagement() {
     try {
       const response = await workspacesApi.getAll();
       setWorkspaces(response.data.data || []);
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to load workspaces');
+    } catch (error: unknown) {
+      toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to load workspaces');
     } finally {
       setIsLoading(false);
     }
@@ -110,7 +111,7 @@ export function WorkspaceManagement() {
     try {
       const response = await groupsApi.getAll();
       setGroups(response.data?.data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load groups:', error);
     }
   };
@@ -133,8 +134,8 @@ export function WorkspaceManagement() {
       setWorkspaces([response.data.data, ...workspaces]);
       setShowAddModal(false);
       setNewWorkspace({ name: '', description: '' });
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to create workspace');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to create workspace');
     } finally {
       setCreatingWorkspace(false);
     }
@@ -150,8 +151,8 @@ export function WorkspaceManagement() {
       await workspacesApi.delete(workspaceId);
       toast.success('Workspace deleted successfully');
       setWorkspaces(workspaces.filter(w => w.id !== workspaceId));
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to delete workspace');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to delete workspace');
     } finally {
       setDeletingWorkspace(null);
     }
@@ -170,8 +171,8 @@ export function WorkspaceManagement() {
           : w
       ));
       setEditingWorkspace(null);
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to update workspace');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to update workspace');
     }
   };
 
@@ -205,8 +206,8 @@ export function WorkspaceManagement() {
       setSelectedUserId('');
       setNewMemberRole('viewer');
       loadWorkspaces();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to add member');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to add member');
     } finally {
       setAddingMember(false);
     }
@@ -219,8 +220,8 @@ export function WorkspaceManagement() {
       await workspacesApi.removeMember(workspaceId, memberId);
       toast.success('Member removed');
       loadWorkspaces();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to remove member');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to remove member');
     }
   };
 
@@ -238,8 +239,8 @@ export function WorkspaceManagement() {
       setSelectedGroup('');
       setGroupRole('viewer');
       loadGroups();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to assign group');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to assign group');
     } finally {
       setAssigningGroup(false);
     }
@@ -252,8 +253,8 @@ export function WorkspaceManagement() {
       await groupsApi.removeWorkspaceAccess(groupId, accessId);
       toast.success('Group access removed');
       loadGroups();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to remove group access');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to remove group access');
     }
   };
 

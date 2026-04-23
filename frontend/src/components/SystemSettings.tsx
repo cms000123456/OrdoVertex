@@ -5,6 +5,7 @@ import api from '../services/api';
 import { systemApi } from '../services/api';
 import { ThemeSelector } from './ThemeSelector';
 import './SystemSettings.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 interface SystemStatus {
   database: boolean;
@@ -83,7 +84,7 @@ export function SystemSettings() {
     try {
       const response = await api.get('/admin/status');
       setStatus(response.data.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Use mock data if endpoint doesn't exist yet
       setStatus({
         database: true,
@@ -162,8 +163,8 @@ export function SystemSettings() {
     try {
       await systemApi.testEmailSettings(testEmailAddress);
       toast.success('Test email sent successfully');
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to send test email');
+    } catch (error: unknown) {
+      toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to send test email');
     } finally {
       setIsTestingEmail(false);
     }

@@ -3,6 +3,7 @@ import { Key, Plus, Trash2, Edit2, Eye, EyeOff, X, Database, Globe, Lock, Shield
 import toast from 'react-hot-toast';
 import { Credential, CredentialTypeInfo, CredentialField } from '../types';
 import { credentialApi } from '../services/api';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 // Vault Test Button Component
 function VaultTestButton({ formData }: { formData: Record<string, any> }) {
@@ -25,10 +26,10 @@ function VaultTestButton({ formData }: { formData: Record<string, any> }) {
         namespace: formData.namespace
       });
       setTestResult({ success: true, message: 'Vault connection successful!' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setTestResult({ 
         success: false, 
-        message: err.response?.data?.error || 'Failed to connect to Vault'
+        message: getAxiosErrorData(err)?.error || 'Failed to connect to Vault'
       });
     } finally {
       setTesting(false);
@@ -118,9 +119,9 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
       const creds = response.data.credentials || response.data.data?.credentials || [];
       setCredentials(creds);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load credentials:', err);
-      setError(err.message || 'Failed to load credentials');
+      setError(getErrorMessage(err) || 'Failed to load credentials');
       setCredentials([]);
     } finally {
       setLoading(false);
@@ -137,7 +138,7 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
         setCredentialTypes(response.data.data.types);
         setHasLoadedTypes(true);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load credential types:', err);
       setError('Failed to load credential types. Please try again.');
     }
@@ -194,9 +195,9 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
         fetchCredentials();
       }, 100);
       toast.success('Credential created successfully');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Credential creation error:', err);
-      const errorMsg = err.response?.data?.error || err.message || 'Failed to create credential';
+      const errorMsg = getAxiosErrorData(err)?.error || getErrorMessage(err) || 'Failed to create credential';
       setError(errorMsg);
     } finally {
       setSaving(false);
@@ -216,8 +217,8 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
       resetForm();
       setShowCreateForm(false);
       fetchCredentials();
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.error || err.message || 'Failed to update credential';
+    } catch (err: unknown) {
+      const errorMsg = getAxiosErrorData(err)?.error || getErrorMessage(err) || 'Failed to update credential';
       setError(errorMsg);
     } finally {
       setSaving(false);
@@ -230,8 +231,8 @@ export function CredentialsManager({ isOpen, onClose }: CredentialsManagerProps)
     try {
       await credentialApi.delete(id);
       fetchCredentials();
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.error || err.message || 'Failed to delete credential';
+    } catch (err: unknown) {
+      const errorMsg = getAxiosErrorData(err)?.error || getErrorMessage(err) || 'Failed to delete credential';
       setError(errorMsg);
     }
   };

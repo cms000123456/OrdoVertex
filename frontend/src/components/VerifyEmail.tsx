@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authApi } from '../services/api';
 import { Loader2, CheckCircle, XCircle, Mail } from 'lucide-react';
+import { getAxiosErrorData } from '../utils/error-helper';
+import { getErrorMessage } from '../utils/error-helper';
 
 export function VerifyEmail() {
   const [searchParams] = useSearchParams();
@@ -49,9 +51,9 @@ export function VerifyEmail() {
           setStatus('error');
           setMessage(response.data.message || 'Verification failed.');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         setStatus('error');
-        setMessage(error.response?.data?.message || 'Invalid or expired verification token.');
+        setMessage(getAxiosErrorData(error)?.message || 'Invalid or expired verification token.');
       }
     };
 

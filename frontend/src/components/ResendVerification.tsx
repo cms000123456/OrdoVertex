@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authApi } from '../services/api';
 import { Loader2, Mail, CheckCircle, ArrowLeft, Send } from 'lucide-react';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 export function ResendVerification() {
   const [email, setEmail] = useState('');
@@ -30,9 +31,9 @@ export function ResendVerification() {
         setStatus('error');
         setMessage(response.data.message || 'Failed to send verification email. Please try again.');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setStatus('error');
-      setMessage(error.response?.data?.message || 'An error occurred. Please try again.');
+      setMessage(getAxiosErrorData(error)?.message || 'An error occurred. Please try again.');
     }
   };
 

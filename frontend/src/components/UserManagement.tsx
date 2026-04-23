@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { usersApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import './UserManagement.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 interface User {
   id: string;
@@ -44,8 +45,8 @@ export function UserManagement() {
     try {
       const response = await usersApi.getAll();
       setUsers(response.data.data.users);
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to load users');
+    } catch (error: unknown) {
+      toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to load users');
     } finally {
       setIsLoading(false);
     }
@@ -57,8 +58,8 @@ export function UserManagement() {
       await usersApi.update(userId, { role: newRole });
       toast.success(`User role updated to ${newRole}`);
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to update role');
+    } catch (error: unknown) {
+      toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to update role');
     } finally {
       setUpdatingUser(null);
     }
@@ -74,8 +75,8 @@ export function UserManagement() {
       await usersApi.delete(userId);
       toast.success('User deleted successfully');
       setUsers(users.filter(u => u.id !== userId));
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to delete user');
+    } catch (error: unknown) {
+      toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to delete user');
     } finally {
       setDeletingUser(null);
     }
@@ -110,8 +111,8 @@ export function UserManagement() {
       setUsers([newUserWithCount, ...users]);
       setShowAddModal(false);
       setNewUser({ email: '', name: '', password: '', role: 'user' });
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to create user');
+    } catch (error: unknown) {
+      toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to create user');
     } finally {
       setCreatingUser(false);
     }

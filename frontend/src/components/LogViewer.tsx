@@ -3,6 +3,7 @@ import { Terminal, RefreshCw, ChevronDown, Download, Trash2, FileText } from 'lu
 import toast from 'react-hot-toast';
 import { logsApi } from '../services/api';
 import './LogViewer.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 
 interface LogData {
@@ -34,7 +35,7 @@ export function LogViewer() {
   const fetchLogFiles = async () => {
     try {
       await logsApi.getLogFiles();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch log files');
     }
   };
@@ -44,8 +45,8 @@ export function LogViewer() {
     try {
       const response = await logsApi.getLogs(selectedLog, lines, searchTerm);
       setLogData(response.data.data);
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to fetch logs');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to fetch logs');
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +92,7 @@ export function LogViewer() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success('Logs downloaded');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to download logs');
     }
   };
@@ -104,7 +105,7 @@ export function LogViewer() {
       await logsApi.clearLogs(selectedLog);
       toast.success('Logs cleared');
       fetchLogs();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to clear logs');
     }
   };

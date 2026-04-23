@@ -17,6 +17,7 @@ import {
 import toast from 'react-hot-toast';
 import { workspacesApi } from '../services/api';
 import './WorkspaceManager.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 interface Workspace {
   id: string;
@@ -109,8 +110,8 @@ export function WorkspaceManager() {
       toast.success('Member added');
       setNewMemberEmail('');
       loadWorkspaces();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to add member');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to add member');
     }
   };
 

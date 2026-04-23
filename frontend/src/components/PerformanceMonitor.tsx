@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Activity, Cpu, MemoryStick, HardDrive, Clock, RefreshCw, Server, Database, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import './PerformanceMonitor.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 interface SystemStats {
   cpu: {
@@ -55,9 +56,10 @@ export function PerformanceMonitor() {
         if (systemRes.data?.success) {
           setSystemStats(systemRes.data.data);
         }
-      } catch (err: any) {
-        console.error('System stats error:', err.response?.data?.error || err.message);
-        if (err.response?.status === 403) {
+      } catch (err: unknown) {
+        console.error('System stats error:', getAxiosErrorData(err)?.error || getErrorMessage(err));
+        const status = (err as { response?: { status?: number } }).response?.status;
+        if (status === 403) {
           setError('Admin access required to view system stats');
         }
       }
@@ -68,14 +70,14 @@ export function PerformanceMonitor() {
         if (queueRes.data?.success) {
           setQueueStats(queueRes.data.data);
         }
-      } catch (err: any) {
-        console.error('Queue stats error:', err.response?.data?.error || err.message);
+      } catch (err: unknown) {
+        console.error('Queue stats error:', getAxiosErrorData(err)?.error || getErrorMessage(err));
       }
       
       setLastUpdated(new Date());
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Fetch stats error:', err);
-      setError('Failed to fetch stats: ' + err.message);
+      setError('Failed to fetch stats: ' + getErrorMessage(err));
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,7 @@ import { Shield, Plus, Trash2, Edit2, X, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { samlApi } from '../services/api';
 import './SAMLConfig.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 interface SAMLProvider {
   id: string;
@@ -65,8 +66,8 @@ export function SAMLConfig() {
       setEditingId(null);
       resetForm();
       loadProviders();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to save configuration');
+    } catch (error: unknown) {
+      toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to save configuration');
     }
   };
 

@@ -3,6 +3,7 @@ import { Workflow, Search, Loader2, Trash2, Power, AlertCircle, User, Building2,
 import toast from 'react-hot-toast';
 import { adminApi, workspacesApi } from '../services/api';
 import './UserManagement.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 interface WorkflowData {
   id: string;
@@ -43,8 +44,8 @@ export function AdminWorkflows() {
     try {
       const response = await adminApi.getAllWorkflows();
       setWorkflows(response.data.data || []);
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to load workflows');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to load workflows');
     } finally {
       setIsLoading(false);
     }
@@ -60,8 +61,8 @@ export function AdminWorkflows() {
       await adminApi.deleteWorkflow(workflowId);
       toast.success('Workflow deleted successfully');
       setWorkflows(workflows.filter(w => w.id !== workflowId));
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to delete workflow');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to delete workflow');
     } finally {
       setDeletingId(null);
     }
@@ -74,8 +75,8 @@ export function AdminWorkflows() {
       const updated = response.data.data;
       setWorkflows(workflows.map(w => w.id === workflowId ? updated : w));
       toast.success(`Workflow ${updated.active ? 'activated' : 'deactivated'}`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to toggle workflow');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to toggle workflow');
     } finally {
       setTogglingId(null);
     }
@@ -128,8 +129,8 @@ export function AdminWorkflows() {
       setShowMoveModal(false);
       setSelectedWorkflow(null);
       setTargetWorkspaceId('');
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to move workflow');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to move workflow');
     } finally {
       setMovingId(null);
     }

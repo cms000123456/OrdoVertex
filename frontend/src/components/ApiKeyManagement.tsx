@@ -3,6 +3,7 @@ import { Key, Plus, Trash2, Copy, AlertCircle, Loader2, X, Calendar, Eye, EyeOff
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import './ApiKeyManagement.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 interface ApiKey {
   id: string;
@@ -35,8 +36,8 @@ export function ApiKeyManagement() {
     try {
       const response = await api.get('/api-keys');
       setApiKeys(response.data.data.apiKeys || []);
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to load API keys');
+    } catch (error: unknown) {
+      toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to load API keys');
     } finally {
       setIsLoading(false);
     }
@@ -58,8 +59,8 @@ export function ApiKeyManagement() {
       setNewlyCreatedKey(newKey.key);
       setNewKeyName('');
       toast.success('API key created successfully');
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to create API key');
+    } catch (error: unknown) {
+      toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to create API key');
     } finally {
       setCreatingKey(false);
     }
@@ -74,8 +75,8 @@ export function ApiKeyManagement() {
       await api.delete(`/api-keys/${keyId}`);
       setApiKeys(prev => prev.filter(k => k.id !== keyId));
       toast.success('API key deleted successfully');
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to delete API key');
+    } catch (error: unknown) {
+      toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to delete API key');
     }
   };
 

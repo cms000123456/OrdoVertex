@@ -3,6 +3,7 @@ import { Users, Plus, X, Trash2, Edit2, Save, UserPlus, Loader2, Building2, Link
 import toast from 'react-hot-toast';
 import { groupsApi, workspacesApi, usersApi } from '../services/api';
 import './GroupsTeamsManager.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 interface User {
   id: string;
@@ -101,8 +102,8 @@ export function GroupsTeamsManager() {
         setLoading(false); // Stop loading if no workspaces
       }
       setError(null);
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
+    } catch (err: unknown) {
+      const errorMsg = getAxiosErrorData(err)?.error || getErrorMessage(err) || 'Unknown error';
       setError('Failed to load workspaces: ' + errorMsg + '. Please ensure you are logged in and have workspace access.');
       console.error('Workspace load error:', err);
       setLoading(false);
@@ -122,8 +123,8 @@ export function GroupsTeamsManager() {
       const response = await groupsApi.getAll();
       setGroups(response.data?.data || []);
       setError(null);
-    } catch (err: any) {
-      setError('Failed to load groups: ' + (err.message || 'Unknown error'));
+    } catch (err: unknown) {
+      setError('Failed to load groups: ' + (getErrorMessage(err) || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -144,8 +145,8 @@ export function GroupsTeamsManager() {
       setSelectedWorkspaces([]);
       setShowCreateForm(false);
       loadAllGroups();
-    } catch (err: any) {
-      setError('Failed to create group: ' + (err.response?.data?.error || err.message));
+    } catch (err: unknown) {
+      setError('Failed to create group: ' + (getAxiosErrorData(err)?.error || getErrorMessage(err)));
     }
   };
 
@@ -157,8 +158,8 @@ export function GroupsTeamsManager() {
       });
       setEditingGroup(null);
       loadAllGroups();
-    } catch (err: any) {
-      setError('Failed to update group: ' + (err.response?.data?.error || err.message));
+    } catch (err: unknown) {
+      setError('Failed to update group: ' + (getAxiosErrorData(err)?.error || getErrorMessage(err)));
     }
   };
 
@@ -168,8 +169,8 @@ export function GroupsTeamsManager() {
     try {
       await groupsApi.delete(groupId);
       loadAllGroups();
-    } catch (err: any) {
-      setError('Failed to delete group: ' + (err.response?.data?.error || err.message));
+    } catch (err: unknown) {
+      setError('Failed to delete group: ' + (getAxiosErrorData(err)?.error || getErrorMessage(err)));
     }
   };
 
@@ -181,8 +182,8 @@ export function GroupsTeamsManager() {
       setShowAddMember(null);
       setSelectedUser('');
       loadAllGroups();
-    } catch (err: any) {
-      setError('Failed to add member: ' + (err.response?.data?.error || err.message));
+    } catch (err: unknown) {
+      setError('Failed to add member: ' + (getAxiosErrorData(err)?.error || getErrorMessage(err)));
     }
   };
 
@@ -192,8 +193,8 @@ export function GroupsTeamsManager() {
     try {
       await groupsApi.removeMember(groupId, memberId);
       loadAllGroups();
-    } catch (err: any) {
-      setError('Failed to remove member: ' + (err.response?.data?.error || err.message));
+    } catch (err: unknown) {
+      setError('Failed to remove member: ' + (getAxiosErrorData(err)?.error || getErrorMessage(err)));
     }
   };
 
@@ -421,8 +422,8 @@ export function GroupsTeamsManager() {
                             setShowAssignWorkspace(null);
                             setSelectedWorkspaceForGroup('');
                             loadAllGroups();
-                          } catch (err: any) {
-                            toast.error(err.response?.data?.error || 'Failed to assign workspace');
+                          } catch (err: unknown) {
+                            toast.error(getAxiosErrorData(err)?.error || 'Failed to assign workspace');
                           }
                         }}
                         disabled={!selectedWorkspaceForGroup}
@@ -465,8 +466,8 @@ export function GroupsTeamsManager() {
                                 await groupsApi.removeWorkspaceAccess(group.id, wa.id);
                                 toast.success('Workspace access removed');
                                 loadAllGroups();
-                              } catch (err: any) {
-                                toast.error(err.response?.data?.error || 'Failed to remove access');
+                              } catch (err: unknown) {
+                                toast.error(getAxiosErrorData(err)?.error || 'Failed to remove access');
                               }
                             }}
                             style={{ 

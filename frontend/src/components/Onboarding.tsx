@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { authApi } from '../services/api';
 import toast from 'react-hot-toast';
 import './Onboarding.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 export function Onboarding() {
   const navigate = useNavigate();
@@ -50,8 +51,8 @@ export function Onboarding() {
       
       toast.success('Setup completed successfully! Welcome to OrdoVertex.');
       navigate('/workflows');
-    } catch (error: any) {
-      const message = error.response?.data?.error?.message || error.response?.data?.error || 'Failed to complete setup';
+    } catch (error: unknown) {
+      const message = (getAxiosErrorData(error)?.message || getErrorMessage(error)) || getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to complete setup';
       toast.error(message);
     } finally {
       setIsLoading(false);

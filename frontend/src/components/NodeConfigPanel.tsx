@@ -5,6 +5,7 @@ import { credentialApi, executionsApi } from '../services/api';
 import { Credential } from '../types';
 import { AITips } from './AITips';
 import { CodeEditor } from './CodeEditor';
+import { getErrorMessage } from '../utils/error-helper';
 
 // Check if a string is an image URL
 const isImageUrl = (url: string): boolean => {
@@ -174,12 +175,13 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
       // Handle different response structures
       const nodeExecution = nodeExecRes.data?.nodeExecution || nodeExecRes.data?.data?.nodeExecution || nodeExecRes.data;
       setExecutionData(nodeExecution);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading execution data:', err);
-      if (err.response?.status === 404) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 404) {
         setExecutionData(null);
       } else {
-        setExecutionError('Failed to load execution data: ' + (err.message || 'Unknown error'));
+        setExecutionError('Failed to load execution data: ' + getErrorMessage(err));
       }
     } finally {
       setExecutionLoading(false);

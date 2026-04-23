@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { authApi, mfaApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import './Login.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 export function Login() {
   const navigate = useNavigate();
@@ -58,8 +59,8 @@ export function Login() {
       setAuth(user, token);
       toast.success(isLogin ? 'Welcome back!' : 'Account created!');
       navigate('/workflows');
-    } catch (error: any) {
-      const message = error.response?.data?.error?.message || 'Something went wrong';
+    } catch (error: unknown) {
+      const message = (getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Something went wrong';
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -76,8 +77,8 @@ export function Login() {
       setAuth(user, token);
       toast.success('Welcome back!');
       navigate('/workflows');
-    } catch (error: any) {
-      const message = error.response?.data?.error?.message || 'Invalid backup code';
+    } catch (error: unknown) {
+      const message = (getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Invalid backup code';
       toast.error(message);
     } finally {
       setIsLoading(false);

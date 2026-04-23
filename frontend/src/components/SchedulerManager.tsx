@@ -3,6 +3,7 @@ import { Clock, Play, Pause, RefreshCw, Zap, AlertCircle, CheckCircle, Loader2, 
 import toast from 'react-hot-toast';
 import { schedulerApi } from '../services/api';
 import './SchedulerManager.css';
+import { getErrorMessage } from '../utils/error-helper';
 
 interface ScheduledTrigger {
   id: string;
@@ -41,7 +42,7 @@ export function SchedulerManager() {
       ]);
       setStatus(statusRes.data.data);
       setTriggers(triggersRes.data.data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error('Failed to load scheduler data');
     } finally {
       setLoading(false);
@@ -61,7 +62,7 @@ export function SchedulerManager() {
         return { ...prev, triggers: { ...prev.triggers, enabled: prev.triggers.enabled + delta, disabled: prev.triggers.disabled - delta } };
       });
       toast.success(trigger.enabled ? 'Schedule disabled' : 'Schedule enabled');
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error('Failed to update schedule');
     } finally {
       setTogglingId(null);
@@ -74,7 +75,7 @@ export function SchedulerManager() {
       await schedulerApi.runNow(trigger.id);
       toast.success(`Triggered "${trigger.workflowName}"`);
       setTimeout(load, 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error('Failed to trigger workflow');
     } finally {
       setRunningId(null);

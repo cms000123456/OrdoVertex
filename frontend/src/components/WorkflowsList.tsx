@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { workflowsApi, workspacesApi } from '../services/api';
 import { Workflow } from '../types';
 import './WorkflowsList.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 interface Workspace {
   id: string;
@@ -39,9 +40,9 @@ export function WorkflowsList() {
     try {
       const response = await workflowsApi.getAll();
       setWorkflows(response.data.data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Load workflows error:', error);
-      toast.error('Failed to load workflows: ' + (error.message || 'Unknown error'));
+      toast.error('Failed to load workflows: ' + (getErrorMessage(error) || 'Unknown error'));
     } finally {
       setIsLoading(false);
     }
@@ -198,8 +199,8 @@ export function WorkflowsList() {
       setShowMoveModal(false);
       setWorkflowToMove(null);
       loadWorkflows();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to move workflow');
+    } catch (error: unknown) {
+      toast.error(getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to move workflow');
     } finally {
       setIsMoving(false);
     }

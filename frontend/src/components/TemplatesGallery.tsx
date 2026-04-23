@@ -20,6 +20,7 @@ import {
 import toast from 'react-hot-toast';
 import { templatesApi } from '../services/api';
 import './TemplatesGallery.css';
+import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
 
 interface Template {
   id: string;
@@ -119,9 +120,9 @@ export function TemplatesGallery() {
       toast.success('Workflow created from template');
       setShowCreateModal(false);
       navigate(`/workflows/${response.data.data.id}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Create from template error:', error);
-      const message = error.response?.data?.error || 'Failed to create workflow';
+      const message = getAxiosErrorData(error)?.error || getErrorMessage(error) || 'Failed to create workflow';
       toast.error(message);
     }
   };
