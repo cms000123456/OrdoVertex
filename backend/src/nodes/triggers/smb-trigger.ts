@@ -290,8 +290,8 @@ export const smbTriggerNode: NodeType = {
             } else {
               fileInfo.contentError = 'File exceeds 50 MB limit';
             }
-          } catch (err: any) {
-            fileInfo.contentError = `Failed to download content: ${err.message}`;
+          } catch (err: unknown) {
+            fileInfo.contentError = `Failed to download content: ${getErrorMessage(err)}`;
           }
         }
 
