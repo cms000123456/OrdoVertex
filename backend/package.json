@@ -19,6 +19,7 @@
     "test:workflows": "jest workflows",
     "test:routes": "jest routes",
     "test:typecheck": "tsc --noEmit",
+    "test:integration": "jest --config jest.integration.config.js",
     "test:pre-push": "npm run test:typecheck && npm test"
   },
   "dependencies": {

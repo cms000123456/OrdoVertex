@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { workflowTemplates } from '../../data/templates';
-
-const prisma = new PrismaClient();
+import { prisma } from '../setup';
 const API_URL = process.env.API_URL || 'http://localhost:3001';
 
 const apiCall = async (method: string, path: string, body?: any, token?: string): Promise<{ status: number; body: any }> => {

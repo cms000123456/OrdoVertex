@@ -21,15 +21,41 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-// Clean up after each test
+// Clean up after each test — delete children before parents to avoid FK violations
 afterEach(async () => {
-  // Clean up test data
-  const tables = ['WorkflowExecution', 'Workflow', 'User', 'ApiKey'];
-  for (const table of tables) {
+  const tablesInOrder = [
+    // Logs and executions (leaf nodes)
+    'ExecutionLog',
+    'NodeExecution',
+    'AlertHistory',
+    // Workflow children
+    'Trigger',
+    'Alert',
+    'WorkflowExecution',
+    // Workspace children
+    'WorkspaceMember',
+    'GroupWorkspaceAccess',
+    'UserGroupMember',
+    'UserGroup',
+    // Workflow (depends on User + Workspace)
+    'Workflow',
+    // User children
+    'ApiKey',
+    'Credential',
+    'MFASettings',
+    'VerificationToken',
+    // Workspace depends on User
+    'Workspace',
+    'SAMLConfig',
+    // User last
+    'User',
+  ];
+
+  for (const table of tablesInOrder) {
     try {
       await (prisma as any)[table].deleteMany({});
-    } catch (e) {
-      // Table might not exist
+    } catch {
+      // Table might not exist or model name differs — ignore
     }
   }
 });

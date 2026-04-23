@@ -6,11 +6,10 @@
  * Run with: npm test -- workspaces.test.ts
  */
 
-import { PrismaClient, WorkspaceRole } from '@prisma/client';
+import { WorkspaceRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
-const prisma = new PrismaClient();
+import { prisma } from '../setup';
 const API_URL = process.env.API_URL || 'http://localhost:3001';
 
 describe('Workspace Routes', () => {
