@@ -512,7 +512,17 @@ export const aiAgentNode: NodeType = {
             // Execute tools
             for (const toolCall of message.tool_calls) {
               const toolName = toolCall.function.name;
-              const toolParams = JSON.parse(toolCall.function.arguments);
+              let toolParams: Record<string, unknown>;
+              try {
+                toolParams = JSON.parse(toolCall.function.arguments);
+              } catch {
+                currentMessages.push({
+                  role: 'tool',
+                  tool_call_id: toolCall.id,
+                  content: JSON.stringify({ error: 'Invalid tool arguments from AI' })
+                });
+                continue;
+              }
               const tool = builtInTools[toolName];
 
               if (tool) {
@@ -650,7 +660,17 @@ export const aiAgentNode: NodeType = {
 
             for (const toolCall of message.tool_calls) {
               const toolName = toolCall.function.name;
-              const toolParams = JSON.parse(toolCall.function.arguments);
+              let toolParams: Record<string, unknown>;
+              try {
+                toolParams = JSON.parse(toolCall.function.arguments);
+              } catch {
+                currentMessages.push({
+                  role: 'tool',
+                  tool_call_id: toolCall.id,
+                  content: JSON.stringify({ error: 'Invalid tool arguments from AI' })
+                });
+                continue;
+              }
               const tool = builtInTools[toolName];
 
               if (tool) {
