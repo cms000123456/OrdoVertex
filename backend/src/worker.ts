@@ -11,14 +11,18 @@ import logger from './utils/logger';
 const HEARTBEAT_KEY = 'worker:heartbeat';
 const HEARTBEAT_INTERVAL_MS = 30_000;
 
+let workflowWorker: Worker | undefined;
+let schedulerControlWorker: Worker | undefined;
+let heartbeatInterval: ReturnType<typeof setInterval> | undefined;
+
 function startHeartbeat() {
   const write = () => redis.set(HEARTBEAT_KEY, Date.now().toString(), 'EX', 120);
   write();
-  return setInterval(write, HEARTBEAT_INTERVAL_MS);
+  heartbeatInterval = setInterval(write, HEARTBEAT_INTERVAL_MS);
 }
 
 function createSchedulerControlWorker() {
-  const worker = new Worker<SchedulerControlJob>(
+  schedulerControlWorker = new Worker<SchedulerControlJob>(
     'scheduler-control',
     async (job: Job<SchedulerControlJob>) => {
       const { action, workflowId, config } = job.data;
@@ -30,8 +34,7 @@ function createSchedulerControlWorker() {
     },
     { connection: redis as any, concurrency: 5 }
   );
-  worker.on('failed', (job, err) => logger.error(`❌ Scheduler control job failed:`, err));
-  return worker;
+  schedulerControlWorker.on('failed', (job, err) => logger.error(`❌ Scheduler control job failed:`, err));
 }
 
 async function main() {
@@ -43,7 +46,7 @@ async function main() {
     await prisma.$connect();
     logger.info('✅ Database connected');
 
-    createWorker();
+    workflowWorker = createWorker();
     createSchedulerControlWorker();
     startHeartbeat();
 
@@ -61,18 +64,17 @@ Press Ctrl+C to stop.
 }
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, shutting down gracefully...');
+async function shutdown(signal: string) {
+  logger.info(`${signal} received, shutting down gracefully...`);
+  if (heartbeatInterval) clearInterval(heartbeatInterval);
+  if (workflowWorker) await workflowWorker.close();
+  if (schedulerControlWorker) await schedulerControlWorker.close();
   await scheduler.shutdown();
   await prisma.$disconnect();
   process.exit(0);
-});
+}
 
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, shutting down gracefully...');
-  await scheduler.shutdown();
-  await prisma.$disconnect();
-  process.exit(0);
-});
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 main();

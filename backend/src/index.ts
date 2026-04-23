@@ -7,6 +7,7 @@ import { prisma } from './prisma';
 // Validate environment before anything else
 validateEnvOrExit();
 
+import { Server } from 'http';
 import { registerAllNodes } from './nodes';
 import { scheduler } from './engine/scheduler';
 import { rateLimit } from './utils/rate-limit';
@@ -371,6 +372,8 @@ app.use((req, res) => {
 });
 
 // Initialize and start server
+let server: Server;
+
 async function main() {
   try {
     // Register all nodes
@@ -384,7 +387,7 @@ async function main() {
     logger.info('✅ Database connected');
 
     // Start server
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       logger.info(`
 🚀 OrdoVertex API Server running on port ${PORT}
 
@@ -407,18 +410,17 @@ API Endpoints:
 }
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, shutting down gracefully...');
+async function shutdown(signal: string) {
+  logger.info(`${signal} received, shutting down gracefully...`);
+  if (server) {
+    server.close(() => logger.info('HTTP server closed'));
+  }
   await scheduler.shutdown();
   await prisma.$disconnect();
   process.exit(0);
-});
+}
 
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, shutting down gracefully...');
-  await scheduler.shutdown();
-  await prisma.$disconnect();
-  process.exit(0);
-});
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 main();
