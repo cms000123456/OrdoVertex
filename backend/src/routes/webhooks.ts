@@ -1,13 +1,19 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { queueWorkflowExecution } from '../engine/queue';
+import { rateLimit } from '../utils/rate-limit';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
 
 const router = Router();
 
 // Webhook handler - no auth required for external webhooks
-router.all('/:workflowId/:path?', asyncHandler(async (req: Request, res: Response) => {
+// Rate limit: 60 requests per minute per workflow to prevent abuse
+router.all('/:workflowId/:path?', rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: 'Too many webhook requests for this workflow'
+}), asyncHandler(async (req: Request, res: Response) => {
   const { workflowId, path = '' } = req.params;
   const method = req.method;
 

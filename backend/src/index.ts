@@ -36,6 +36,9 @@ import queueRoutes from './routes/queue';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy when behind nginx (needed for accurate req.ip in rate limiting)
+app.set('trust proxy', 1);
+
 // Middleware
 // Configure CORS - in production, restrict to specific origins
 const corsOptions = {
