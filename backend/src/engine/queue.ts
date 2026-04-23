@@ -6,6 +6,10 @@ import logger from '../utils/logger';
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 const redis = new IORedis(redisUrl, { maxRetriesPerRequest: null });
 
+redis.on('error', (err) => logger.error('[Redis] connection error:', err));
+redis.on('reconnecting', () => logger.warn('[Redis] reconnecting...'));
+redis.on('connect', () => logger.info('[Redis] connected'));
+
 export { redis };
 
 // Define job types
