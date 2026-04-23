@@ -499,7 +499,7 @@ except Exception as e:
         resolve({
           success: false,
           output: [],
-          error: `Python execution error: ${err.message}`,
+          error: `Python execution error: ${getErrorMessage(err)}`,
         });
       });
 
@@ -557,7 +557,7 @@ except Exception as e:
 
       // Send the script
       pyshell.send(pythonScript);
-      pyshell.end((err: any) => { if (err) logger.error(err); });
+      pyshell.end((err: unknown) => { if (err) logger.error(getErrorMessage(err)); });
     } catch (error: unknown) {
       if (!isFinished) {
         isFinished = true;
