@@ -224,7 +224,8 @@ Step-by-step guides to building common workflows. No coding required — just dr
    - **Language:** `JavaScript`
    - **Code:**
      ```javascript
-     const lines = $input.content.split('\n');
+     const item = items[0].json;
+     const lines = item.content.split('\n');
      const headers = lines[0].split(',');
      const rows = lines.slice(1).map(line => {
        const values = line.split(',');
@@ -232,11 +233,13 @@ Step-by-step guides to building common workflows. No coding required — just dr
        headers.forEach((h, i) => obj[h.trim()] = values[i]?.trim());
        return obj;
      });
-     return {
-       fileName: $input.fileName,
-       rowCount: rows.length,
-       rows: rows
-     };
+     return [{
+       json: {
+         fileName: item.fileName,
+         rowCount: rows.length,
+         rows: rows
+       }
+     }];
      ```
 
 ### Step 4 — Add SFTP (to move the file)
@@ -390,11 +393,7 @@ The IF node has two output branches: **true** (amount > 1000) and **false** (amo
      ```
      Here are the latest posts from user 1:
 
-     {{#each $json}}
-     Title: {{ post_title }}
-     Body:  {{ post_body }}
-     ---
-     {{/each}}
+     {{ $json }}
      ```
    - **Format:** `Plain Text`
 
@@ -407,19 +406,127 @@ The IF node has two output branches: **true** (amount > 1000) and **false** (amo
 
 ---
 
-## Tips & Shortcuts
+## Understanding Template Variables
 
-### Expression Cheat Sheet
-Use these inside any text field to insert dynamic data:
+Template variables let you pass data from one node to the next. They are written inside double curly braces: `{{ ... }}`.
 
-| Expression | Meaning |
-|-----------|---------|
-| `{{ $json }}` | Entire output from the previous node |
-| `{{ $json.fieldName }}` | A specific field from the previous node |
-| `{{ $json[0].fieldName }}` | First item's field (when previous node returns an array) |
-| `{{ $input.fieldName }}` | Field from the original trigger input |
-| `{{ $executionId }}` | Unique ID for this run |
-| `{{ $now }}` | Current timestamp |
+### How Data Flows Between Nodes
+
+When a node finishes running, it outputs an **array of items**. Each item looks like this:
+
+```json
+{
+  "json": {
+    "fieldName": "value",
+    "anotherField": 42
+  }
+}
+```
+
+The next node receives this array and can read fields from the **first item** using template expressions.
+
+### Core Expressions (Work Everywhere)
+
+These are handled by the workflow engine and work in almost every node field:
+
+| Expression | Meaning | Example Result |
+|-----------|---------|----------------|
+| `{{ $json }}` | The entire `json` object from the first input item | `{ "message": "hi" }` |
+| `{{ $json.fieldName }}` | A single field from the first input item | `hi` |
+| `{{ $json["field-with-dash"] }}` | Same, but for field names with dashes or spaces | `value` |
+
+#### Important Limitations
+
+- **Only one level deep.** `{{ $json.address.city }}` does **not** work. If you need nested data, use a **Code** node or **Set** node to flatten it first.
+- **Only the first item.** `{{ $json[0] }}` does **not** work. If a node outputs an array inside a field (e.g. `rows`), use `{{ $json.rows }}` to get the whole array.
+- **No built-in functions.** `{{ $now }}`, `{{ $sum(...) }}`, or `{{ $formatDate(...) }}` are **not** implemented in the core engine.
+
+### Node-Specific `$input` Variables
+
+Some nodes implement their **own** template replacement for `$input.fieldName`. This works **only** inside these specific nodes:
+
+| Node | What works | Example |
+|------|-----------|---------|
+| **Send Email** | `{{ $input.email }}`, `{{ $input.name }}` | Subject: `Hello {{ $input.name }}` |
+| **Google Chat** | `{{ $input.fieldName }}` | Card text: `Status: {{ $input.status }}` |
+| **Image Display** | `{{ $input.imageUrl }}` | URL field: `{{ $input.url }}` |
+| **Text Parser** | `{{ $input.body }}` | Source field: `{{ $input.rawText }}` |
+| **LDAP** | `{{ $input.username }}` | Filter: `(uid={{ $input.username }})` |
+
+> **Tip:** `$input` in these nodes refers to the **previous node's first item's `json` object**. It is the same data as `$json`, just a different syntax that those nodes support.
+
+### Special Variables
+
+| Variable | Where it works | Meaning |
+|----------|---------------|---------|
+| `{{ $executionId }}` | **AI Agent** Memory Key only | The unique ID of the current workflow run |
+
+If you need timestamps, random IDs, or formatted dates, use a **Code** node to generate them and pass them downstream.
+
+### Inline vs Full Expressions
+
+You can use expressions inside a larger string:
+
+```
+Hello {{ $json.name }}, your order #{{ $json.orderId }} is ready.
+```
+
+Or as the entire value:
+
+```
+{{ $json.email }}
+```
+
+Both work fine.
+
+### Code Node Variables
+
+The **Code** node does **not** use `{{ }}` syntax. Instead it gives you real variables:
+
+**JavaScript:**
+```javascript
+const item = items[0].json;          // First item
+const all = items;                    // All items
+const first = $.first();              // Helper: first item's json
+const last = $.last();                // Helper: last item's json
+
+return [{ json: { message: 'Hello ' + item.name } }];
+```
+
+**Python:**
+```python
+item = items[0]['json']               # First item
+all_items = items                     # All items
+
+result = {'message': 'Hello ' + item['name']}
+[{'json': result}]
+```
+
+### Common Patterns
+
+**Pass a webhook field to an email:**
+```
+// In Send Email "To" field
+{{ $input.email }}
+
+// In Send Email "Subject" field
+Welcome, {{ $input.firstName }}!
+```
+
+**Pass SQL results to an email:**
+```
+// SQL node outputs: [{ json: { total_orders: 42, total_revenue: 1500 } }]
+// In Send Email body:
+Orders: {{ $json.total_orders }}
+Revenue: {{ $json.total_revenue }}
+```
+
+**Pass AI response to a webhook reply:**
+```
+// AI Agent outputs: [{ json: { response: "Hello!" } }]
+// In Webhook Response body:
+{ "reply": "{{ $json.response }}" }
+```
 
 ### Keyboard Shortcuts
 
