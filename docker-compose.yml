@@ -41,8 +41,8 @@ services:
       NODE_ENV: development
       DATABASE_URL: postgresql://ordovertex:ordovertex_secret@postgres:5432/ordovertex
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: your-super-secret-jwt-key-change-in-production
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-this-is-a-32-char-dev-key-change-me!}
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required -- generate with: openssl rand -base64 32}"
+      ENCRYPTION_KEY: "${ENCRYPTION_KEY:?ENCRYPTION_KEY is required -- generate with: openssl rand -base64 32}"
       PORT: 3001
       # Initial admin user (optional - defaults to admin@example.com / admin123)
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
@@ -73,8 +73,8 @@ services:
       NODE_ENV: development
       DATABASE_URL: postgresql://ordovertex:ordovertex_secret@postgres:5432/ordovertex
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: your-super-secret-jwt-key-change-in-production
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-this-is-a-32-char-dev-key-change-me!}
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+      ENCRYPTION_KEY: "${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}"
       LOGS_DIR: /app/logs
       TZ: ${TZ:-Europe/Stockholm}
     volumes:

@@ -105,6 +105,180 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res) =>
 }));
 
 /**
+ * @route GET /api/credentials/types
+ * @desc Get available credential types and their required fields
+ */
+
+// Backward-compatible redirect
+router.get('/types/list', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+  res.redirect(301, '/api/credentials/types');
+}));
+
+router.get('/types', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+  const credentialTypes = {
+    database: {
+      name: 'Database',
+      description: 'Database connection credentials',
+      fields: [
+        { name: 'host', type: 'string', displayName: 'Host', required: true },
+        { name: 'port', type: 'number', displayName: 'Port', required: false },
+        { name: 'database', type: 'string', displayName: 'Database', required: true },
+        { name: 'user', type: 'string', displayName: 'Username', required: true },
+        { name: 'password', type: 'string', displayName: 'Password', required: true, sensitive: true },
+        { name: 'ssl', type: 'boolean', displayName: 'SSL', required: false }
+      ]
+    },
+    http: {
+      name: 'HTTP Basic Auth',
+      description: 'HTTP Basic Authentication',
+      fields: [
+        { name: 'username', type: 'string', displayName: 'Username', required: true },
+        { name: 'password', type: 'string', displayName: 'Password', required: true, sensitive: true }
+      ]
+    },
+    apiKey: {
+      name: 'API Key',
+      description: 'API Key authentication',
+      fields: [
+        { name: 'key', type: 'string', displayName: 'API Key', required: true, sensitive: true },
+        { name: 'headerName', type: 'string', displayName: 'Header Name', required: false, default: 'X-API-Key' }
+      ]
+    },
+    oauth2: {
+      name: 'OAuth 2.0',
+      description: 'OAuth 2.0 credentials',
+      fields: [
+        { name: 'clientId', type: 'string', displayName: 'Client ID', required: true },
+        { name: 'clientSecret', type: 'string', displayName: 'Client Secret', required: true, sensitive: true },
+        { name: 'accessToken', type: 'string', displayName: 'Access Token', required: false, sensitive: true },
+        { name: 'refreshToken', type: 'string', displayName: 'Refresh Token', required: false, sensitive: true }
+      ]
+    },
+    ssh: {
+      name: 'SSH',
+      description: 'SSH credentials',
+      fields: [
+        { name: 'username', type: 'string', displayName: 'Username', required: true },
+        { name: 'password', type: 'string', displayName: 'Password', required: false, sensitive: true },
+        { name: 'privateKey', type: 'string', displayName: 'Private Key', required: false, sensitive: true, multiline: true }
+      ]
+    },
+    generic: {
+      name: 'Generic',
+      description: 'Generic key-value credentials',
+      fields: [
+        { name: 'key', type: 'string', displayName: 'Key', required: true },
+        { name: 'value', type: 'string', displayName: 'Value', required: true, sensitive: true }
+      ]
+    },
+    hashicorpVault: {
+      name: 'HashiCorp Vault',
+      description: 'Fetch secrets from HashiCorp Vault',
+      fields: [
+        { name: 'url', type: 'string', displayName: 'Vault URL', required: true, placeholder: 'https://vault.example.com:8200' },
+        { name: 'token', type: 'string', displayName: 'Vault Token', required: true, sensitive: true },
+        { name: 'namespace', type: 'string', displayName: 'Namespace (Enterprise)', required: false, placeholder: 'admin' },
+        { name: 'mountPath', type: 'string', displayName: 'Secrets Engine Path', required: true, default: 'secret', placeholder: 'secret' },
+        { name: 'secretPath', type: 'string', displayName: 'Secret Path', required: true, placeholder: 'database/prod' }
+      ]
+    },
+    openai: {
+      name: 'OpenAI API',
+      description: 'OpenAI API key for GPT models',
+      fields: [
+        { name: 'apiKey', type: 'string', displayName: 'API Key', required: true, sensitive: true, placeholder: 'sk-...' }
+      ]
+    },
+    anthropic: {
+      name: 'Anthropic Claude',
+      description: 'Anthropic API key for Claude models',
+      fields: [
+        { name: 'apiKey', type: 'string', displayName: 'API Key', required: true, sensitive: true, placeholder: 'sk-ant-...' }
+      ]
+    },
+    gemini: {
+      name: 'Google Gemini',
+      description: 'Google Gemini API key for Gemini models',
+      fields: [
+        { name: 'apiKey', type: 'string', displayName: 'API Key', required: true, sensitive: true, placeholder: 'AIza...' }
+      ]
+    },
+    kimi: {
+      name: 'Kimi AI (Moonshot)',
+      description: 'Moonshot AI API key for Kimi models',
+      fields: [
+        { name: 'apiKey', type: 'string', displayName: 'API Key', required: true, sensitive: true, placeholder: 'sk-...' },
+        { name: 'baseUrl', type: 'string', displayName: 'Base URL', required: false, placeholder: 'https://api.moonshot.cn/v1', default: 'https://api.moonshot.cn/v1' }
+      ]
+    },
+    smtp: {
+      name: 'SMTP Server',
+      description: 'SMTP credentials for sending emails',
+      fields: [
+        { name: 'host', type: 'string', displayName: 'Host', required: true, placeholder: 'smtp.gmail.com' },
+        { name: 'port', type: 'number', displayName: 'Port', required: true, default: 587 },
+        { name: 'user', type: 'string', displayName: 'Username', required: true },
+        { name: 'password', type: 'string', displayName: 'Password', required: true, sensitive: true },
+        { name: 'secure', type: 'boolean', displayName: 'Use TLS (Port 465)', required: false, default: false }
+      ]
+    },
+    sftp: {
+      name: 'SFTP/SSH Server',
+      description: 'SFTP credentials for file transfers',
+      fields: [
+        { name: 'host', type: 'string', displayName: 'Host', required: true, placeholder: 'sftp.example.com' },
+        { name: 'port', type: 'number', displayName: 'Port', required: true, default: 22 },
+        { name: 'username', type: 'string', displayName: 'Username', required: true },
+        { name: 'password', type: 'string', displayName: 'Password', required: false, sensitive: true },
+        { name: 'privateKey', type: 'string', displayName: 'Private Key', required: false, sensitive: true, multiline: true },
+        { name: 'passphrase', type: 'string', displayName: 'Key Passphrase', required: false, sensitive: true }
+      ]
+    },
+    smb: {
+      name: 'SMB/CIFS Share',
+      description: 'SMB/CIFS credentials for Windows or Samba file shares (NTLMv2 or Kerberos)',
+      fields: [
+        { name: 'host', type: 'string', displayName: 'Host', required: true, placeholder: '192.168.1.10' },
+        { name: 'share', type: 'string', displayName: 'Share Name', required: true, placeholder: 'shared' },
+        { name: 'authType', type: 'string', displayName: 'Auth Type', required: false, placeholder: 'ntlm (default) or kerberos' },
+        { name: 'domain', type: 'string', displayName: 'Domain (NTLMv2)', required: false, placeholder: 'WORKGROUP' },
+        { name: 'username', type: 'string', displayName: 'Username (NTLMv2)', required: false },
+        { name: 'password', type: 'string', displayName: 'Password (NTLMv2)', required: false, sensitive: true },
+        { name: 'principal', type: 'string', displayName: 'Principal (Kerberos)', required: false, placeholder: 'user@REALM.COM' },
+        { name: 'keytab', type: 'string', displayName: 'Keytab base64 (Kerberos)', required: false, sensitive: true }
+      ]
+    },
+    aws: {
+      name: 'AWS Credentials',
+      description: 'AWS Access Key for S3 and other services',
+      fields: [
+        { name: 'accessKeyId', type: 'string', displayName: 'Access Key ID', required: true },
+        { name: 'secretAccessKey', type: 'string', displayName: 'Secret Access Key', required: true, sensitive: true }
+      ]
+    },
+    ldap: {
+      name: 'LDAP Server',
+      description: 'LDAP/Active Directory credentials',
+      fields: [
+        { name: 'url', type: 'string', displayName: 'Server URL', required: true, placeholder: 'ldap://ad.example.com:389' },
+        { name: 'bindDn', type: 'string', displayName: 'Bind DN', required: true, placeholder: 'cn=admin,dc=example,dc=com' },
+        { name: 'password', type: 'string', displayName: 'Password', required: true, sensitive: true }
+      ]
+    },
+    webhook: {
+      name: 'Webhook',
+      description: 'Webhook URL credential (e.g. Google Chat, Slack)',
+      fields: [
+        { name: 'webhookUrl', type: 'string', displayName: 'Webhook URL', required: true, sensitive: false, placeholder: 'https://chat.googleapis.com/v1/spaces/...' },
+        { name: 'description', type: 'string', displayName: 'Description', required: false, placeholder: 'e.g. Marketing Alerts' }
+      ]
+    }
+  };
+
+  return successResponse(res, { types: credentialTypes });
+}));
+
+/**
  * @route GET /api/credentials/:id
  * @desc Get a specific credential (without sensitive data)
  */
@@ -412,179 +586,6 @@ router.post('/test-vault', authenticateToken, asyncHandler(async (req: AuthReque
   } else {
     return errorResponse(res, 'Failed to connect to Vault - check URL and token', 400);
   }
-}));
-
-/**
- * @route GET /api/credentials/types
- * @desc Get available credential types and their required fields
- */
-// Backward-compatible redirect
-router.get('/types/list', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
-  res.redirect(301, '/api/credentials/types');
-}));
-
-router.get('/types', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
-  const credentialTypes = {
-    database: {
-      name: 'Database',
-      description: 'Database connection credentials',
-      fields: [
-        { name: 'host', type: 'string', displayName: 'Host', required: true },
-        { name: 'port', type: 'number', displayName: 'Port', required: false },
-        { name: 'database', type: 'string', displayName: 'Database', required: true },
-        { name: 'user', type: 'string', displayName: 'Username', required: true },
-        { name: 'password', type: 'string', displayName: 'Password', required: true, sensitive: true },
-        { name: 'ssl', type: 'boolean', displayName: 'SSL', required: false }
-      ]
-    },
-    http: {
-      name: 'HTTP Basic Auth',
-      description: 'HTTP Basic Authentication',
-      fields: [
-        { name: 'username', type: 'string', displayName: 'Username', required: true },
-        { name: 'password', type: 'string', displayName: 'Password', required: true, sensitive: true }
-      ]
-    },
-    apiKey: {
-      name: 'API Key',
-      description: 'API Key authentication',
-      fields: [
-        { name: 'key', type: 'string', displayName: 'API Key', required: true, sensitive: true },
-        { name: 'headerName', type: 'string', displayName: 'Header Name', required: false, default: 'X-API-Key' }
-      ]
-    },
-    oauth2: {
-      name: 'OAuth 2.0',
-      description: 'OAuth 2.0 credentials',
-      fields: [
-        { name: 'clientId', type: 'string', displayName: 'Client ID', required: true },
-        { name: 'clientSecret', type: 'string', displayName: 'Client Secret', required: true, sensitive: true },
-        { name: 'accessToken', type: 'string', displayName: 'Access Token', required: false, sensitive: true },
-        { name: 'refreshToken', type: 'string', displayName: 'Refresh Token', required: false, sensitive: true }
-      ]
-    },
-    ssh: {
-      name: 'SSH',
-      description: 'SSH credentials',
-      fields: [
-        { name: 'username', type: 'string', displayName: 'Username', required: true },
-        { name: 'password', type: 'string', displayName: 'Password', required: false, sensitive: true },
-        { name: 'privateKey', type: 'string', displayName: 'Private Key', required: false, sensitive: true, multiline: true }
-      ]
-    },
-    generic: {
-      name: 'Generic',
-      description: 'Generic key-value credentials',
-      fields: [
-        { name: 'key', type: 'string', displayName: 'Key', required: true },
-        { name: 'value', type: 'string', displayName: 'Value', required: true, sensitive: true }
-      ]
-    },
-    hashicorpVault: {
-      name: 'HashiCorp Vault',
-      description: 'Fetch secrets from HashiCorp Vault',
-      fields: [
-        { name: 'url', type: 'string', displayName: 'Vault URL', required: true, placeholder: 'https://vault.example.com:8200' },
-        { name: 'token', type: 'string', displayName: 'Vault Token', required: true, sensitive: true },
-        { name: 'namespace', type: 'string', displayName: 'Namespace (Enterprise)', required: false, placeholder: 'admin' },
-        { name: 'mountPath', type: 'string', displayName: 'Secrets Engine Path', required: true, default: 'secret', placeholder: 'secret' },
-        { name: 'secretPath', type: 'string', displayName: 'Secret Path', required: true, placeholder: 'database/prod' }
-      ]
-    },
-    openai: {
-      name: 'OpenAI API',
-      description: 'OpenAI API key for GPT models',
-      fields: [
-        { name: 'apiKey', type: 'string', displayName: 'API Key', required: true, sensitive: true, placeholder: 'sk-...' }
-      ]
-    },
-    anthropic: {
-      name: 'Anthropic Claude',
-      description: 'Anthropic API key for Claude models',
-      fields: [
-        { name: 'apiKey', type: 'string', displayName: 'API Key', required: true, sensitive: true, placeholder: 'sk-ant-...' }
-      ]
-    },
-    gemini: {
-      name: 'Google Gemini',
-      description: 'Google Gemini API key for Gemini models',
-      fields: [
-        { name: 'apiKey', type: 'string', displayName: 'API Key', required: true, sensitive: true, placeholder: 'AIza...' }
-      ]
-    },
-    kimi: {
-      name: 'Kimi AI (Moonshot)',
-      description: 'Moonshot AI API key for Kimi models',
-      fields: [
-        { name: 'apiKey', type: 'string', displayName: 'API Key', required: true, sensitive: true, placeholder: 'sk-...' },
-        { name: 'baseUrl', type: 'string', displayName: 'Base URL', required: false, placeholder: 'https://api.moonshot.cn/v1', default: 'https://api.moonshot.cn/v1' }
-      ]
-    },
-    smtp: {
-      name: 'SMTP Server',
-      description: 'SMTP credentials for sending emails',
-      fields: [
-        { name: 'host', type: 'string', displayName: 'Host', required: true, placeholder: 'smtp.gmail.com' },
-        { name: 'port', type: 'number', displayName: 'Port', required: true, default: 587 },
-        { name: 'user', type: 'string', displayName: 'Username', required: true },
-        { name: 'password', type: 'string', displayName: 'Password', required: true, sensitive: true },
-        { name: 'secure', type: 'boolean', displayName: 'Use TLS (Port 465)', required: false, default: false }
-      ]
-    },
-    sftp: {
-      name: 'SFTP/SSH Server',
-      description: 'SFTP credentials for file transfers',
-      fields: [
-        { name: 'host', type: 'string', displayName: 'Host', required: true, placeholder: 'sftp.example.com' },
-        { name: 'port', type: 'number', displayName: 'Port', required: true, default: 22 },
-        { name: 'username', type: 'string', displayName: 'Username', required: true },
-        { name: 'password', type: 'string', displayName: 'Password', required: false, sensitive: true },
-        { name: 'privateKey', type: 'string', displayName: 'Private Key', required: false, sensitive: true, multiline: true },
-        { name: 'passphrase', type: 'string', displayName: 'Key Passphrase', required: false, sensitive: true }
-      ]
-    },
-    smb: {
-      name: 'SMB/CIFS Share',
-      description: 'SMB/CIFS credentials for Windows or Samba file shares (NTLMv2 or Kerberos)',
-      fields: [
-        { name: 'host', type: 'string', displayName: 'Host', required: true, placeholder: '192.168.1.10' },
-        { name: 'share', type: 'string', displayName: 'Share Name', required: true, placeholder: 'shared' },
-        { name: 'authType', type: 'string', displayName: 'Auth Type', required: false, placeholder: 'ntlm (default) or kerberos' },
-        { name: 'domain', type: 'string', displayName: 'Domain (NTLMv2)', required: false, placeholder: 'WORKGROUP' },
-        { name: 'username', type: 'string', displayName: 'Username (NTLMv2)', required: false },
-        { name: 'password', type: 'string', displayName: 'Password (NTLMv2)', required: false, sensitive: true },
-        { name: 'principal', type: 'string', displayName: 'Principal (Kerberos)', required: false, placeholder: 'user@REALM.COM' },
-        { name: 'keytab', type: 'string', displayName: 'Keytab base64 (Kerberos)', required: false, sensitive: true }
-      ]
-    },
-    aws: {
-      name: 'AWS Credentials',
-      description: 'AWS Access Key for S3 and other services',
-      fields: [
-        { name: 'accessKeyId', type: 'string', displayName: 'Access Key ID', required: true },
-        { name: 'secretAccessKey', type: 'string', displayName: 'Secret Access Key', required: true, sensitive: true }
-      ]
-    },
-    ldap: {
-      name: 'LDAP Server',
-      description: 'LDAP/Active Directory credentials',
-      fields: [
-        { name: 'url', type: 'string', displayName: 'Server URL', required: true, placeholder: 'ldap://ad.example.com:389' },
-        { name: 'bindDn', type: 'string', displayName: 'Bind DN', required: true, placeholder: 'cn=admin,dc=example,dc=com' },
-        { name: 'password', type: 'string', displayName: 'Password', required: true, sensitive: true }
-      ]
-    },
-    webhook: {
-      name: 'Webhook',
-      description: 'Webhook URL credential (e.g. Google Chat, Slack)',
-      fields: [
-        { name: 'webhookUrl', type: 'string', displayName: 'Webhook URL', required: true, sensitive: false, placeholder: 'https://chat.googleapis.com/v1/spaces/...' },
-        { name: 'description', type: 'string', displayName: 'Description', required: false, placeholder: 'e.g. Marketing Alerts' }
-      ]
-    }
-  };
-
-  return successResponse(res, { types: credentialTypes });
 }));
 
 export default router;
