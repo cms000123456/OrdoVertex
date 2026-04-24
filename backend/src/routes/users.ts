@@ -3,7 +3,7 @@ import { body, param, validationResult } from 'express-validator';
 import { UserRole } from '@prisma/client';
 import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest, hashPassword } from '../utils/auth';
-import { successResponse, errorResponse } from '../utils/response';
+import { successResponse, errorResponse, parsePagination } from '../utils/response';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
 
@@ -91,26 +91,32 @@ router.get('/', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
     return errorResponse(res, 'Forbidden: Admin access required', 403);
   }
 
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      createdAt: true,
-      updatedAt: true,
-      _count: {
-        select: {
-          workflows: true
+  const { limit, offset } = parsePagination(req.query);
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            workflows: true
+          }
         }
-      }
-    },
-    orderBy: {
-      createdAt: 'desc'
-    }
-  });
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: limit,
+      skip: offset
+    }),
+    prisma.user.count()
+  ]);
 
-  return successResponse(res, { users });
+  return successResponse(res, { users, pagination: { total, limit, offset } });
 }));
 
 // Update user role (admin only)

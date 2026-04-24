@@ -5,6 +5,8 @@ import { authMiddleware, AuthRequest } from '../utils/auth';
 const authenticateToken = authMiddleware;
 import { encryptJSON, decryptJSON } from '../utils/encryption';
 import { getVaultSecret, validateVaultConnection, VaultConfig } from '../utils/vault';
+import { isInternalUrl } from '../utils/security';
+import { parsePagination, validateUUID, handleValidationErrors } from '../utils/response';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
 import { getErrorMessage } from '../utils/error-helper';
@@ -37,6 +39,7 @@ const errorResponse = (res: Response, message: string, status = 400) => {
 router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
   const userId = req.user!.id;
   const { type, workspaceId, includeShared } = req.query;
+  const { limit, offset } = parsePagination(req.query);
 
   const where: Record<string, unknown> = {
     ...(type && { type: type as string }),
@@ -55,15 +58,20 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res) =>
     }
   }
 
-  const credentials = await prisma.credential.findMany({
-    where,
-    include: {
-      workspace: {
-        select: { id: true, name: true }
-      }
-    },
-    orderBy: { createdAt: 'desc' }
-  });
+  const [credentials, total] = await Promise.all([
+    prisma.credential.findMany({
+      where,
+      include: {
+        workspace: {
+          select: { id: true, name: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset
+    }),
+    prisma.credential.count({ where })
+  ]);
 
   // Return credentials without sensitive data
   const sanitizedCredentials = credentials.map(cred => ({
@@ -77,14 +85,14 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res) =>
     lastUsed: cred.lastUsed
   }));
 
-  return successResponse(res, { credentials: sanitizedCredentials });
+  return successResponse(res, { credentials: sanitizedCredentials, pagination: { total, limit, offset } });
 }));
 
 /**
  * @route GET /api/credentials/:id
  * @desc Get a specific credential (without sensitive data)
  */
-router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+router.get('/:id', validateUUID(), handleValidationErrors, authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
   const userId = req.user!.id;
   const { id } = req.params;
 
@@ -282,7 +290,7 @@ router.put('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res)
  * @route DELETE /api/credentials/:id
  * @desc Delete a credential
  */
-router.delete('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+router.delete('/:id', validateUUID(), handleValidationErrors, authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
   const userId = req.user!.id;
   const { id } = req.params;
 
@@ -306,7 +314,7 @@ router.delete('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, r
  * @desc Decrypt and return credential data (for node execution)
  * @access Internal use only - requires additional validation
  */
-router.post('/:id/decrypt', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+router.post('/:id/decrypt', validateUUID(), handleValidationErrors, authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
   const userId = req.user!.id;
   const { id } = req.params;
 
@@ -370,6 +378,10 @@ router.post('/:id/decrypt', authenticateToken, asyncHandler(async (req: AuthRequ
  */
 router.post('/test-vault', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
   const { url, token, namespace } = req.body;
+
+  if (url && isInternalUrl(url)) {
+    return errorResponse(res, 'Access to internal addresses is not allowed', 400);
+  }
 
   const isValid = await validateVaultConnection({ url, token, namespace });
 

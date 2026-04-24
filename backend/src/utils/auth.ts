@@ -105,3 +105,10 @@ export async function apiKeyMiddleware(req: Request, res: Response, next: NextFu
     return res.status(401).json({ error: 'Invalid API key' });
   }
 }
+
+export function adminMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required' });
+  }
+  next();
+}

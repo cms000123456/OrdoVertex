@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
-import { successResponse, errorResponse } from '../utils/response';
+import { successResponse, errorResponse, parsePagination } from '../utils/response';
 import crypto from 'crypto';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
@@ -26,22 +26,28 @@ router.get('/', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
     return errorResponse(res, 'Forbidden: Admin access required', 403);
   }
 
-  const apiKeys = await prisma.apiKey.findMany({
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          name: true
+  const { limit, offset } = parsePagination(req.query);
+  const [apiKeys, total] = await Promise.all([
+    prisma.apiKey.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true
+          }
         }
-      }
-    },
-    orderBy: {
-      createdAt: 'desc'
-    }
-  });
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: limit,
+      skip: offset
+    }),
+    prisma.apiKey.count()
+  ]);
 
-  return successResponse(res, { apiKeys });
+  return successResponse(res, { apiKeys, pagination: { total, limit, offset } });
 }));
 
 // Create new API key (admin only)

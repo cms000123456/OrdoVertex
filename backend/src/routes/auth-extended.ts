@@ -344,7 +344,7 @@ router.delete('/saml/config/:id', authMiddleware, asyncHandler(async (req: AuthR
 }));
 
 // Get available SAML providers
-router.get('/saml/providers', asyncHandler(async (req, res) => {
+router.get('/saml/providers', authMiddleware, asyncHandler(async (req, res) => {
   const providers = await prisma.sAMLConfig.findMany({
     where: { isActive: true },
     select: {

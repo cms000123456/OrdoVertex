@@ -3,27 +3,36 @@ import { prisma } from '../prisma';
 import { authMiddleware } from '../utils/auth';
 import { sendEmail } from '../utils/email-sender';
 import { rateLimit } from '../utils/rate-limit';
+import { isInternalUrl } from '../utils/security';
+import { parsePagination } from '../utils/response';
 import { asyncHandler } from '../utils/async-handler';
 
 const router = Router();
 
 // Get all alerts for user
 router.get('/', authMiddleware, asyncHandler(async (req, res) => {
-  const alerts = await prisma.alert.findMany({
-    where: {
-      OR: [
-        { userId: req.user!.id },
-        { workspace: { members: { some: { userId: req.user!.id } } } }
-      ]
-    },
-    include: {
-      workflow: { select: { id: true, name: true } },
-      workspace: { select: { id: true, name: true } }
-    },
-    orderBy: { createdAt: 'desc' }
-  });
+  const { limit, offset } = parsePagination(req.query);
+  const where = {
+    OR: [
+      { userId: req.user!.id },
+      { workspace: { members: { some: { userId: req.user!.id } } } }
+    ]
+  };
+  const [alerts, total] = await Promise.all([
+    prisma.alert.findMany({
+      where,
+      include: {
+        workflow: { select: { id: true, name: true } },
+        workspace: { select: { id: true, name: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset
+    }),
+    prisma.alert.count({ where })
+  ]);
 
-  res.json({ success: true, data: alerts });
+  res.json({ success: true, data: alerts, pagination: { total, limit, offset } });
 }));
 
 const VALID_CONDITION_TYPES = ['threshold', 'status', 'duration', 'error_rate'];
@@ -44,9 +53,12 @@ function validateAlertInput(body: Record<string, unknown>): { valid: boolean; er
   }
   if (body.webhookUrl !== undefined && body.webhookUrl !== null && body.webhookUrl !== '') {
     try {
-      const url = new URL(body.webhookUrl);
+      const url = new URL(body.webhookUrl as string);
       if (url.protocol !== 'http:' && url.protocol !== 'https:') {
         return { valid: false, error: 'webhookUrl must use http or https protocol' };
+      }
+      if (isInternalUrl(body.webhookUrl as string)) {
+        return { valid: false, error: 'webhookUrl must not point to internal addresses' };
       }
     } catch {
       return { valid: false, error: 'webhookUrl must be a valid URL' };
@@ -160,13 +172,18 @@ router.post('/:id/test', authMiddleware, rateLimit({ windowMs: 60_000, max: 10, 
 
 // Get alert history
 router.get('/:id/history', authMiddleware, asyncHandler(async (req, res) => {
-  const history = await prisma.alertHistory.findMany({
-    where: { alertId: req.params.id },
-    orderBy: { triggeredAt: 'desc' },
-    take: 50
-  });
+  const { limit, offset } = parsePagination(req.query, 200);
+  const [history, total] = await Promise.all([
+    prisma.alertHistory.findMany({
+      where: { alertId: req.params.id },
+      orderBy: { triggeredAt: 'desc' },
+      take: limit,
+      skip: offset
+    }),
+    prisma.alertHistory.count({ where: { alertId: req.params.id } })
+  ]);
 
-  res.json({ success: true, data: history });
+  res.json({ success: true, data: history, pagination: { total, limit, offset } });
 }));
 
 async function sendTestAlert(alert: Record<string, unknown>, user: { email?: string }) {

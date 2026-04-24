@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
-import { successResponse, errorResponse } from '../utils/response';
+import { successResponse, errorResponse, parsePagination } from '../utils/response';
 import { redis, sendSchedulerControl, queueWorkflowExecution } from '../engine/queue';
 import { rateLimit } from '../utils/rate-limit';
 import { asyncHandler } from '../utils/async-handler';
@@ -30,26 +30,34 @@ router.get('/status', asyncHandler(async (req: AuthRequest, res) => {
 // GET /api/scheduler/triggers — list all scheduled triggers
 router.get('/triggers', asyncHandler(async (req: AuthRequest, res) => {
   const enabledOnly = req.query.enabled === 'true';
+  const { limit, offset } = parsePagination(req.query);
+  const where = { type: 'schedule', ...(enabledOnly ? { enabled: true } : {}) };
+
   const triggers = await prisma.trigger.findMany({
-    where: { type: 'schedule', ...(enabledOnly ? { enabled: true } : {}) },
+    where,
     include: { workflow: { select: { id: true, name: true, active: true, userId: true } } },
-    orderBy: { createdAt: 'asc' }
+    orderBy: { createdAt: 'asc' },
+    take: limit,
+    skip: offset
   });
 
   const filtered = req.user?.role === 'admin'
     ? triggers
     : triggers.filter(t => t.workflow.userId === req.user!.id);
 
-  return successResponse(res, filtered.map(t => ({
-    id: t.id,
-    workflowId: t.workflowId,
-    workflowName: t.workflow.name,
-    workflowActive: t.workflow.active,
-    enabled: t.enabled,
-    config: t.config,
-    lastTriggered: t.lastTriggered,
-    createdAt: t.createdAt
-  })));
+  return successResponse(res, {
+    triggers: filtered.map(t => ({
+      id: t.id,
+      workflowId: t.workflowId,
+      workflowName: t.workflow.name,
+      workflowActive: t.workflow.active,
+      enabled: t.enabled,
+      config: t.config,
+      lastTriggered: t.lastTriggered,
+      createdAt: t.createdAt
+    })),
+    pagination: { total: filtered.length, limit, offset }
+  });
 }));
 
 // PATCH /api/scheduler/triggers/:id — enable or disable a trigger

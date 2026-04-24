@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
-import { successResponse, errorResponse } from '../utils/response';
+import { successResponse, errorResponse, validateUUID, handleValidationErrors } from '../utils/response';
 import { getQueueStats } from '../engine/queue';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
@@ -62,7 +62,7 @@ router.get('/', asyncHandler(async (req: AuthRequest, res) => {
 }));
 
 // Get execution by ID
-router.get('/:id', asyncHandler(async (req: AuthRequest, res) => {
+router.get('/:id', validateUUID(), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
 
   const execution = await prisma.workflowExecution.findFirst({
@@ -94,7 +94,7 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res) => {
 }));
 
 // Delete execution
-router.delete('/:id', asyncHandler(async (req: AuthRequest, res) => {
+router.delete('/:id', validateUUID(), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
 
   // Verify ownership through workflow
@@ -119,7 +119,7 @@ router.delete('/:id', asyncHandler(async (req: AuthRequest, res) => {
 }));
 
 // Get node execution data for a specific node in an execution
-router.get('/:executionId/nodes/:nodeId', asyncHandler(async (req: AuthRequest, res) => {
+router.get('/:executionId/nodes/:nodeId', validateUUID('executionId'), validateUUID('nodeId'), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { executionId, nodeId } = req.params;
 
   // Verify execution ownership

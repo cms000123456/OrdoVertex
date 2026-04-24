@@ -276,7 +276,7 @@ router.get('/me', authMiddleware, asyncHandler(async (req: AuthRequest, res) => 
 }));
 
 // Verify email with token
-router.post('/verify-email', asyncHandler(async (req, res) => {
+router.post('/verify-email', authRateLimit(), asyncHandler(async (req, res) => {
   const { token } = req.body;
 
   if (!token) {

@@ -4,7 +4,7 @@ import { WorkspaceRole } from '@prisma/client';
 import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import logger from '../utils/logger';
-import { successResponse, errorResponse } from '../utils/response';
+import { successResponse, errorResponse, parsePagination } from '../utils/response';
 import { asyncHandler } from '../utils/async-handler';
 const authenticateToken = authMiddleware;
 
@@ -14,11 +14,12 @@ const router = Router();
 router.get('/', authenticateToken, asyncHandler(async (req, res) => {
   const userId = req.user!.id;
   const isAdmin = req.user!.role === 'admin';
+  const { limit, offset } = parsePagination(req.query);
 
-  let groups;
-  if (isAdmin) {
-    // Admin sees all groups with workspace access
-    groups = await prisma.userGroup.findMany({
+  const where = isAdmin ? {} : { members: { some: { userId } } };
+  const [groups, total] = await Promise.all([
+    prisma.userGroup.findMany({
+      where,
       include: {
         members: {
           include: {
@@ -31,31 +32,14 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
           }
         },
         _count: { select: { members: true } }
-      }
-    });
-  } else {
-    // Users see groups they are members of
-    groups = await prisma.userGroup.findMany({
-      where: {
-        members: { some: { userId } }
       },
-      include: {
-        members: {
-          include: {
-            user: { select: { id: true, email: true, name: true } }
-          }
-        },
-        workspaceAccess: {
-          include: {
-            workspace: { select: { id: true, name: true } }
-          }
-        },
-        _count: { select: { members: true } }
-      }
-    });
-  }
+      take: limit,
+      skip: offset
+    }),
+    prisma.userGroup.count({ where })
+  ]);
 
-  res.json({ success: true, data: groups });
+  res.json({ success: true, data: groups, pagination: { total, limit, offset } });
 }));
 
 // Get all groups for a workspace

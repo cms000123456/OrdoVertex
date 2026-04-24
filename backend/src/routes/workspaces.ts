@@ -3,7 +3,7 @@ import { body, validationResult } from 'express-validator';
 import { WorkspaceRole } from '@prisma/client';
 import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
-import { successResponse, errorResponse } from '../utils/response';
+import { successResponse, errorResponse, parsePagination, validateUUID, handleValidationErrors } from '../utils/response';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
 const authenticateToken = authMiddleware;
@@ -20,32 +20,39 @@ function generateSlug(name: string): string {
 
 // List user's workspaces
 router.get('/', authenticateToken, asyncHandler(async (req, res) => {
-  const workspaces = await prisma.workspace.findMany({
-    where: {
-      OR: [
-        { ownerId: req.user!.id },
-        { members: { some: { userId: req.user!.id } } }
-      ]
-    },
-    include: {
-      owner: {
-        select: { id: true, name: true, email: true }
-      },
-      members: {
-        include: {
-          user: {
-            select: { id: true, name: true, email: true }
+  const { limit, offset } = parsePagination(req.query);
+  const where = {
+    OR: [
+      { ownerId: req.user!.id },
+      { members: { some: { userId: req.user!.id } } }
+    ]
+  };
+  const [workspaces, total] = await Promise.all([
+    prisma.workspace.findMany({
+      where,
+      include: {
+        owner: {
+          select: { id: true, name: true, email: true }
+        },
+        members: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true }
+            }
           }
+        },
+        _count: {
+          select: { workflows: true, members: true }
         }
       },
-      _count: {
-        select: { workflows: true, members: true }
-      }
-    },
-    orderBy: { updatedAt: 'desc' }
-  });
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      skip: offset
+    }),
+    prisma.workspace.count({ where })
+  ]);
 
-  res.json({ success: true, data: workspaces });
+  res.json({ success: true, data: workspaces, pagination: { total, limit, offset } });
 }));
 
 // Create workspace
@@ -93,7 +100,7 @@ router.post('/', authenticateToken, [
 }));
 
 // Get workspace by ID
-router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
+router.get('/:id', validateUUID(), handleValidationErrors, authenticateToken, asyncHandler(async (req, res) => {
   const workspace = await prisma.workspace.findFirst({
     where: {
       id: req.params.id,
@@ -141,7 +148,7 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
 }));
 
 // Update workspace
-router.patch('/:id', authenticateToken, asyncHandler(async (req, res) => {
+router.patch('/:id', validateUUID(), handleValidationErrors, authenticateToken, asyncHandler(async (req, res) => {
   const { name, description } = req.body;
 
   // Check permissions (only owner or admin can update)
@@ -176,7 +183,7 @@ router.patch('/:id', authenticateToken, asyncHandler(async (req, res) => {
 }));
 
 // Delete workspace
-router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
+router.delete('/:id', validateUUID(), handleValidationErrors, authenticateToken, asyncHandler(async (req, res) => {
   const workspace = await prisma.workspace.findFirst({
     where: { id: req.params.id, ownerId: req.user!.id }
   });
@@ -193,7 +200,7 @@ router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
 }));
 
 // Add member to workspace
-router.post('/:id/members', authenticateToken, asyncHandler(async (req, res) => {
+router.post('/:id/members', validateUUID(), handleValidationErrors, authenticateToken, asyncHandler(async (req, res) => {
   const { email, role = 'viewer' } = req.body;
 
   // Check permissions
@@ -256,7 +263,7 @@ router.post('/:id/members', authenticateToken, asyncHandler(async (req, res) => 
 }));
 
 // Update member role
-router.patch('/:id/members/:memberId', authenticateToken, asyncHandler(async (req, res) => {
+router.patch('/:id/members/:memberId', validateUUID(), validateUUID('memberId'), handleValidationErrors, authenticateToken, asyncHandler(async (req, res) => {
   const { role } = req.body;
 
   const workspace = await prisma.workspace.findFirst({
@@ -282,7 +289,7 @@ router.patch('/:id/members/:memberId', authenticateToken, asyncHandler(async (re
 }));
 
 // Remove member from workspace
-router.delete('/:id/members/:memberId', authenticateToken, asyncHandler(async (req, res) => {
+router.delete('/:id/members/:memberId', validateUUID(), validateUUID('memberId'), handleValidationErrors, authenticateToken, asyncHandler(async (req, res) => {
   const workspace = await prisma.workspace.findFirst({
     where: { id: req.params.id }
   });
@@ -315,7 +322,7 @@ router.delete('/:id/members/:memberId', authenticateToken, asyncHandler(async (r
 }));
 
 // Get workspace workflows
-router.get('/:id/workflows', authenticateToken, asyncHandler(async (req, res) => {
+router.get('/:id/workflows', validateUUID(), handleValidationErrors, authenticateToken, asyncHandler(async (req, res) => {
   // Verify user is a member of the workspace
   const workspace = await prisma.workspace.findFirst({
     where: {
@@ -331,18 +338,25 @@ router.get('/:id/workflows', authenticateToken, asyncHandler(async (req, res) =>
     return res.status(403).json({ success: false, error: 'Access denied' });
   }
 
-  const workflows = await prisma.workflow.findMany({
-    where: { workspaceId: req.params.id },
-    include: {
-      _count: { select: { executions: true } }
-    }
-  });
+  const { limit, offset } = parsePagination(req.query);
+  const where = { workspaceId: req.params.id };
+  const [workflows, total] = await Promise.all([
+    prisma.workflow.findMany({
+      where,
+      include: {
+        _count: { select: { executions: true } }
+      },
+      take: limit,
+      skip: offset
+    }),
+    prisma.workflow.count({ where })
+  ]);
 
-  res.json({ success: true, data: workflows });
+  res.json({ success: true, data: workflows, pagination: { total, limit, offset } });
 }));
 
 // Add workflow to workspace
-router.post('/:id/workflows/:workflowId', authenticateToken, asyncHandler(async (req, res) => {
+router.post('/:id/workflows/:workflowId', validateUUID(), validateUUID('workflowId'), handleValidationErrors, authenticateToken, asyncHandler(async (req, res) => {
   const workspace = await prisma.workspace.findFirst({
     where: { id: req.params.id }
   });

@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
-import { successResponse, errorResponse } from '../utils/response';
+import { successResponse, errorResponse, parsePagination, validateUUID, handleValidationErrors } from '../utils/response';
 import { executeWorkflow } from '../engine/executor';
 import { queueWorkflowExecution, sendSchedulerControl } from '../engine/queue';
 import { workflowContainsCodeNodes } from '../utils/code-sandbox';
@@ -26,29 +26,35 @@ router.use(authMiddleware);
 
 // Get all workflows
 router.get('/', asyncHandler(async (req: AuthRequest, res) => {
-  const workflows = await prisma.workflow.findMany({
-    where: { userId: req.user!.id },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      active: true,
-      userId: true,
-      workspaceId: true,
-      createdAt: true,
-      updatedAt: true,
-      _count: {
-        select: { executions: true }
-      }
-    },
-    orderBy: { updatedAt: 'desc' }
-  });
+  const { limit, offset } = parsePagination(req.query);
+  const [workflows, total] = await Promise.all([
+    prisma.workflow.findMany({
+      where: { userId: req.user!.id },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        active: true,
+        userId: true,
+        workspaceId: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: { executions: true }
+        }
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      skip: offset
+    }),
+    prisma.workflow.count({ where: { userId: req.user!.id } })
+  ]);
 
-  return successResponse(res, workflows);
+  return successResponse(res, { workflows, pagination: { total, limit, offset } });
 }));
 
 // Get single workflow
-router.get('/:id', asyncHandler(async (req: AuthRequest, res) => {
+router.get('/:id', validateUUID(), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
 
   const workflow = await prisma.workflow.findFirst({
@@ -245,7 +251,7 @@ router.patch(
 );
 
 // Delete workflow
-router.delete('/:id', asyncHandler(async (req: AuthRequest, res) => {
+router.delete('/:id', validateUUID(), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
 
   // Verify ownership
@@ -268,7 +274,7 @@ router.delete('/:id', asyncHandler(async (req: AuthRequest, res) => {
 }));
 
 // Execute workflow manually
-router.post('/:id/execute', asyncHandler(async (req: AuthRequest, res) => {
+router.post('/:id/execute', validateUUID(), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
   const data = req.body.data || {};
 
@@ -291,7 +297,7 @@ router.post('/:id/execute', asyncHandler(async (req: AuthRequest, res) => {
 }));
 
 // Get workflow executions
-router.get('/:id/executions', asyncHandler(async (req: AuthRequest, res) => {
+router.get('/:id/executions', validateUUID(), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
   const limitVal = parseInt(req.query.limit as string, 10);
   const limit = isNaN(limitVal) ? 20 : limitVal;
@@ -329,7 +335,7 @@ router.get('/:id/executions', asyncHandler(async (req: AuthRequest, res) => {
 }));
 
 // Get execution details
-router.get('/:id/executions/:executionId', asyncHandler(async (req: AuthRequest, res) => {
+router.get('/:id/executions/:executionId', validateUUID(), validateUUID('executionId'), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { id, executionId } = req.params;
 
   // Verify ownership
@@ -359,7 +365,7 @@ router.get('/:id/executions/:executionId', asyncHandler(async (req: AuthRequest,
 }));
 
 // Export workflow as JSON
-router.get('/:id/export', asyncHandler(async (req: AuthRequest, res) => {
+router.get('/:id/export', validateUUID(), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
 
   const workflow = await prisma.workflow.findFirst({
@@ -448,7 +454,7 @@ router.post('/import/validate', asyncHandler(async (req: AuthRequest, res) => {
 }));
 
 // Move workflow to a different workspace
-router.post('/:id/move', asyncHandler(async (req: AuthRequest, res) => {
+router.post('/:id/move', validateUUID(), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
   const { workspaceId } = req.body;
 
