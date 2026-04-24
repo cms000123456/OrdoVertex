@@ -70,7 +70,7 @@ class WorkflowScheduler {
         async () => {
           logger.info(`⏰ Scheduled trigger fired for workflow: ${workflowId}`);
           try {
-            const workflow = await prisma.workflow.findUnique({ where: { id: workflowId }, select: { userId: true } });
+            const workflow = await prisma.workflow.findFirst({ where: { id: workflowId, deletedAt: null }, select: { userId: true } });
             if (!workflow) {
               logger.error(`❌ Workflow ${workflowId} not found, skipping scheduled execution`);
               return;

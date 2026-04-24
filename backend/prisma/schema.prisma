@@ -70,6 +70,7 @@ model User {
   provider  AuthProvider @default(local)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
 
   // MFA fields
   mfaEnabled     Boolean @default(false)
@@ -91,6 +92,7 @@ model User {
   alerts         Alert[]
   samlConfig     SAMLConfig?
   mfaSettings    MFASettings?
+  auditLogs      AuditLog[]
 }
 
 // SAML Configuration for SSO
@@ -245,6 +247,7 @@ model Workflow {
   workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
 
   executions WorkflowExecution[]
   triggers   Trigger[]
@@ -341,6 +344,7 @@ model Credential {
   workspace   Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
   lastUsed    DateTime?
   
   @@index([userId])
@@ -404,4 +408,32 @@ model VerificationToken {
   
   @@index([email])
   @@index([token])
+}
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  category  String   // maintenance, security, email, general
+  updatedAt DateTime @updatedAt
+  
+  @@index([category])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String   // e.g. 'user.delete', 'credential.decrypt', 'workflow.admin_delete'
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  targetId   String?  // ID of affected resource
+  targetType String?  // e.g. 'user', 'credential', 'workflow', 'saml_config'
+  details    Json?    // additional context
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([targetId, targetType])
 }

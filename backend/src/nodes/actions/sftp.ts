@@ -199,7 +199,7 @@ export const sftpNode: NodeType = {
         
         const credentialId = context.getNodeParameter('credentialId', '') as string;
         const credential = await prisma.credential.findFirst({
-          where: { id: credentialId, userId: context.userId }
+          where: { deletedAt: null, id: credentialId, userId: context.userId }
         });
         
         if (!credential) {

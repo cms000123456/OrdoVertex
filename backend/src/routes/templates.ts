@@ -103,7 +103,12 @@ router.post('/:id/create', authMiddleware, [
 }));
 
 // Get template categories - MUST be before /:id route
+// Backward-compatible redirect
 router.get('/categories/list', authMiddleware, asyncHandler(async (req, res) => {
+  res.redirect(301, '/api/templates/categories');
+}));
+
+router.get('/categories', authMiddleware, asyncHandler(async (req, res) => {
   const categories = [...new Set(Object.values(workflowTemplates).map((t: { category?: string }) => t.category))];
   return successResponse(res, { categories });
 }));

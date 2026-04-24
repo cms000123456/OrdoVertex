@@ -275,6 +275,7 @@ export const httpRequestNode: NodeType = {
           try {
             const credential = await prisma.credential.findFirst({
               where: { 
+                deletedAt: null,
                 id: credentialId,
                 userId: context.userId
               }

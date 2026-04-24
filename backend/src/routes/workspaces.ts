@@ -339,7 +339,7 @@ router.get('/:id/workflows', validateUUID(), handleValidationErrors, authenticat
   }
 
   const { limit, offset } = parsePagination(req.query);
-  const where = { workspaceId: req.params.id };
+  const where = { workspaceId: req.params.id, deletedAt: null };
   const [workflows, total] = await Promise.all([
     prisma.workflow.findMany({
       where,

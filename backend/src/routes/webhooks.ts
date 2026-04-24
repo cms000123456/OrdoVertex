@@ -18,8 +18,8 @@ router.all('/:workflowId/:path?', rateLimit({
   const method = req.method;
 
   // Find the workflow
-  const workflow = await prisma.workflow.findUnique({
-    where: { id: workflowId },
+  const workflow = await prisma.workflow.findFirst({
+    where: { id: workflowId, deletedAt: null },
     include: { triggers: true }
   });
 

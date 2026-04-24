@@ -1,13 +1,15 @@
 import { Router } from 'express';
+import { body } from 'express-validator';
 import { prisma } from '../prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
-import { authMiddleware, AuthRequest } from '../utils/auth';
-import { successResponse, errorResponse } from '../utils/response';
+import { authMiddleware, adminMiddleware, AuthRequest } from '../utils/auth';
+import { successResponse, errorResponse, validateUUID, handleValidationErrors } from '../utils/response';
 import { authRateLimit } from '../utils/rate-limit';
 import crypto from 'crypto';
+import { logAudit } from '../utils/audit';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
 
@@ -243,11 +245,7 @@ router.post('/mfa/backup', authRateLimit(), asyncHandler(async (req, res) => {
 // ==================== SAML SSO Routes ====================
 
 // Get SAML configuration (admin only)
-router.get('/saml/config', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
-  if (req.user!.role !== 'admin') {
-    return errorResponse(res, 'Admin access required', 403);
-  }
-
+router.get('/saml/config', authMiddleware, adminMiddleware, asyncHandler(async (req: AuthRequest, res) => {
   const configs = await prisma.sAMLConfig.findMany({
     select: {
       id: true,
@@ -265,12 +263,34 @@ router.get('/saml/config', authMiddleware, asyncHandler(async (req: AuthRequest,
   return successResponse(res, configs);
 }));
 
-// Create SAML configuration (admin only)
-router.post('/saml/config', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
-  if (req.user!.role !== 'admin') {
-    return errorResponse(res, 'Admin access required', 403);
-  }
+const samlConfigValidation = [
+  body('provider').trim().notEmpty().withMessage('provider is required'),
+  body('entityId').trim().notEmpty().withMessage('entityId is required'),
+  body('entryPoint').trim().notEmpty().withMessage('entryPoint is required').isURL().withMessage('entryPoint must be a valid URL'),
+  body('cert').trim().notEmpty().withMessage('cert is required'),
+  body('callbackUrl').trim().notEmpty().withMessage('callbackUrl is required').isURL().withMessage('callbackUrl must be a valid URL'),
+  body('privateKey').optional().trim(),
+  body('logoutUrl').optional().trim().isURL().withMessage('logoutUrl must be a valid URL'),
+  body('nameIdFormat').optional().trim(),
+  body('wantAssertionsSigned').optional().isBoolean().withMessage('wantAssertionsSigned must be a boolean'),
+  body('wantResponseSigned').optional().isBoolean().withMessage('wantResponseSigned must be a boolean'),
+];
 
+const samlConfigUpdateValidation = [
+  body('provider').optional().trim().notEmpty().withMessage('provider cannot be empty'),
+  body('entityId').optional().trim().notEmpty().withMessage('entityId cannot be empty'),
+  body('entryPoint').optional().trim().isURL().withMessage('entryPoint must be a valid URL'),
+  body('cert').optional().trim().notEmpty().withMessage('cert cannot be empty'),
+  body('callbackUrl').optional().trim().isURL().withMessage('callbackUrl must be a valid URL'),
+  body('privateKey').optional().trim(),
+  body('logoutUrl').optional().trim().isURL().withMessage('logoutUrl must be a valid URL'),
+  body('nameIdFormat').optional().trim(),
+  body('wantAssertionsSigned').optional().isBoolean().withMessage('wantAssertionsSigned must be a boolean'),
+  body('wantResponseSigned').optional().isBoolean().withMessage('wantResponseSigned must be a boolean'),
+];
+
+// Create SAML configuration (admin only)
+router.post('/saml/config', authMiddleware, adminMiddleware, samlConfigValidation, handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const {
     provider,
     entityId,
@@ -299,6 +319,10 @@ router.post('/saml/config', authMiddleware, asyncHandler(async (req: AuthRequest
     }
   });
 
+  await logAudit({ actorId: req.user!.id, action: 'saml_config.create', targetId: config.id, targetType: 'saml_config', details: { provider }, req });
+
+  logger.info(`[SAML] Configuration created by admin ${req.user!.id}: provider=${provider}`);
+
   return successResponse(res, {
     message: 'SAML configuration created',
     config: {
@@ -311,11 +335,7 @@ router.post('/saml/config', authMiddleware, asyncHandler(async (req: AuthRequest
 }));
 
 // Update SAML configuration (admin only)
-router.patch('/saml/config/:id', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
-  if (req.user!.role !== 'admin') {
-    return errorResponse(res, 'Admin access required', 403);
-  }
-
+router.patch('/saml/config/:id', authMiddleware, adminMiddleware, validateUUID('id'), samlConfigUpdateValidation, handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
   const updateData = req.body;
 
@@ -324,6 +344,10 @@ router.patch('/saml/config/:id', authMiddleware, asyncHandler(async (req: AuthRe
     data: updateData
   });
 
+  await logAudit({ actorId: req.user!.id, action: 'saml_config.update', targetId: id, targetType: 'saml_config', req });
+
+  logger.info(`[SAML] Configuration updated by admin ${req.user!.id}: id=${id}`);
+
   return successResponse(res, {
     message: 'SAML configuration updated',
     config
@@ -331,14 +355,14 @@ router.patch('/saml/config/:id', authMiddleware, asyncHandler(async (req: AuthRe
 }));
 
 // Delete SAML configuration (admin only)
-router.delete('/saml/config/:id', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
-  if (req.user!.role !== 'admin') {
-    return errorResponse(res, 'Admin access required', 403);
-  }
-
+router.delete('/saml/config/:id', authMiddleware, adminMiddleware, validateUUID('id'), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
 
   await prisma.sAMLConfig.delete({ where: { id } });
+
+  await logAudit({ actorId: req.user!.id, action: 'saml_config.delete', targetId: id, targetType: 'saml_config', req });
+
+  logger.info(`[SAML] Configuration deleted by admin ${req.user!.id}: id=${id}`);
 
   return successResponse(res, { message: 'SAML configuration deleted' });
 }));

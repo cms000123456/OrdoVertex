@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { prisma } from '../prisma';
 import { authMiddleware, adminMiddleware, AuthRequest } from '../utils/auth';
+import { successResponse, errorResponse, parsePagination } from '../utils/response';
 import { asyncHandler } from '../utils/async-handler';
 import { getErrorMessage } from '../utils/error-helper';
+import { logAudit } from '../utils/audit';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -11,6 +13,7 @@ const authenticateToken = authMiddleware;
 // Get all workflows (admin only)
 router.get('/workflows', authenticateToken, adminMiddleware, asyncHandler(async (req: AuthRequest, res) => {
   const workflows = await prisma.workflow.findMany({
+    where: { deletedAt: null },
     select: {
       id: true,
       name: true,
@@ -33,14 +36,16 @@ router.get('/workflows', authenticateToken, adminMiddleware, asyncHandler(async 
     orderBy: { updatedAt: 'desc' }
   });
 
-  res.json({ success: true, data: workflows });
+  return successResponse(res, workflows);
 }));
 
 // Delete any workflow (admin only)
 router.delete('/workflows/:id', authenticateToken, adminMiddleware, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
-  await prisma.workflow.delete({ where: { id } });
-  res.json({ success: true, message: 'Workflow deleted' });
+  await prisma.workflow.update({ where: { id }, data: { deletedAt: new Date() } });
+  await logAudit({ actorId: req.user!.id, action: 'workflow.admin_delete', targetId: id, targetType: 'workflow', req });
+
+  return successResponse(res, { message: 'Workflow deleted' });
 }));
 
 // Move workflow to different workspace (admin only)
@@ -51,7 +56,7 @@ router.post('/workflows/:id/move', authenticateToken, adminMiddleware, asyncHand
   if (workspaceId) {
     const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });
     if (!workspace) {
-      return res.status(404).json({ success: false, error: 'Workspace not found' });
+      return errorResponse(res, 'Workspace not found', 404);
     }
   }
 
@@ -72,8 +77,9 @@ router.post('/workflows/:id/move', authenticateToken, adminMiddleware, asyncHand
     }
   });
 
-  res.json({
-    success: true,
+  await logAudit({ actorId: req.user!.id, action: 'admin.workflow_move', targetId: id, targetType: 'workflow', details: { workspaceId: workspaceId || null }, req });
+
+  return successResponse(res, {
     message: workspaceId ? 'Workflow moved to workspace' : 'Workflow moved to personal',
     data: updated
   });
@@ -83,13 +89,13 @@ router.post('/workflows/:id/move', authenticateToken, adminMiddleware, asyncHand
 router.patch('/workflows/:id/toggle', authenticateToken, adminMiddleware, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
 
-  const workflow = await prisma.workflow.findUnique({
-    where: { id },
+  const workflow = await prisma.workflow.findFirst({
+    where: { id, deletedAt: null },
     select: { active: true }
   });
 
   if (!workflow) {
-    return res.status(404).json({ success: false, error: 'Workflow not found' });
+    return errorResponse(res, 'Workflow not found', 404);
   }
 
   const updated = await prisma.workflow.update({
@@ -109,7 +115,35 @@ router.patch('/workflows/:id/toggle', authenticateToken, adminMiddleware, asyncH
     }
   });
 
-  res.json({ success: true, data: updated });
+  await logAudit({ actorId: req.user!.id, action: 'admin.workflow_toggle', targetId: id, targetType: 'workflow', details: { active: updated.active }, req });
+
+  return successResponse(res, updated);
+}));
+
+// Get audit logs (admin only)
+router.get('/audit-logs', authenticateToken, adminMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  const { limit, offset } = parsePagination(req.query);
+  const { action, targetType, actorId } = req.query;
+
+  const where: Record<string, unknown> = {};
+  if (action) where.action = action as string;
+  if (targetType) where.targetType = targetType as string;
+  if (actorId) where.actorId = actorId as string;
+
+  const [logs, total] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset,
+      include: {
+        actor: { select: { id: true, email: true, name: true } }
+      }
+    }),
+    prisma.auditLog.count({ where })
+  ]);
+
+  return successResponse(res, { logs, pagination: { total, limit, offset } });
 }));
 
 // Get system stats (admin only)
@@ -160,7 +194,7 @@ router.get('/system-stats', authenticateToken, adminMiddleware, asyncHandler(asy
     timestamp: new Date().toISOString()
   };
 
-  res.json({ success: true, data: stats });
+  return successResponse(res, stats);
 }));
 
 export default router;

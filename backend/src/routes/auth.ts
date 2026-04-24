@@ -125,7 +125,7 @@ router.post(
       where: { email }
     });
 
-    if (!user) {
+    if (!user || user.deletedAt) {
       return errorResponse(res, 'Invalid credentials', 401);
     }
 
@@ -264,11 +264,12 @@ router.get('/me', authMiddleware, asyncHandler(async (req: AuthRequest, res) => 
       emailVerified: true,
       mfaEnabled: true,
       onboardingCompleted: true,
-      createdAt: true
+      createdAt: true,
+      deletedAt: true
     }
   });
 
-  if (!user) {
+  if (!user || user.deletedAt) {
     return errorResponse(res, 'User not found', 404);
   }
 
@@ -306,7 +307,7 @@ router.post('/verify-email', authRateLimit(), asyncHandler(async (req, res) => {
     where: { email: verificationToken.email }
   });
 
-  if (!user) {
+  if (!user || user.deletedAt) {
     return errorResponse(res, 'User not found', 404);
   }
 
@@ -350,7 +351,7 @@ router.post('/resend-verification', authRateLimit(), asyncHandler(async (req, re
     where: { email }
   });
 
-  if (!user) {
+  if (!user || user.deletedAt) {
     // Don't reveal if user exists
     return successResponse(res, {
       message: 'If an account exists with this email, a verification link has been sent.'

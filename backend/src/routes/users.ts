@@ -4,6 +4,7 @@ import { UserRole } from '@prisma/client';
 import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest, hashPassword } from '../utils/auth';
 import { successResponse, errorResponse, parsePagination } from '../utils/response';
+import { logAudit } from '../utils/audit';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
 
@@ -75,6 +76,8 @@ router.post(
       }
     });
 
+    await logAudit({ actorId: user.id, action: 'user.create', targetId: user.id, targetType: 'user', details: { email: user.email, role: user.role }, req });
+
     return successResponse(res, { user }, 201);
   })
 );
@@ -94,6 +97,7 @@ router.get('/', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
   const { limit, offset } = parsePagination(req.query);
   const [users, total] = await Promise.all([
     prisma.user.findMany({
+      where: { deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -113,7 +117,7 @@ router.get('/', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
       take: limit,
       skip: offset
     }),
-    prisma.user.count()
+    prisma.user.count({ where: { deletedAt: null } })
   ]);
 
   return successResponse(res, { users, pagination: { total, limit, offset } });
@@ -163,6 +167,8 @@ router.patch(
       }
     });
 
+    await logAudit({ actorId: req.user!.id, action: 'user.update_role', targetId: user.id, targetType: 'user', details: { newRole: role }, req });
+
     return successResponse(res, { user });
   })
 );
@@ -195,9 +201,22 @@ router.delete(
       return errorResponse(res, 'Cannot delete yourself', 400);
     }
 
-    await prisma.user.delete({
-      where: { id }
+    await prisma.user.update({
+      where: { id },
+      data: { deletedAt: new Date() }
     });
+
+    // Cascade soft-delete user's workflows and credentials
+    await prisma.workflow.updateMany({
+      where: { userId: id, deletedAt: null },
+      data: { deletedAt: new Date() }
+    });
+    await prisma.credential.updateMany({
+      where: { userId: id, deletedAt: null },
+      data: { deletedAt: new Date() }
+    });
+
+    await logAudit({ actorId: req.user!.id, action: 'user.delete', targetId: id, targetType: 'user', req });
 
     return successResponse(res, { message: 'User deleted successfully' });
   })

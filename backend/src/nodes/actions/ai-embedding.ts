@@ -177,7 +177,7 @@ export const aiEmbeddingNode: NodeType = {
         if (useCredential) {
           const credentialId = context.getNodeParameter('credentialId', '') as string;
           const credential = await prisma.credential.findFirst({
-            where: { id: credentialId, userId: context.userId }
+            where: { deletedAt: null, id: credentialId, userId: context.userId }
           });
           if (!credential) throw new Error('Credential not found');
           const credData = decryptJSON(credential.data, credential.iv);
@@ -204,7 +204,7 @@ export const aiEmbeddingNode: NodeType = {
         if (useCredential) {
           const credentialId = context.getNodeParameter('kimiCredentialId', '') as string;
           const credential = await prisma.credential.findFirst({
-            where: { id: credentialId, userId: context.userId }
+            where: { deletedAt: null, id: credentialId, userId: context.userId }
           });
           if (!credential) throw new Error('Credential not found');
           const credData = decryptJSON(credential.data, credential.iv);

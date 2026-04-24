@@ -20,6 +20,50 @@ API keys can be used on any endpoint that accepts Bearer tokens. The middleware 
 
 ---
 
+## Conventions
+
+### Response Format
+All endpoints return a standardized envelope:
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+Errors:
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Error description",
+    "details": [ ... ]
+  }
+}
+```
+
+### Pagination
+List endpoints support `?limit` (default: 20, max: 100) and `?offset` (default: 0).
+Paginated responses include:
+```json
+{
+  "data": { ... },
+  "pagination": {
+    "total": 42,
+    "limit": 20,
+    "offset": 0
+  }
+}
+```
+
+### Soft Delete
+Workflows, credentials, and users support soft deletion. `DELETE` endpoints set `deletedAt` instead of removing the record. Soft-deleted resources:
+- Are excluded from all list endpoints
+- Cannot be retrieved by `GET /:id`
+- Cannot be executed, updated, or moved
+- Block authentication (soft-deleted users cannot log in)
+
+---
+
 ## Auth Routes
 
 ### POST /auth/register
@@ -175,13 +219,27 @@ Create SAML SSO configuration (admin only).
 **Request Body:**
 ```json
 {
-  "name": "Okta",
+  "provider": "okta",
+  "entityId": "ordovertex",
   "entryPoint": "https://company.okta.com/app/...",
-  "issuer": "ordovertex",
   "cert": "-----BEGIN CERTIFICATE-----...",
-  "enabled": true
+  "callbackUrl": "https://app.example.com/api/auth/saml/acs",
+  "privateKey": "-----BEGIN PRIVATE KEY-----...",
+  "logoutUrl": "https://company.okta.com/logout",
+  "nameIdFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+  "wantAssertionsSigned": true,
+  "wantResponseSigned": true
 }
 ```
+
+**Validation:**
+- `provider`, `entityId`, `entryPoint`, `cert`, `callbackUrl` are required
+- `entryPoint` and `callbackUrl` must be valid URLs
+- `logoutUrl` must be a valid URL if provided
+- `wantAssertionsSigned` and `wantResponseSigned` must be booleans if provided
+
+### PATCH /auth/saml/config/:id
+Update SAML configuration (admin only). Same fields as POST, all optional.
 
 ### PATCH /auth/saml/config/:id
 Update SAML configuration (admin only).
@@ -1207,6 +1265,40 @@ Move workflow to a different workspace (or personal).
 
 ### PATCH /admin/workflows/:id/toggle
 Toggle workflow active/inactive state.
+
+### GET /admin/audit-logs
+Query audit logs (admin only).
+
+**Query Parameters:**
+- `limit` - Max items per page (default: 20, max: 100)
+- `offset` - Items to skip (default: 0)
+- `action` - Filter by action (e.g. `user.delete`, `credential.decrypt`)
+- `targetType` - Filter by target type (`user`, `workflow`, `credential`, `saml_config`)
+- `actorId` - Filter by actor user ID
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "logs": [
+      {
+        "id": "uuid",
+        "action": "workflow.delete",
+        "actorId": "uuid",
+        "actor": { "id": "uuid", "email": "admin@example.com", "name": "Admin" },
+        "targetId": "uuid",
+        "targetType": "workflow",
+        "details": { "name": "My Workflow" },
+        "ipAddress": "192.168.1.1",
+        "userAgent": "Mozilla/5.0 ...",
+        "createdAt": "2026-04-24T19:00:00.000Z"
+      }
+    ],
+    "pagination": { "total": 42, "limit": 20, "offset": 0 }
+  }
+}
+```
 
 ### GET /admin/system-stats
 Get server system statistics (CPU, memory, disk).

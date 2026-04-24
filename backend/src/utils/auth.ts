@@ -87,7 +87,7 @@ export async function apiKeyMiddleware(req: Request, res: Response, next: NextFu
       include: { user: true }
     });
 
-    if (!keyRecord) {
+    if (!keyRecord || keyRecord.user.deletedAt) {
       return res.status(401).json({ error: 'Invalid API key' });
     }
 

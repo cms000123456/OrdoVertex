@@ -688,6 +688,7 @@ export const sqlDatabaseNode: NodeType = {
           // Use userId from context to ensure users can only access their own credentials
           const credential = await prisma.credential.findFirst({
             where: { 
+              deletedAt: null,
               id: credentialId,
               userId: context.userId
             }

@@ -28,6 +28,7 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
   // Get user's accessible workflow IDs
   const userWorkflows = await prisma.workflow.findMany({
     where: {
+      deletedAt: null,
       OR: [
         { userId: req.user!.id },
         { workspace: { members: { some: { userId: req.user!.id } } } }
@@ -172,6 +173,7 @@ router.get('/stats/overview', authenticateToken, asyncHandler(async (req, res) =
   // Get user's workflows
   const userWorkflows = await prisma.workflow.findMany({
     where: {
+      deletedAt: null,
       OR: [
         { userId: req.user!.id },
         { workspace: { members: { some: { userId: req.user!.id } } } }
@@ -239,6 +241,7 @@ router.get('/timeline', authenticateToken, asyncHandler(async (req, res) => {
   // Get user's accessible workflow IDs
   const userWorkflows = await prisma.workflow.findMany({
     where: {
+      deletedAt: null,
       OR: [
         { userId: req.user!.id },
         { workspace: { members: { some: { userId: req.user!.id } } } }

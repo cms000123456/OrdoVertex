@@ -9,6 +9,7 @@ import { rateLimit } from '../utils/rate-limit';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
 import { getErrorMessage } from '../utils/error-helper';
+import { logAudit } from '../utils/audit';
 
 const router = Router();
 
@@ -57,6 +58,38 @@ let emailSettings = { ...DEFAULT_EMAIL_SETTINGS };
 let generalSettings = { ...DEFAULT_GENERAL_SETTINGS };
 let scheduledPurgeTask: cron.ScheduledTask | null = null;
 let emailPasswordCiphertext: EncryptedData | null = null;
+
+// Load settings from database (or seed with defaults)
+async function loadSystemSettings() {
+  const settings = await prisma.systemSetting.findMany();
+  for (const s of settings) {
+    switch (s.category) {
+      case 'maintenance':
+        maintenanceSettings = { ...DEFAULT_MAINTENANCE_SETTINGS, ...(s.value as any) };
+        break;
+      case 'security':
+        securitySettings = { ...DEFAULT_SECURITY_SETTINGS, ...(s.value as any) };
+        break;
+      case 'email':
+        emailSettings = { ...DEFAULT_EMAIL_SETTINGS, ...((s.value as any).settings || {}) };
+        emailPasswordCiphertext = (s.value as any).password || null;
+        break;
+      case 'general':
+        generalSettings = { ...DEFAULT_GENERAL_SETTINGS, ...(s.value as any) };
+        break;
+    }
+  }
+  logger.info('[System] Settings loaded from database');
+}
+
+// Save settings to database
+async function saveSystemSettings(category: string, value: any) {
+  await prisma.systemSetting.upsert({
+    where: { key: category },
+    create: { key: category, category, value },
+    update: { value }
+  });
+}
 
 // Export function to check if code nodes require admin approval
 export function isCodeNodeApprovalRequired(): boolean {
@@ -133,10 +166,7 @@ router.get('/stats', authMiddleware, adminMiddleware, asyncHandler(async (req, r
 
 // Get maintenance settings
 router.get('/maintenance', authMiddleware, adminMiddleware, asyncHandler(async (req, res) => {
-  res.json({
-    success: true,
-    data: maintenanceSettings
-  });
+  return successResponse(res, maintenanceSettings);
 }));
 
 // Update maintenance settings
@@ -199,10 +229,9 @@ router.patch('/maintenance', authMiddleware, adminMiddleware, asyncHandler(async
     }
   }
 
-  res.json({
-    success: true,
-    data: maintenanceSettings
-  });
+  await saveSystemSettings('maintenance', maintenanceSettings);
+  await logAudit({ actorId: req.user!.id, action: 'system.settings_update', targetType: 'maintenance_settings', details: { ...maintenanceSettings }, req });
+  return successResponse(res, maintenanceSettings);
 }));
 
 // Manual purge
@@ -371,10 +400,14 @@ function isValidCron(cron: string): boolean {
   return parts.length === 5;
 }
 
-// Initialize auto-purge on startup
-if (maintenanceSettings.enableAutoPurge) {
-  scheduleAutoPurge();
-}
+// Initialize: load from DB then schedule if enabled
+loadSystemSettings().then(() => {
+  if (maintenanceSettings.enableAutoPurge) {
+    scheduleAutoPurge();
+  }
+}).catch(err => {
+  logger.error('[System] Failed to load settings from database:', err);
+});
 
 // ========================================================================
 // Security Settings Routes
@@ -428,10 +461,9 @@ router.patch('/security', authMiddleware, adminMiddleware, asyncHandler(async (r
     securitySettings.requireEmailVerification = requireEmailVerification;
   }
 
-  res.json({
-    success: true,
-    data: securitySettings
-  });
+  await saveSystemSettings('security', securitySettings);
+  await logAudit({ actorId: req.user!.id, action: 'system.settings_update', targetType: 'security_settings', details: { ...securitySettings }, req });
+  return successResponse(res, securitySettings);
 }));
 
 // ========================================================================
@@ -509,16 +541,19 @@ router.patch('/email', authMiddleware, adminMiddleware, asyncHandler(async (req,
   // Clear transporter cache so new settings take effect
   clearEmailTransporter();
 
+  await saveSystemSettings('email', {
+    settings: emailSettings,
+    password: emailPasswordCiphertext
+  });
+  await logAudit({ actorId: req.user!.id, action: 'system.settings_update', targetType: 'email_settings', details: { host: emailSettings.smtpHost, enabled: emailSettings.enabled }, req });
+
   // Return safe settings (masked password)
   const safeSettings = {
     ...emailSettings,
     smtpPassword: emailPasswordCiphertext ? '********' : ''
   };
 
-  res.json({
-    success: true,
-    data: safeSettings
-  });
+  return successResponse(res, safeSettings);
 }));
 
 // Test email configuration
@@ -615,10 +650,9 @@ router.patch('/general', authMiddleware, adminMiddleware, asyncHandler(async (re
 
   logger.info(`[General] Settings updated. Base URL: ${generalSettings.baseUrl}`);
 
-  res.json({
-    success: true,
-    data: generalSettings
-  });
+  await saveSystemSettings('general', generalSettings);
+  await logAudit({ actorId: req.user!.id, action: 'system.settings_update', targetType: 'general_settings', details: { ...generalSettings }, req });
+  return successResponse(res, generalSettings);
 }));
 
 export default router;

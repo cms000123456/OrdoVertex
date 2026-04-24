@@ -146,7 +146,7 @@ export const googleChatNode: NodeType = {
       if (credentialId) {
         try {
           const credential = await prisma.credential.findFirst({
-            where: { id: credentialId, userId: context.userId }
+            where: { deletedAt: null, id: credentialId, userId: context.userId }
           });
           if (!credential) {
             return { success: false, error: `Credential not found (id: ${credentialId}). Make sure it was saved and belongs to your account.` };

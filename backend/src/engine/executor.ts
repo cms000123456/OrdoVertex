@@ -422,8 +422,8 @@ export async function executeWorkflow(
   mode: 'manual' | 'webhook' | 'schedule' = 'manual'
 ): Promise<{ executionId: string; result: any }> {
   // Get workflow from database
-  const workflow = await prisma.workflow.findUnique({
-    where: { id: workflowId }
+  const workflow = await prisma.workflow.findFirst({
+    where: { id: workflowId, deletedAt: null }
   });
 
   if (!workflow) {

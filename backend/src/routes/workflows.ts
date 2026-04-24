@@ -7,6 +7,7 @@ import { executeWorkflow } from '../engine/executor';
 import { queueWorkflowExecution, sendSchedulerControl } from '../engine/queue';
 import { workflowContainsCodeNodes } from '../utils/code-sandbox';
 import { isCodeNodeApprovalRequired } from './system';
+import { logAudit } from '../utils/audit';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
 
@@ -30,9 +31,12 @@ router.post('/bulk-delete', asyncHandler(async (req: AuthRequest, res) => {
   if (!Array.isArray(ids) || ids.length === 0) {
     return errorResponse(res, 'ids array is required', 400);
   }
-  const result = await prisma.workflow.deleteMany({
-    where: { id: { in: ids }, userId: req.user!.id }
+  const result = await prisma.workflow.updateMany({
+    where: { id: { in: ids }, userId: req.user!.id, deletedAt: null },
+    data: { deletedAt: new Date() }
   });
+  await logAudit({ actorId: req.user!.id, action: 'workflow.bulk_delete', details: { ids, count: result.count }, req });
+
   return successResponse(res, { deleted: result.count });
 }));
 
@@ -41,7 +45,7 @@ router.get('/', asyncHandler(async (req: AuthRequest, res) => {
   const { limit, offset } = parsePagination(req.query);
   const [workflows, total] = await Promise.all([
     prisma.workflow.findMany({
-      where: { userId: req.user!.id },
+      where: { userId: req.user!.id, deletedAt: null },
       select: {
         id: true,
         name: true,
@@ -59,7 +63,7 @@ router.get('/', asyncHandler(async (req: AuthRequest, res) => {
       take: limit,
       skip: offset
     }),
-    prisma.workflow.count({ where: { userId: req.user!.id } })
+    prisma.workflow.count({ where: { userId: req.user!.id, deletedAt: null } })
   ]);
 
   return successResponse(res, { workflows, pagination: { total, limit, offset } });
@@ -72,7 +76,8 @@ router.get('/:id', validateUUID(), handleValidationErrors, asyncHandler(async (r
   const workflow = await prisma.workflow.findFirst({
     where: {
       id,
-      userId: req.user!.id
+      userId: req.user!.id,
+      deletedAt: null
     },
     include: {
       executions: {
@@ -162,7 +167,7 @@ router.patch(
 
     // Verify ownership
     const existing = await prisma.workflow.findFirst({
-      where: { id, userId: req.user!.id }
+      where: { id, userId: req.user!.id, deletedAt: null }
     });
 
     if (!existing) {
@@ -268,7 +273,7 @@ router.delete('/:id', validateUUID(), handleValidationErrors, asyncHandler(async
 
   // Verify ownership
   const existing = await prisma.workflow.findFirst({
-    where: { id, userId: req.user!.id }
+    where: { id, userId: req.user!.id, deletedAt: null }
   });
 
   if (!existing) {
@@ -278,9 +283,12 @@ router.delete('/:id', validateUUID(), handleValidationErrors, asyncHandler(async
   // Unschedule if needed
   await sendSchedulerControl('unschedule', id);
 
-  await prisma.workflow.delete({
-    where: { id }
+  await prisma.workflow.update({
+    where: { id },
+    data: { deletedAt: new Date() }
   });
+
+  await logAudit({ actorId: req.user!.id, action: 'workflow.delete', targetId: id, targetType: 'workflow', req });
 
   return successResponse(res, { deleted: true });
 }));
@@ -292,7 +300,7 @@ router.post('/:id/execute', validateUUID(), handleValidationErrors, asyncHandler
 
   // Verify ownership
   const workflow = await prisma.workflow.findFirst({
-    where: { id, userId: req.user!.id }
+    where: { id, userId: req.user!.id, deletedAt: null }
   });
 
   if (!workflow) {
@@ -318,7 +326,7 @@ router.get('/:id/executions', validateUUID(), handleValidationErrors, asyncHandl
 
   // Verify ownership
   const workflow = await prisma.workflow.findFirst({
-    where: { id, userId: req.user!.id }
+    where: { id, userId: req.user!.id, deletedAt: null }
   });
 
   if (!workflow) {
@@ -352,7 +360,7 @@ router.get('/:id/executions/:executionId', validateUUID(), validateUUID('executi
 
   // Verify ownership
   const workflow = await prisma.workflow.findFirst({
-    where: { id, userId: req.user!.id }
+    where: { id, userId: req.user!.id, deletedAt: null }
   });
 
   if (!workflow) {
@@ -381,7 +389,7 @@ router.get('/:id/export', validateUUID(), handleValidationErrors, asyncHandler(a
   const { id } = req.params;
 
   const workflow = await prisma.workflow.findFirst({
-    where: { id, userId: req.user!.id }
+    where: { id, userId: req.user!.id, deletedAt: null }
   });
 
   if (!workflow) {
@@ -472,7 +480,7 @@ router.post('/:id/move', validateUUID(), handleValidationErrors, asyncHandler(as
 
   // Verify workflow ownership
   const workflow = await prisma.workflow.findFirst({
-    where: { id, userId: req.user!.id }
+    where: { id, userId: req.user!.id, deletedAt: null }
   });
 
   if (!workflow) {

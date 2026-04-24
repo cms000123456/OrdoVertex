@@ -7,6 +7,7 @@ import { encryptJSON, decryptJSON } from '../utils/encryption';
 import { getVaultSecret, validateVaultConnection, VaultConfig } from '../utils/vault';
 import { isInternalUrl } from '../utils/security';
 import { parsePagination, validateUUID, handleValidationErrors } from '../utils/response';
+import { logAudit } from '../utils/audit';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
 import { getErrorMessage } from '../utils/error-helper';
@@ -41,9 +42,12 @@ router.post('/bulk-delete', authenticateToken, asyncHandler(async (req: AuthRequ
   if (!Array.isArray(ids) || ids.length === 0) {
     return errorResponse(res, 'ids array is required', 400);
   }
-  const result = await prisma.credential.deleteMany({
-    where: { id: { in: ids }, userId: req.user!.id }
+  const result = await prisma.credential.updateMany({
+    where: { id: { in: ids }, userId: req.user!.id, deletedAt: null },
+    data: { deletedAt: new Date() }
   });
+  await logAudit({ actorId: req.user!.id, action: 'credential.bulk_delete', details: { ids, count: result.count }, req });
+
   return successResponse(res, { deleted: result.count });
 }));
 
@@ -53,6 +57,7 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res) =>
   const { limit, offset } = parsePagination(req.query);
 
   const where: Record<string, unknown> = {
+    deletedAt: null,
     ...(type && { type: type as string }),
     ...(workspaceId && { workspaceId: workspaceId as string })
   };
@@ -110,6 +115,7 @@ router.get('/:id', validateUUID(), handleValidationErrors, authenticateToken, as
   const credential = await prisma.credential.findFirst({
     where: {
       id,
+      deletedAt: null,
       OR: [
         { userId },
         { workspace: { members: { some: { userId } } } }
@@ -256,7 +262,7 @@ router.put('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res)
     const { name, data } = req.body;
 
     const existing = await prisma.credential.findFirst({
-      where: { id, userId }
+      where: { id, userId, deletedAt: null }
     });
 
     if (!existing) {
@@ -306,16 +312,19 @@ router.delete('/:id', validateUUID(), handleValidationErrors, authenticateToken,
   const { id } = req.params;
 
   const existing = await prisma.credential.findFirst({
-    where: { id, userId }
+    where: { id, userId, deletedAt: null }
   });
 
   if (!existing) {
     return errorResponse(res, 'Credential not found', 404);
   }
 
-  await prisma.credential.delete({
-    where: { id }
+  await prisma.credential.update({
+    where: { id },
+    data: { deletedAt: new Date() }
   });
+
+  await logAudit({ actorId: req.user!.id, action: 'credential.delete', targetId: id, targetType: 'credential', req });
 
   return successResponse(res, { message: 'Credential deleted successfully' });
 }));
@@ -330,7 +339,7 @@ router.post('/:id/decrypt', validateUUID(), handleValidationErrors, authenticate
   const { id } = req.params;
 
   const credential = await prisma.credential.findFirst({
-    where: { id, userId }
+    where: { id, userId, deletedAt: null }
   });
 
   if (!credential) {
@@ -373,6 +382,8 @@ router.post('/:id/decrypt', validateUUID(), handleValidationErrors, authenticate
     data: { lastUsed: new Date() }
   });
 
+  await logAudit({ actorId: req.user!.id, action: 'credential.decrypt', targetId: id, targetType: 'credential', details: { type: credential.type }, req });
+
   return successResponse(res, {
     credential: {
       id: credential.id,
@@ -407,7 +418,12 @@ router.post('/test-vault', authenticateToken, asyncHandler(async (req: AuthReque
  * @route GET /api/credentials/types
  * @desc Get available credential types and their required fields
  */
+// Backward-compatible redirect
 router.get('/types/list', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+  res.redirect(301, '/api/credentials/types');
+}));
+
+router.get('/types', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
   const credentialTypes = {
     database: {
       name: 'Database',

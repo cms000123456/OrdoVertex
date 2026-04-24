@@ -432,7 +432,7 @@ export const aiAgentNode: NodeType = {
           throw new Error('No credential selected');
         }
         const credential = await prisma.credential.findFirst({
-          where: { id: credentialId, userId: context.userId }
+          where: { deletedAt: null, id: credentialId, userId: context.userId }
         });
         if (!credential) {
           throw new Error('Credential not found');

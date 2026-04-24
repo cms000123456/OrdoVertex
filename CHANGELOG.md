@@ -10,6 +10,24 @@ All notable changes to OrdoVertex will be documented in this file.
 - Added HTML escaping in email templates (alert, verification, password-reset)
 - Wrapped unprotected `JSON.parse` calls in webhook-response and ai-agent nodes
 - Wrapped credentials PUT and GET /types/list routes with `asyncHandler`
+- `GET /auth/saml/providers` now requires authentication (was public)
+- `POST /auth/verify-email` rate-limited to prevent abuse
+- `POST /credentials/test-vault` and alert `webhookUrl` protected with `isInternalUrl()` SSRF guard
+- SAML config creation/update now validated with `express-validator` (admin-only)
+
+### Added
+- **Pagination**: `parsePagination()` helper (default 20, max 100) applied to 10+ list endpoints
+- **UUID Validation**: `validateUUID()` + `handleValidationErrors` middleware on all `:id` routes
+- **Admin Route Refactor**: Extracted 5 inline admin routes to `backend/src/routes/admin.ts` with shared `adminMiddleware`
+- **DB Performance**: 6 composite indexes (`Workflow`, `WorkflowExecution`, `ExecutionLog`, `Credential`, `Alert`, `WorkspaceMember`)
+- **Response Standardization**: `successResponse()` / `errorResponse()` helpers adopted across `alerts.ts`, `templates.ts`, `workspaces.ts`, `system.ts`, `admin.ts`
+- **API Key Auth**: `authMiddleware` tries JWT Bearer first, then falls back to `X-API-Key`
+- **Bulk Operations**: `POST /workflows/bulk-delete` and `POST /credentials/bulk-delete`
+- **Caching**: `GET /nodes` and `GET /nodes/categories` return `Cache-Control: public, max-age=3600`
+- **URL Normalization**: `/credentials/types/list` → `/credentials/types`, `/templates/categories/list` → `/templates/categories` (backward-compatible redirects)
+- **System Settings Persistence**: New `SystemSetting` DB model; `routes/system.ts` loads from DB on startup and saves on every PATCH
+- **Soft Delete**: `deletedAt` columns on `Workflow`, `Credential`, `User`; hard deletes converted to soft deletes with cascade for user deletion
+- **Audit Logging**: New `AuditLog` model + `logAudit()` helper; covers admin actions, credential decryption, SAML changes, system settings updates
 
 ### Fixed
 - Fixed integration test race conditions by splitting Jest configs (parallel unit vs sequential integration)
