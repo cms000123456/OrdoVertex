@@ -168,6 +168,8 @@ Open your browser and go to: **http://localhost:3000**
 3. Connect nodes by dragging from output to input
 4. Click **"Execute"** to run your workflow
 
+**New to workflow automation?** Check out the [step-by-step tutorials](docs/TUTORIALS.md) for guided walkthroughs — webhook alerts, daily reports, AI chatbots, file processing, and more.
+
 ### 📖 Tutorial Workflow (Optional)
 
 Add a pre-built tutorial workflow that demonstrates data flow between nodes:
@@ -260,7 +262,7 @@ For production deployment with HTTPS, see the **[Deployment Guide](DEPLOYMENT.md
 
 ## 📦 Available Nodes
 
-### Triggers (5)
+### Triggers (8)
 | Node | Description |
 |------|-------------|
 | Manual Trigger | Start workflows manually |
@@ -268,14 +270,18 @@ For production deployment with HTTPS, see the **[Deployment Guide](DEPLOYMENT.md
 | Schedule Trigger | Cron-based scheduling |
 | File Watch | Monitor file system changes |
 | S3 Trigger | React to S3 bucket events |
+| SFTP Watch | Poll SFTP servers for new files |
+| SMB/CIFS Watch | Poll SMB/CIFS shares for new files |
+| Sticky Note | Annotation-only node for the canvas |
 
-### Actions (26)
+### Actions & Transforms (22)
 | Category | Nodes |
 |----------|-------|
-| **Core** | HTTP Request, Code, Set, IF, Wait, Split, Aggregate |
-| **Data** | CSV, Filter, Sort, Remove Duplicates, Date/Time, Math, Text Parser, Image Display |
+| **Core** | HTTP Request, Code, Set, IF, Wait, Split In Batches, Aggregate |
+| **Data** | CSV, Filter, Sort, Remove Duplicates, Date & Time, Math, String Operations, Rename Fields |
 | **Database** | SQL Database (PostgreSQL, MySQL, MSSQL, SQLite) |
-| **Integration** | Send Email, SFTP, LDAP |
+| **Integration** | Send Email, Webhook Response, SFTP, SMB/CIFS, LDAP, Google Chat |
+| **Parse/Display** | Text Parser, Image Display |
 | **AI** | AI Agent, AI Embedding, AI Vector Store, Text Splitter |
 
 ### 🤖 AI Workflow Features
@@ -486,6 +492,7 @@ npm test
 
 | Document | Description |
 |----------|-------------|
+| [Tutorials](docs/TUTORIALS.md) | Step-by-step workflow building guides |
 | [AI Workflow Guide](AI_WORKFLOW_GUIDE.md) | Building AI-powered workflows |
 | [Node Development Guide](NODE_DEVELOPMENT_GUIDE.md) | Create custom nodes |
 | [API Documentation](API.md) | Full REST API reference |
