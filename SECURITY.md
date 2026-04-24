@@ -1,7 +1,7 @@
 # OrdoVertex Security Report
 
-**Date:** 2026-03-22  
-**Version:** 1.1.0  
+**Date:** 2026-04-24  
+**Version:** 1.2.0  
 **Classification:** Internal
 
 **Status:** ✅ CRITICAL VULNERABILITIES PATCHED - March 22, 2026
@@ -41,7 +41,8 @@ This report documents the security posture of the OrdoVertex workflow automation
 | API Key Auth | Database-backed with tracking | ✅ Active |
 | Role-based Access | Admin/User roles | ✅ Active |
 | Rate Limiting | Auth: 5/15min, API: 120/min | ✅ Active |
-| 2FA Support | TOTP via speakeasy | ✅ Available |
+| MFA/TOTP | speakeasy with QR setup | ✅ Active |
+| SAML 2.0 SSO | Configurable providers (Okta, Azure AD, etc.) | ✅ Active |
 
 **Files:** `backend/src/utils/auth.ts`, `backend/src/utils/rate-limit.ts`
 
@@ -56,7 +57,18 @@ This report documents the security posture of the OrdoVertex workflow automation
 
 **Files:** `backend/src/utils/encryption.ts`
 
-### 3. Network Security
+### 3. Workspace & Group Isolation
+
+| Feature | Implementation | Status |
+|---------|----------------|--------|
+| Workspace RBAC | Owner, Admin, Editor, Viewer roles | ✅ Active |
+| Workflow Isolation | Workflows scoped to workspace | ✅ Active |
+| Credential Sharing | Shared within workspace only | ✅ Active |
+| Group Membership | Users organized into groups | ✅ Active |
+
+**Files:** `backend/src/routes/workspaces.ts`, `backend/src/routes/groups.ts`
+
+### 4. Network Security
 
 | Feature | Implementation | Status |
 |---------|----------------|--------|
@@ -68,7 +80,19 @@ This report documents the security posture of the OrdoVertex workflow automation
 
 **Files:** `backend/src/index.ts`, `backend/src/utils/security.ts`
 
-### 4. Recent Security Fixes (2026-03-22)
+### 5. Input Validation & Injection Prevention
+
+| Feature | Implementation | Status |
+|---------|----------------|--------|
+| SQL Injection Prevention | Parameterized queries (Prisma) | ✅ Active |
+| LDAP Injection Prevention | Filter validation + escaping | ✅ Active |
+| Path Traversal Protection | `ALLOWED_WATCH_DIRECTORIES` restriction | ✅ Active |
+| Template Injection | Limited expression resolution (`$json.field` only) | ✅ Active |
+| Code Injection | Sandboxed JS/Python execution | ✅ Active |
+
+**Files:** `backend/src/nodes/actions/sql-database.ts`, `backend/src/nodes/actions/ldap.ts`, `backend/src/nodes/triggers/file-watch.ts`, `backend/src/utils/code-sandbox.ts`
+
+### 6. Recent Security Fixes (2026-03-22)
 
 #### ✅ Quick Win #1: Security Headers (Helmet.js)
 **Problem:** Missing security headers left application vulnerable to XSS, clickjacking, and MIME sniffing attacks.
@@ -150,6 +174,16 @@ if (isInternalUrl(url)) {
 
 **Code:** `backend/src/utils/code-sandbox.ts`, `backend/src/nodes/actions/code.ts`
 
+### 7. Execution Data Protection
+
+| Feature | Implementation | Status |
+|---------|----------------|--------|
+| Execution Log Truncation | Large objects limited to 1000 chars, 20 keys, depth 3 | ✅ Active |
+| Input/Output Audit | Full execution history with per-node logs | ✅ Active |
+| Log Retention | Configurable auto-purge (default: 30 days) | ✅ Active |
+
+**Files:** `backend/src/engine/executor.ts`, `backend/src/routes/system.ts`
+
 ---
 
 ## Security Checklist
@@ -168,8 +202,14 @@ if (isInternalUrl(url)) {
 - [x] SSRF protection
 - [x] Input validation for identifiers
 - [x] Request size limits
-- [x] **Code execution sandboxing (JavaScript/Python)** ✅ **NEW**
-- [x] **Admin approval for code nodes** ✅ **NEW**
+- [x] Code execution sandboxing (JavaScript/Python)
+- [x] Admin approval for code nodes
+- [x] MFA/TOTP authentication
+- [x] SAML 2.0 SSO
+- [x] Workspace/Group RBAC isolation
+- [x] LDAP injection prevention
+- [x] Path traversal protection
+- [x] Execution log data truncation
 
 ### ⚠️ Partial/Needs Attention
 
@@ -177,6 +217,7 @@ if (isInternalUrl(url)) {
 - [ ] Automatic HTTPS enforcement (config-dependent)
 - [ ] Redis-backed rate limiting (for multi-instance deployments)
 - [ ] Content Security Policy refinements for inline scripts
+- [ ] Audit logging for all admin actions (partial: execution logs exist)
 
 ### ❌ Not Implemented
 
@@ -267,10 +308,10 @@ AUTH_RATE_LIMIT_WINDOW_MS="900000"  # 15 minutes
 API_RATE_LIMIT_MAX="120"
 API_RATE_LIMIT_WINDOW_MS="60000"    # 1 minute
 
-# Code Execution Security (NEW)
+# Code Execution Security
 CODE_NODE_REQUIRE_ADMIN="true"      # Require admin approval for code nodes
 CODE_EXEC_TIMEOUT="30000"           # Code execution timeout in ms (default: 30000)
-DISABLE_CODE_NODE="false"           # Emergency: completely disable code nodes
+ALLOWED_WATCH_DIRECTORIES="/data"   # Restrict File Watch node to these paths
 ```
 
 ### Validation
@@ -376,7 +417,7 @@ curl -X POST http://localhost:3001/api/workflows \
 ### Reporting Security Issues
 
 1. **DO NOT** create public GitHub issues for security vulnerabilities
-2. Email security concerns to: [security@yourorganization.com]
+2. Email security concerns to: [security@ordovertex.dev] (update with your organization's email)
 3. Include:
    - Description of vulnerability
    - Steps to reproduce
@@ -423,6 +464,7 @@ curl -X POST http://localhost:3001/api/workflows \
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-04-24 | Updated security documentation: workspace isolation, LDAP injection prevention, path traversal protection | Security Team |
 | 2026-03-22 | **CRITICAL:** Implemented secure code sandbox (JavaScript/Python) - fixes RCE vulnerability | Security Team |
 | 2026-03-22 | Added Helmet.js, error sanitization, SSRF protection | Security Team |
 | 2026-03-15 | Fixed template expression resolution | Dev Team |
