@@ -488,6 +488,20 @@ cd frontend
 npm test
 ```
 
+### Smoke Tests (Full Stack)
+
+Run HTTP-only smoke tests against a live Docker Compose stack:
+
+```bash
+cd test
+cp .env.example .env
+# Edit .env: set JWT_SECRET and ENCRYPTION_KEY (generate with: openssl rand -base64 32)
+docker compose up -d --build
+npm test
+```
+
+This starts the full stack (API, worker, frontend, Postgres, Redis, Samba) and runs 18 smoke tests covering auth, workflows, templates, nodes, executions, and credentials.
+
 ## 📖 Documentation
 
 | Document | Description |
