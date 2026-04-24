@@ -204,6 +204,28 @@ Get list of enabled SAML providers (public).
 }
 ```
 
+### POST /auth/onboarding
+Complete initial onboarding (change default admin credentials). Requires authentication.
+
+**Request Body:**
+```json
+{
+  "email": "admin@yourcompany.com",
+  "password": "StrongPassword123!"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": { /* updated user */ },
+    "message": "Onboarding completed successfully"
+  }
+}
+```
+
 ---
 
 ## Workflow Routes
@@ -339,6 +361,17 @@ Move workflow to a different workspace (or personal).
 }
 ```
 
+### GET /workflows/:id/executions/:executionId
+Get a specific execution of a workflow.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": { /* execution details */ }
+}
+```
+
 ---
 
 ## Execution Routes
@@ -363,6 +396,17 @@ Delete an execution.
 
 ### POST /executions/:id/cancel
 Cancel a running execution.
+
+### GET /executions/:executionId/nodes/:nodeId
+Get execution details for a specific node within an execution.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": { /* node execution details */ }
+}
+```
 
 ---
 
@@ -864,6 +908,9 @@ Add workspace access to a group.
 }
 ```
 
+### DELETE /groups/:id/workspaces/:accessId
+Remove workspace access from a group.
+
 ---
 
 ## System (Admin Only)
@@ -974,6 +1021,36 @@ Update security settings.
 }
 ```
 
+### GET /system/maintenance/purge-preview
+Preview what data would be purged by maintenance.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "logsToDelete": 1500,
+    "executionsToDelete": 300,
+    "estimatedStorage": "45MB"
+  }
+}
+```
+
+### GET /system/email
+Get email/SMTP configuration.
+
+### PATCH /system/email
+Update email/SMTP configuration.
+
+### POST /system/email/test
+Send a test email to verify configuration.
+
+### GET /system/general
+Get general system settings (site name, theme, registration, default role).
+
+### PATCH /system/general
+Update general system settings.
+
 ---
 
 ## App Logs (Admin Only)
@@ -1007,6 +1084,71 @@ View log file content.
 
 ### GET /logs/:logName/download
 Download log file.
+
+### DELETE /logs/:logName
+Delete a log file.
+
+---
+
+## Queue (Admin Only)
+
+Monitor and manage the BullMQ job queue.
+
+### GET /queue/stats
+Get queue statistics (job counts, worker status).
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "waiting": 5,
+    "active": 2,
+    "completed": 150,
+    "failed": 3,
+    "delayed": 1
+  }
+}
+```
+
+### GET /queue/failed
+List failed jobs.
+
+### POST /queue/failed/:jobId/retry
+Retry a failed job.
+
+### DELETE /queue/failed/:jobId
+Remove a failed job from the queue.
+
+---
+
+## Scheduler (Admin Only)
+
+Manage scheduled workflow triggers.
+
+### GET /scheduler/status
+Get scheduler health and trigger count.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "active": true,
+    "triggerCount": 12,
+    "lastRun": "2026-04-24T10:00:00Z"
+  }
+}
+```
+
+### GET /scheduler/triggers
+List all scheduled triggers.
+
+### PATCH /scheduler/triggers/:id
+Update a scheduled trigger (enable/disable, change cron).
+
+### POST /scheduler/triggers/:id/run
+Manually trigger a scheduled workflow run.
 
 ---
 
