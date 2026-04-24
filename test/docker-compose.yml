@@ -1,0 +1,201 @@
+version: '3.8'
+
+# Prod-like stack for local smoke testing.
+#
+# BEFORE RUNNING:
+#   cp .env.example .env
+#   Fill in JWT_SECRET, ENCRYPTION_KEY (min 32 chars each)
+#
+# Start:  docker compose up -d --build
+# Stop:   docker compose down -v   (the -v removes ephemeral test volumes)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ordovertex-test-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-ordovertex}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-testpassword}
+      POSTGRES_DB: ${DB_NAME:-ordovertex}
+    volumes:
+      - test-postgres:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ordovertex}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - ordovertex-test-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ordovertex-test-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - test-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - ordovertex-test-network
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: ordovertex-test-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USER:-ordovertex}:${DB_PASSWORD:-testpassword}@postgres:5432/${DB_NAME:-ordovertex}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required — see .env.example}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required — see .env.example}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      ALLOWED_WATCH_DIRECTORIES: /data
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin1234!}
+      # Raise auth rate limit so repeated test runs don't get locked out
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-20}
+      AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:-60000}
+      PORT: 3001
+    ports:
+      - "127.0.0.1:3011:3001"
+    command: >
+      sh -c "npm run build &&
+             npx prisma db push --accept-data-loss &&
+             npx prisma db seed || true &&
+             npm start"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health | grep -q ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ordovertex-test-network
+
+  worker:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: ordovertex-test-worker
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USER:-ordovertex}:${DB_PASSWORD:-testpassword}@postgres:5432/${DB_NAME:-ordovertex}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      TZ: ${TZ:-Europe/Stockholm}
+      # Points smbclient/kinit at the realm served by the samba-dc container.
+      # Harmless when samba-dc is not running (NTLM tests don't invoke kinit).
+      KRB5_CONFIG: /keytabs/krb5.conf
+    volumes:
+      - test-kerberos:/keytabs:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    command: >
+      sh -c "npm run build &&
+             npm run worker"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - ordovertex-test-network
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: /api
+    container_name: ordovertex-test-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3010:3000"
+    depends_on:
+      - api
+    networks:
+      - ordovertex-test-network
+
+  samba:
+    image: dperson/samba
+    container_name: ordovertex-test-samba
+    restart: unless-stopped
+    # Creates user testuser/testpassword and share "testshare" at /samba/testshare.
+    # USER1/SHARE1/GLOBAL* are read by samba.sh from environment.
+    # force user = testuser: smbclient's write-access CREATE request succeeds on owned files.
+    # create mask / force create mode = 0777: new files are world-writable.
+    # vfs objects = (empty): disables recycle bin so files are actually deleted.
+    entrypoint: /bin/sh -c "chmod 777 /samba/testshare && exec /sbin/tini -- /usr/bin/samba.sh"
+    environment:
+      USER1: "testuser;testpassword"
+      SHARE1: "testshare;/samba/testshare;yes;no;no;testuser"
+      GLOBAL1: "force user = testuser"
+      GLOBAL2: "create mask = 0777"
+      GLOBAL3: "force create mode = 0777"
+      GLOBAL4: "vfs objects ="
+    volumes:
+      - test-samba:/samba/testshare
+    networks:
+      - ordovertex-test-network
+
+  # Samba 4 AD Domain Controller — provides a real Kerberos KDC (Heimdal)
+  # alongside a regular SMB share, for end-to-end Kerberos auth testing.
+  # Exports testuser.keytab + krb5.conf to the test-kerberos volume once ready.
+  samba-dc:
+    build:
+      context: ./kdc
+    container_name: ordovertex-test-samba-dc
+    hostname: samba-dc
+    restart: unless-stopped
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+      - NET_BIND_SERVICE
+      - DAC_OVERRIDE
+    environment:
+      KRB5_REALM: ORDOVERTEX.TEST
+      SMB_DOMAIN: ORDOVERTEX
+      ADMIN_PASSWORD: Admin1234!
+      TEST_USER: testuser
+      TEST_PASSWORD: testpassword
+    volumes:
+      - test-samba-dc:/samba/dc-share
+      - test-kerberos:/keytabs
+    healthcheck:
+      test: ["CMD", "test", "-f", "/keytabs/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 360s
+    networks:
+      - ordovertex-test-network
+
+volumes:
+  test-postgres:
+  test-redis:
+  test-samba:
+  test-samba-dc:
+  test-kerberos:
+
+networks:
+  ordovertex-test-network:
+    driver: bridge

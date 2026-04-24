@@ -1,0 +1,20 @@
+{
+  "name": "ordovertex-smoke-tests",
+  "private": true,
+  "scripts": {
+    "test": "jest --testTimeout=15000",
+    "test:verbose": "jest --testTimeout=15000 --verbose"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "dotenv": "^16.4.5",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.5.4"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "setupFiles": ["dotenv/config"]
+  }
+}
