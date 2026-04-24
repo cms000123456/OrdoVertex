@@ -188,7 +188,7 @@ Update SAML configuration (admin only).
 Delete SAML configuration (admin only).
 
 ### GET /auth/saml/providers
-Get list of enabled SAML providers (public).
+Get list of enabled SAML providers (requires authentication).
 
 **Response:**
 ```json
@@ -233,23 +233,34 @@ Complete initial onboarding (change default admin credentials). Requires authent
 ### GET /workflows
 List all workflows for current user.
 
+**Query Parameters:**
+- `limit` - Number of results (default: 20, max: 100)
+- `offset` - Pagination offset (default: 0)
+
 **Response:**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "name": "My Workflow",
-      "description": "Description",
-      "active": false,
-      "createdAt": "2024-01-01T00:00:00Z",
-      "updatedAt": "2024-01-01T00:00:00Z",
-      "_count": {
-        "executions": 5
+  "data": {
+    "workflows": [
+      {
+        "id": "uuid",
+        "name": "My Workflow",
+        "description": "Description",
+        "active": false,
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-01T00:00:00Z",
+        "_count": {
+          "executions": 5
+        }
       }
+    ],
+    "pagination": {
+      "total": 42,
+      "limit": 20,
+      "offset": 0
     }
-  ]
+  }
 }
 ```
 
@@ -501,6 +512,24 @@ Get details for a specific node.
 ### GET /credentials
 List all credentials for current user.
 
+**Query Parameters:**
+- `type` - Filter by credential type
+- `workspaceId` - Filter by workspace
+- `includeShared` - Include workspace-shared credentials (`true`/`false`)
+- `limit` - Number of results (default: 20, max: 100)
+- `offset` - Pagination offset (default: 0)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "credentials": [...],
+    "pagination": { "total": 15, "limit": 20, "offset": 0 }
+  }
+}
+```
+
 ### GET /credentials/:id
 Get credential details (without encrypted data).
 
@@ -554,6 +583,10 @@ Workspaces enable team collaboration by allowing multiple users to share workflo
 ### GET /workspaces
 List all workspaces for current user (owned or member).
 
+**Query Parameters:**
+- `limit` - Number of results (default: 20, max: 100)
+- `offset` - Pagination offset (default: 0)
+
 **Response:**
 ```json
 {
@@ -569,7 +602,8 @@ List all workspaces for current user (owned or member).
       "members": [...],
       "_count": { "workflows": 5, "members": 3 }
     }
-  ]
+  ],
+  "pagination": { "total": 5, "limit": 20, "offset": 0 }
 }
 ```
 
@@ -630,6 +664,19 @@ Remove member from workspace.
 ### GET /workspaces/:id/workflows
 List workflows in workspace.
 
+**Query Parameters:**
+- `limit` - Number of results (default: 20, max: 100)
+- `offset` - Pagination offset (default: 0)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [...],
+  "pagination": { "total": 12, "limit": 20, "offset": 0 }
+}
+```
+
 ### POST /workspaces/:id/workflows/:workflowId
 Add workflow to workspace (requires editor+ role).
 
@@ -639,6 +686,21 @@ Add workflow to workspace (requires editor+ role).
 
 ### GET /api-keys
 List all API keys for current user.
+
+**Query Parameters:**
+- `limit` - Number of results (default: 20, max: 100)
+- `offset` - Pagination offset (default: 0)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "apiKeys": [...],
+    "pagination": { "total": 3, "limit": 20, "offset": 0 }
+  }
+}
+```
 
 ### POST /api-keys
 Create a new API key.
@@ -674,6 +736,21 @@ Revoke an API key.
 ### GET /users
 List all users (admin only).
 
+**Query Parameters:**
+- `limit` - Number of results (default: 20, max: 100)
+- `offset` - Pagination offset (default: 0)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "users": [...],
+    "pagination": { "total": 25, "limit": 20, "offset": 0 }
+  }
+}
+```
+
 ### POST /users
 Create a new user (admin only).
 
@@ -702,6 +779,19 @@ Delete user (admin only).
 
 ### GET /alerts
 List all alerts for current user.
+
+**Query Parameters:**
+- `limit` - Number of results (default: 20, max: 100)
+- `offset` - Pagination offset (default: 0)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [...],
+  "pagination": { "total": 8, "limit": 20, "offset": 0 }
+}
+```
 
 ### POST /alerts
 Create a new alert.
@@ -1053,6 +1143,34 @@ Update general system settings.
 
 ---
 
+## Admin Routes
+
+Admin-only endpoints for system management.
+
+### GET /admin/workflows
+List all workflows across all users.
+
+### DELETE /admin/workflows/:id
+Delete any workflow.
+
+### POST /admin/workflows/:id/move
+Move workflow to a different workspace (or personal).
+
+**Request Body:**
+```json
+{
+  "workspaceId": "workspace-uuid"  // null to move to personal
+}
+```
+
+### PATCH /admin/workflows/:id/toggle
+Toggle workflow active/inactive state.
+
+### GET /admin/system-stats
+Get server system statistics (CPU, memory, disk).
+
+---
+
 ## App Logs (Admin Only)
 
 View application log files for troubleshooting.
@@ -1143,6 +1261,22 @@ Get scheduler health and trigger count.
 
 ### GET /scheduler/triggers
 List all scheduled triggers.
+
+**Query Parameters:**
+- `enabled` - Filter to enabled triggers only (`true`)
+- `limit` - Number of results (default: 20, max: 100)
+- `offset` - Pagination offset (default: 0)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "triggers": [...],
+    "pagination": { "total": 12, "limit": 20, "offset": 0 }
+  }
+}
+```
 
 ### PATCH /scheduler/triggers/:id
 Update a scheduled trigger (enable/disable, change cron).
