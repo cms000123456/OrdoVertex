@@ -51,25 +51,27 @@ export function verifyToken(token: string): { id: string; email: string; role?: 
 }
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
+  const authHeader = req.headers.authorization;
+  const apiKey = req.headers['x-api-key'] as string;
 
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-    
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      role: decoded.role
-    };
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+  // Try JWT first
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.substring(7);
+      const decoded = verifyToken(token);
+      req.user = { id: decoded.id, email: decoded.email, role: decoded.role };
+      return next();
+    } catch {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
   }
+
+  // Fall back to API key
+  if (apiKey) {
+    return apiKeyMiddleware(req, res, next);
+  }
+
+  return res.status(401).json({ error: 'Authentication required' });
 }
 
 export async function apiKeyMiddleware(req: Request, res: Response, next: NextFunction) {

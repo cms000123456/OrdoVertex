@@ -52,7 +52,7 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
     prisma.workspace.count({ where })
   ]);
 
-  res.json({ success: true, data: workspaces, pagination: { total, limit, offset } });
+  return successResponse(res, { workspaces, pagination: { total, limit, offset } });
 }));
 
 // Create workspace
@@ -141,10 +141,10 @@ router.get('/:id', validateUUID(), handleValidationErrors, authenticateToken, as
   });
 
   if (!workspace) {
-    return res.status(404).json({ success: false, error: 'Workspace not found' });
+    return errorResponse(res, 'Workspace not found', 404);
   }
 
-  res.json({ success: true, data: workspace });
+  return successResponse(res, { workspace });
 }));
 
 // Update workspace
@@ -165,7 +165,7 @@ router.patch('/:id', validateUUID(), handleValidationErrors, authenticateToken, 
   });
 
   if (!member && !isOwner) {
-    return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+    return errorResponse(res, 'Insufficient permissions', 403);
   }
 
   const workspace = await prisma.workspace.update({
@@ -189,14 +189,14 @@ router.delete('/:id', validateUUID(), handleValidationErrors, authenticateToken,
   });
 
   if (!workspace) {
-    return res.status(404).json({ success: false, error: 'Workspace not found or not owner' });
+    return errorResponse(res, 'Workspace not found or not owner', 404);
   }
 
   await prisma.workspace.delete({
     where: { id: req.params.id }
   });
 
-  res.json({ success: true, message: 'Workspace deleted' });
+  return successResponse(res, { message: 'Workspace deleted' });
 }));
 
 // Add member to workspace
@@ -214,7 +214,7 @@ router.post('/:id/members', validateUUID(), handleValidationErrors, authenticate
   });
 
   if (!workspace) {
-    return res.status(404).json({ success: false, error: 'Workspace not found' });
+    return errorResponse(res, 'Workspace not found', 404);
   }
 
   const isOwner = workspace.ownerId === req.user!.id;
@@ -222,7 +222,7 @@ router.post('/:id/members', validateUUID(), handleValidationErrors, authenticate
   const canManage = isOwner || (userMember && ['admin'].includes(userMember.role));
 
   if (!canManage) {
-    return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+    return errorResponse(res, 'Insufficient permissions', 403);
   }
 
   // Find user by email
@@ -231,7 +231,7 @@ router.post('/:id/members', validateUUID(), handleValidationErrors, authenticate
   });
 
   if (!user) {
-    return res.status(404).json({ success: false, error: 'User not found' });
+    return errorResponse(res, 'User not found', 404);
   }
 
   // Check if already a member
@@ -245,7 +245,7 @@ router.post('/:id/members', validateUUID(), handleValidationErrors, authenticate
   });
 
   if (existing) {
-    return res.status(400).json({ success: false, error: 'User is already a member' });
+    return errorResponse(res, 'User is already a member', 400);
   }
 
   const member = await prisma.workspaceMember.create({
@@ -276,7 +276,7 @@ router.patch('/:id/members/:memberId', validateUUID(), validateUUID('memberId'),
 
   const isOwner = workspace.ownerId === req.user!.id;
   if (!isOwner) {
-    return res.status(403).json({ success: false, error: 'Only owner can change roles' });
+    return errorResponse(res, 'Only owner can change roles', 403);
   }
 
   const member = await prisma.workspaceMember.update({
@@ -304,7 +304,7 @@ router.delete('/:id/members/:memberId', validateUUID(), validateUUID('memberId')
   });
 
   if (!memberToRemove) {
-    return res.status(404).json({ success: false, error: 'Member not found' });
+    return errorResponse(res, 'Member not found', 404);
   }
 
   // Can remove if owner, or if removing self
@@ -335,7 +335,7 @@ router.get('/:id/workflows', validateUUID(), handleValidationErrors, authenticat
   });
 
   if (!workspace) {
-    return res.status(403).json({ success: false, error: 'Access denied' });
+    return errorResponse(res, 'Access denied', 403);
   }
 
   const { limit, offset } = parsePagination(req.query);
@@ -352,7 +352,7 @@ router.get('/:id/workflows', validateUUID(), handleValidationErrors, authenticat
     prisma.workflow.count({ where })
   ]);
 
-  res.json({ success: true, data: workflows, pagination: { total, limit, offset } });
+  return successResponse(res, { workflows, pagination: { total, limit, offset } });
 }));
 
 // Add workflow to workspace
@@ -384,7 +384,7 @@ router.post('/:id/workflows/:workflowId', validateUUID(), validateUUID('workflow
     data: { workspaceId: req.params.id }
   });
 
-  res.json({ success: true, data: workflow });
+  return successResponse(res, { workflow });
 }));
 
 export default router;

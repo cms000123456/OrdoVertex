@@ -24,6 +24,18 @@ async function verifyUserExists(userId: string) {
 // All routes require authentication
 router.use(authMiddleware);
 
+// Bulk delete workflows
+router.post('/bulk-delete', asyncHandler(async (req: AuthRequest, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return errorResponse(res, 'ids array is required', 400);
+  }
+  const result = await prisma.workflow.deleteMany({
+    where: { id: { in: ids }, userId: req.user!.id }
+  });
+  return successResponse(res, { deleted: result.count });
+}));
+
 // Get all workflows
 router.get('/', asyncHandler(async (req: AuthRequest, res) => {
   const { limit, offset } = parsePagination(req.query);

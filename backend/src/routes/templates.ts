@@ -5,6 +5,7 @@ import { authMiddleware, AuthRequest } from '../utils/auth';
 import crypto from 'crypto';
 import { workflowTemplates } from '../data/templates';
 import logger from '../utils/logger';
+import { successResponse, errorResponse } from '../utils/response';
 import { asyncHandler } from '../utils/async-handler';
 
 const router = Router();
@@ -36,7 +37,7 @@ router.get('/', authMiddleware, asyncHandler(async (req, res) => {
     );
   }
 
-  res.json({ success: true, data: templates });
+  return successResponse(res, { templates });
 }));
 
 // Create workflow from template
@@ -46,13 +47,13 @@ router.post('/:id/create', authMiddleware, [
 ], asyncHandler(async (req: AuthRequest, res: Response) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, error: 'Validation failed', details: errors.array() });
+    return errorResponse(res, 'Validation failed', 400, errors.array());
   }
 
   const template = (workflowTemplates as any)[req.params.id];
 
   if (!template) {
-    return res.status(404).json({ success: false, error: 'Template not found' });
+    return errorResponse(res, 'Template not found', 404);
   }
 
   const { name, description } = req.body;
@@ -84,10 +85,7 @@ router.post('/:id/create', authMiddleware, [
   });
 
   if (!user) {
-    return res.status(401).json({
-      success: false,
-      error: 'User not found. Please log out and log in again.'
-    });
+    return errorResponse(res, 'User not found. Please log out and log in again.', 401);
   }
 
   const workflow = await prisma.workflow.create({
@@ -101,13 +99,13 @@ router.post('/:id/create', authMiddleware, [
     }
   });
 
-  res.json({ success: true, data: workflow });
+  return successResponse(res, { workflow });
 }));
 
 // Get template categories - MUST be before /:id route
 router.get('/categories/list', authMiddleware, asyncHandler(async (req, res) => {
   const categories = [...new Set(Object.values(workflowTemplates).map((t: { category?: string }) => t.category))];
-  res.json({ success: true, data: categories });
+  return successResponse(res, { categories });
 }));
 
 // Get single template - MUST be after specific routes
@@ -115,16 +113,10 @@ router.get('/:id', authMiddleware, asyncHandler(async (req, res) => {
   const template = (workflowTemplates as any)[req.params.id];
 
   if (!template) {
-    return res.status(404).json({ success: false, error: 'Template not found' });
+    return errorResponse(res, 'Template not found', 404);
   }
 
-  res.json({
-    success: true,
-    data: {
-      id: req.params.id,
-      ...template
-    }
-  });
+  return successResponse(res, { id: req.params.id, ...template });
 }));
 
 export default router;

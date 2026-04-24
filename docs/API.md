@@ -4,7 +4,7 @@ Base URL: `http://localhost:3001/api` (development) or your production domain.
 
 ## Authentication
 
-All API endpoints (except `/auth/*`) require authentication via Bearer token or API key.
+All API endpoints (except `/auth/*` and `/webhook/*`) require authentication via Bearer token or API key.
 
 ### Bearer Token (JWT)
 ```http
@@ -15,6 +15,8 @@ Authorization: Bearer <jwt_token>
 ```http
 X-API-Key: <api_key>
 ```
+
+API keys can be used on any endpoint that accepts Bearer tokens. The middleware tries JWT first, then falls back to API key authentication.
 
 ---
 
@@ -260,6 +262,26 @@ List all workflows for current user.
       "limit": 20,
       "offset": 0
     }
+  }
+}
+```
+
+### POST /workflows/bulk-delete
+Delete multiple workflows at once.
+
+**Request Body:**
+```json
+{
+  "ids": ["uuid-1", "uuid-2", "uuid-3"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "deleted": 3
   }
 }
 ```
@@ -532,6 +554,26 @@ List all credentials for current user.
 
 ### GET /credentials/:id
 Get credential details (without encrypted data).
+
+### POST /credentials/bulk-delete
+Delete multiple credentials at once.
+
+**Request Body:**
+```json
+{
+  "ids": ["uuid-1", "uuid-2"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "deleted": 2
+  }
+}
+```
 
 ### POST /credentials
 Create a new credential.

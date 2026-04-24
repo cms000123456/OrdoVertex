@@ -252,6 +252,7 @@ model Workflow {
 
   @@index([workspaceId])
   @@index([userId])
+  @@index([userId, workspaceId])
 }
 
 model WorkflowExecution {
@@ -274,6 +275,7 @@ model WorkflowExecution {
   @@index([workflowId])
   @@index([status])
   @@index([startedAt])
+  @@index([workflowId, startedAt])
 }
 
 model NodeExecution {
@@ -310,6 +312,7 @@ model ExecutionLog {
   @@index([executionId])
   @@index([timestamp])
   @@index([level])
+  @@index([executionId, timestamp])
 }
 
 model Trigger {
@@ -343,6 +346,8 @@ model Credential {
   @@index([userId])
   @@index([type])
   @@index([workspaceId])
+  @@index([userId, type])
+  @@index([workspaceId, type])
 }
 
 model Alert {
@@ -371,6 +376,7 @@ model Alert {
   @@index([workflowId])
   @@index([workspaceId])
   @@index([isActive])
+  @@index([userId, isActive])
 }
 
 model AlertHistory {

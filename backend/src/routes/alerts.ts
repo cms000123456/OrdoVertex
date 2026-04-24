@@ -4,7 +4,7 @@ import { authMiddleware } from '../utils/auth';
 import { sendEmail } from '../utils/email-sender';
 import { rateLimit } from '../utils/rate-limit';
 import { isInternalUrl } from '../utils/security';
-import { parsePagination } from '../utils/response';
+import { successResponse, errorResponse, parsePagination } from '../utils/response';
 import { asyncHandler } from '../utils/async-handler';
 
 const router = Router();
@@ -32,7 +32,7 @@ router.get('/', authMiddleware, asyncHandler(async (req, res) => {
     prisma.alert.count({ where })
   ]);
 
-  res.json({ success: true, data: alerts, pagination: { total, limit, offset } });
+  return successResponse(res, { alerts, pagination: { total, limit, offset } });
 }));
 
 const VALID_CONDITION_TYPES = ['threshold', 'status', 'duration', 'error_rate'];
@@ -76,7 +76,7 @@ function validateAlertInput(body: Record<string, unknown>): { valid: boolean; er
 router.post('/', authMiddleware, asyncHandler(async (req, res) => {
   const validation = validateAlertInput(req.body);
   if (!validation.valid) {
-    return res.status(400).json({ success: false, error: validation.error });
+    return errorResponse(res, validation.error || 'Invalid input', 400);
   }
 
   const {
@@ -106,7 +106,7 @@ router.post('/', authMiddleware, asyncHandler(async (req, res) => {
     }
   });
 
-  res.json({ success: true, data: alert });
+  return successResponse(res, { alert });
 }));
 
 // Update alert
@@ -123,10 +123,10 @@ router.patch('/:id', authMiddleware, asyncHandler(async (req, res) => {
   });
 
   if (alert.count === 0) {
-    return res.status(404).json({ success: false, error: 'Alert not found or insufficient permissions' });
+    return errorResponse(res, 'Alert not found or insufficient permissions', 404);
   }
 
-  res.json({ success: true });
+  return successResponse(res, { message: 'Alert updated' });
 }));
 
 // Delete alert
@@ -142,7 +142,7 @@ router.delete('/:id', authMiddleware, asyncHandler(async (req, res) => {
   });
 
   if (alert.count === 0) {
-    return res.status(404).json({ success: false, error: 'Alert not found or insufficient permissions' });
+    return errorResponse(res, 'Alert not found or insufficient permissions', 404);
   }
 
   res.json({ success: true });
@@ -161,13 +161,13 @@ router.post('/:id/test', authMiddleware, rateLimit({ windowMs: 60_000, max: 10, 
   });
 
   if (!alert) {
-    return res.status(404).json({ success: false, error: 'Alert not found' });
+    return errorResponse(res, 'Alert not found', 404);
   }
 
   // Send test notification
   await sendTestAlert(alert, req.user!);
 
-  res.json({ success: true, message: 'Test alert sent' });
+  return successResponse(res, { message: 'Test alert sent' });
 }));
 
 // Get alert history
@@ -183,7 +183,7 @@ router.get('/:id/history', authMiddleware, asyncHandler(async (req, res) => {
     prisma.alertHistory.count({ where: { alertId: req.params.id } })
   ]);
 
-  res.json({ success: true, data: history, pagination: { total, limit, offset } });
+  return successResponse(res, { history, pagination: { total, limit, offset } });
 }));
 
 async function sendTestAlert(alert: Record<string, unknown>, user: { email?: string }) {

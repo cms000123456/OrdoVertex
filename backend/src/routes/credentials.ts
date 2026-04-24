@@ -36,6 +36,17 @@ const errorResponse = (res: Response, message: string, status = 400) => {
  * @route GET /api/credentials
  * @desc List all credentials for the authenticated user
  */
+router.post('/bulk-delete', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return errorResponse(res, 'ids array is required', 400);
+  }
+  const result = await prisma.credential.deleteMany({
+    where: { id: { in: ids }, userId: req.user!.id }
+  });
+  return successResponse(res, { deleted: result.count });
+}));
+
 router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
   const userId = req.user!.id;
   const { type, workspaceId, includeShared } = req.query;
