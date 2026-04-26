@@ -193,14 +193,16 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
       const ulMatch = line.match(/^(\s*)[-*+]\s+(.+)$/);
       if (ulMatch) {
         if (!listBuffer || listBuffer.type !== 'ul') flushList();
-        listBuffer = { type: 'ul', items: [...(listBuffer?.items || []), ulMatch[2]] };
+        const currentItems: string[] = listBuffer ? listBuffer.items : [];
+        listBuffer = { type: 'ul', items: [...currentItems, ulMatch[2]] };
         continue;
       }
 
       const olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
       if (olMatch) {
         if (!listBuffer || listBuffer.type !== 'ol') flushList();
-        listBuffer = { type: 'ol', items: [...(listBuffer?.items || []), olMatch[2]] };
+        const currentItems: string[] = listBuffer ? listBuffer.items : [];
+        listBuffer = { type: 'ol', items: [...currentItems, olMatch[2]] };
         continue;
       }
 

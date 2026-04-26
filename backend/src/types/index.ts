@@ -83,7 +83,7 @@ export interface NodeOutput {
 export interface NodeProperty {
   name: string;
   displayName: string;
-  type: 'string' | 'number' | 'boolean' | 'json' | 'options' | 'multiline' | 'resource' | 'multiselect' | 'timezone';
+  type: 'string' | 'number' | 'boolean' | 'json' | 'options' | 'multiline' | 'resource' | 'multiselect' | 'timezone' | 'ollamaModel';
   default?: any;
   placeholder?: string;
   description?: string;

@@ -111,7 +111,7 @@ export interface NodeOutput {
 export interface NodeProperty {
   name: string;
   displayName: string;
-  type: 'string' | 'number' | 'boolean' | 'json' | 'options' | 'multiline' | 'resource';
+  type: 'string' | 'number' | 'boolean' | 'json' | 'options' | 'multiline' | 'resource' | 'ollamaModel';
   default?: any;
   placeholder?: string;
   description?: string;
