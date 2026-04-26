@@ -99,7 +99,7 @@ export function WorkspaceManagement() {
     setIsLoading(true);
     try {
       const response = await workspacesApi.getAll();
-      setWorkspaces(response.data.data || []);
+      setWorkspaces(response.data.data?.workspaces || response.data.data || []);
     } catch (error: unknown) {
       toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to load workspaces');
     } finally {

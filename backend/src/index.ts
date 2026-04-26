@@ -34,6 +34,7 @@ import systemRoutes from './routes/system';
 import schedulerRoutes from './routes/scheduler';
 import queueRoutes from './routes/queue';
 import adminRoutes from './routes/admin';
+import ollamaRoutes from './routes/ollama';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -128,6 +129,7 @@ app.use('/api/system', systemRoutes);
 app.use('/api/scheduler', schedulerRoutes);
 app.use('/api/queue', queueRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ollama', ollamaRoutes);
 app.use('/webhook', webhookRoutes);
 
 // Error handling with sanitization for production

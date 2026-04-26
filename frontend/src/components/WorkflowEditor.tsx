@@ -14,12 +14,12 @@ import ReactFlow, {
   ReactFlowProvider
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Play, Save, ArrowLeft, Terminal, Key, Sparkles, Power } from 'lucide-react';
+import { Play, Save, ArrowLeft, Terminal, Key, Sparkles, Power, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
 import { useWorkflowStore } from '../store/workflowStore';
-import { nodesApi, workflowsApi } from '../services/api';
+import { nodesApi, workflowsApi, executionsApi } from '../services/api';
 import { NodeType, WorkflowNode, WorkflowConnection } from '../types';
 
 import { WorkflowNode as WorkflowNodeComponent } from './nodes/WorkflowNode';
@@ -48,6 +48,9 @@ function Flow() {
   const [isTogglingActive, setIsTogglingActive] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
+  const [runningNodeIds, setRunningNodeIds] = useState<Set<string>>(new Set());
+  const [completedNodeStatuses, setCompletedNodeStatuses] = useState<Record<string, string>>({});
+  const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
   
   // Config panel resize state
   const [configPanelWidth, setConfigPanelWidth] = useState(800);
@@ -110,8 +113,8 @@ function Flow() {
         selected: node.id === selectedNode
       }));
 
-      const flowEdges: Edge[] = storeConnections.map((conn) => ({
-        id: conn.id,
+      const flowEdges: Edge[] = storeConnections.map((conn, index) => ({
+        id: conn.id || `edge-${conn.source}-${conn.target}-${index}`,
         source: conn.source,
         target: conn.target,
         sourceHandle: conn.sourceHandle,
@@ -181,6 +184,24 @@ function Flow() {
       })
     );
   }, [storeNodes, setNodes]);
+
+  // Sync execution status to ReactFlow nodes
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        const status = runningNodeIds.has(node.id)
+          ? 'running'
+          : completedNodeStatuses[node.id] || undefined;
+        if (node.data.executionStatus !== status) {
+          return {
+            ...node,
+            data: { ...node.data, executionStatus: status }
+          };
+        }
+        return node;
+      })
+    );
+  }, [runningNodeIds, completedNodeStatuses, setNodes]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -359,8 +380,14 @@ function Flow() {
     if (!currentWorkflow) return;
 
     setIsExecuting(true);
+    setRunningNodeIds(new Set());
+    setCompletedNodeStatuses({});
     try {
-      await workflowsApi.execute(currentWorkflow.id);
+      const response = await workflowsApi.execute(currentWorkflow.id);
+      const executionId = response.data?.data?.executionId;
+      if (executionId) {
+        setActiveExecutionId(executionId);
+      }
       toast.success('Workflow execution started');
     } catch (error) {
       toast.error('Failed to start workflow execution');
@@ -368,6 +395,58 @@ function Flow() {
       setIsExecuting(false);
     }
   };
+
+  const handleCancel = async () => {
+    if (!activeExecutionId) return;
+    try {
+      await executionsApi.cancel(activeExecutionId);
+      toast.success('Execution canceled');
+      setActiveExecutionId(null);
+      setRunningNodeIds(new Set());
+      setCompletedNodeStatuses({});
+    } catch (error) {
+      toast.error('Failed to cancel execution');
+    }
+  };
+
+  // Poll execution status to show running nodes on canvas
+  useEffect(() => {
+    if (!activeExecutionId) return;
+
+    const poll = async () => {
+      try {
+        const response = await executionsApi.getById(activeExecutionId);
+        const execution = response.data?.data;
+        if (execution?.nodeExecutions) {
+          const running = new Set<string>();
+          const completed: Record<string, string> = {};
+          execution.nodeExecutions.forEach((ne: any) => {
+            if (ne.status === 'running') {
+              running.add(ne.nodeId);
+            } else if (ne.status === 'success' || ne.status === 'failed') {
+              completed[ne.nodeId] = ne.status;
+            }
+          });
+          setRunningNodeIds(running);
+          setCompletedNodeStatuses(completed);
+        }
+
+        if (execution?.status !== 'running' && execution?.status !== 'waiting') {
+          // Execution finished, clear running state after a brief delay
+          setTimeout(() => {
+            setActiveExecutionId(null);
+            setRunningNodeIds(new Set());
+          }, execution?.status === 'canceled' ? 500 : 3000);
+        }
+      } catch (err) {
+        console.error('Failed to poll execution status:', err);
+      }
+    };
+
+    poll();
+    const interval = setInterval(poll, 2000);
+    return () => clearInterval(interval);
+  }, [activeExecutionId]);
 
   const handleParameterChange = (key: string, value: any) => {
     if (selectedNode) {
@@ -480,14 +559,24 @@ function Flow() {
             <Save size={16} />
             {isSaving ? 'Saving...' : 'Save'}
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleExecute}
-            disabled={isExecuting}
-          >
-            <Play size={16} />
-            {isExecuting ? 'Running...' : 'Execute'}
-          </button>
+          {activeExecutionId ? (
+            <button
+              className="btn btn-danger"
+              onClick={handleCancel}
+            >
+              <Square size={16} />
+              Stop
+            </button>
+          ) : (
+            <button
+              className="btn btn-primary"
+              onClick={handleExecute}
+              disabled={isExecuting}
+            >
+              <Play size={16} />
+              {isExecuting ? 'Running...' : 'Execute'}
+            </button>
+          )}
         </div>
       </div>
 

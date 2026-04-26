@@ -37,6 +37,7 @@ services:
       dockerfile: Dockerfile
       target: development
     container_name: ordovertex-api
+    user: "1000:1000"
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://ordovertex:ordovertex_secret@postgres:5432/ordovertex
@@ -69,6 +70,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ordovertex-worker
+    user: "1000:1000"
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://ordovertex:ordovertex_secret@postgres:5432/ordovertex
@@ -101,7 +103,9 @@ services:
       dockerfile: Dockerfile
       target: development
     container_name: ordovertex-frontend
-    
+    user: "1000:1000"
+    environment:
+      VITE_PROXY_API_URL: http://api:3001
     volumes:
       - ./frontend:/app
     ports:

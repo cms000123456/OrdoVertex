@@ -99,7 +99,7 @@ router.post('/:id/create', authMiddleware, [
     }
   });
 
-  return successResponse(res, { workflow });
+  return successResponse(res, workflow);
 }));
 
 // Get template categories - MUST be before /:id route

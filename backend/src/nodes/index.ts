@@ -36,6 +36,7 @@ import { dateTimeNode } from './actions/date-time';
 import { stringOpsNode } from './actions/string-ops';
 import { mathNode } from './actions/math';
 import { renameFieldsNode } from './actions/rename-fields';
+import { markdownNode } from './actions/markdown';
 
 // AI nodes
 import { aiAgentNode } from './actions/ai-agent';
@@ -45,6 +46,7 @@ import { textSplitterNode } from './actions/text-splitter';
 import { imageDisplayNode } from './actions/image-display';
 import { textParserNode } from './actions/text-parser';
 import { googleChatNode } from './actions/google-chat';
+import { markdownViewerNode } from './actions/markdown-viewer';
 import logger from '../utils/logger';
 
 // Register all nodes
@@ -85,6 +87,7 @@ export function registerAllNodes() {
   nodeRegistry.register(stringOpsNode);
   nodeRegistry.register(mathNode);
   nodeRegistry.register(renameFieldsNode);
+  nodeRegistry.register(markdownNode);
 
   // AI nodes
   nodeRegistry.register(aiAgentNode);
@@ -94,6 +97,7 @@ export function registerAllNodes() {
   nodeRegistry.register(imageDisplayNode);
   nodeRegistry.register(textParserNode);
   nodeRegistry.register(googleChatNode);
+  nodeRegistry.register(markdownViewerNode);
 
   logger.info(`✅ Registered ${nodeRegistry.getAll().length} nodes`);
 }

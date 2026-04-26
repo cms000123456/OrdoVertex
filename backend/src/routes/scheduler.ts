@@ -101,8 +101,11 @@ router.post('/triggers/:id/run', rateLimit({ windowMs: 60_000, max: 20, message:
     return errorResponse(res, 'Not authorized', 403);
   }
 
-  const job = await queueWorkflowExecution(trigger.workflowId, req.user!.id, {}, 'schedule');
-  return successResponse(res, { queued: true, jobId: job.id });
+  const execution = await prisma.workflowExecution.create({
+    data: { workflowId: trigger.workflowId, status: 'waiting', mode: 'schedule' }
+  });
+  await queueWorkflowExecution(trigger.workflowId, req.user!.id, {}, 'schedule', execution.id);
+  return successResponse(res, { queued: true, executionId: execution.id });
 }));
 
 export default router;

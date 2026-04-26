@@ -86,17 +86,24 @@ router.all('/:workflowId/:path?', rateLimit({
     
     res.status(nodeConfig.responseCode || 200).json(responseData);
 
-    // Queue execution after responding
-    await queueWorkflowExecution(workflowId, workflow.userId, webhookData, 'webhook');
+    // Create execution record and queue
+    const execution = await prisma.workflowExecution.create({
+      data: { workflowId, status: 'waiting', data: webhookData, mode: 'webhook' }
+    });
+    await queueWorkflowExecution(workflowId, workflow.userId, webhookData, 'webhook', execution.id);
   } else {
     // Execute synchronously and return result
     // This would require a more complex implementation with job waiting
     // For now, queue and return accepted
-    await queueWorkflowExecution(workflowId, workflow.userId, webhookData, 'webhook');
+    const execution = await prisma.workflowExecution.create({
+      data: { workflowId, status: 'waiting', data: webhookData, mode: 'webhook' }
+    });
+    await queueWorkflowExecution(workflowId, workflow.userId, webhookData, 'webhook', execution.id);
     
     res.status(202).json({ 
       success: true, 
-      message: 'Webhook received, processing...' 
+      message: 'Webhook received, processing...',
+      executionId: execution.id
     });
   }
 

@@ -222,7 +222,20 @@ export class WorkflowExecutor {
     });
   }
 
+  private async checkCancelled(): Promise<void> {
+    const execution = await prisma.workflowExecution.findUnique({
+      where: { id: this.executionId },
+      select: { status: true }
+    });
+    if (execution?.status === 'canceled') {
+      throw new Error('Execution canceled by user');
+    }
+  }
+
   private async executeNode(node: WorkflowNode, inputItems: any[]): Promise<any[]> {
+    // Check if execution was canceled
+    await this.checkCancelled();
+
     // Prevent infinite loops
     if (this.visitedNodes.has(node.id)) {
       logger.info(`⚠️ Node ${node.name} already visited, skipping`);
@@ -419,7 +432,8 @@ export async function executeWorkflow(
   workflowId: string, 
   userId: string,
   data: any = {},
-  mode: 'manual' | 'webhook' | 'schedule' = 'manual'
+  mode: 'manual' | 'webhook' | 'schedule' = 'manual',
+  executionId?: string
 ): Promise<{ executionId: string; result: any }> {
   // Get workflow from database
   const workflow = await prisma.workflow.findFirst({
@@ -430,15 +444,24 @@ export async function executeWorkflow(
     throw new Error(`Workflow not found: ${workflowId}`);
   }
 
-  // Create execution record
-  const execution = await prisma.workflowExecution.create({
-    data: {
-      workflowId,
-      status: 'running',
-      data,
-      mode
-    }
-  });
+  let execution;
+  if (executionId) {
+    // Use existing execution record (created by API before queuing)
+    execution = await prisma.workflowExecution.update({
+      where: { id: executionId },
+      data: { status: 'running' }
+    });
+  } else {
+    // Create execution record (for direct calls without queuing)
+    execution = await prisma.workflowExecution.create({
+      data: {
+        workflowId,
+        status: 'running',
+        data,
+        mode
+      }
+    });
+  }
 
   // Parse workflow definition
   const workflowDef: WorkflowDefinition = {

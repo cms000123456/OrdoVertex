@@ -48,7 +48,7 @@ export function WorkflowSelector({ currentWorkflowId }: WorkflowSelectorProps) {
     setIsLoading(true);
     try {
       const response = await workflowsApi.getAll();
-      setWorkflows(response.data.data || []);
+      setWorkflows(response.data.data?.workflows || response.data.data || []);
     } catch (error) {
       toast.error('Failed to load workflows');
     } finally {

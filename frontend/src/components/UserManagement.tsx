@@ -44,7 +44,7 @@ export function UserManagement() {
     setIsLoading(true);
     try {
       const response = await usersApi.getAll();
-      setUsers(response.data.data.users);
+      setUsers(response.data.data?.users || response.data.data || []);
     } catch (error: unknown) {
       toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to load users');
     } finally {

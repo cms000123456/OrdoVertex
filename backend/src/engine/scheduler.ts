@@ -75,7 +75,10 @@ class WorkflowScheduler {
               logger.error(`❌ Workflow ${workflowId} not found, skipping scheduled execution`);
               return;
             }
-            await queueWorkflowExecution(workflowId, workflow.userId, {}, 'schedule');
+            const execution = await prisma.workflowExecution.create({
+              data: { workflowId, status: 'waiting', mode: 'schedule' }
+            });
+            await queueWorkflowExecution(workflowId, workflow.userId, {}, 'schedule', execution.id);
 
             // Update last triggered time
             await prisma.trigger.updateMany({

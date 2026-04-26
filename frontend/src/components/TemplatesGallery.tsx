@@ -74,7 +74,7 @@ export function TemplatesGallery() {
       if (searchQuery) params.search = searchQuery;
 
       const response = await templatesApi.getAll(params);
-      setTemplates(response.data.data || []);
+      setTemplates(response.data.data?.templates || response.data.data || []);
     } catch (error) {
       toast.error('Failed to load templates');
     } finally {
@@ -89,7 +89,7 @@ export function TemplatesGallery() {
   const loadCategories = async () => {
     try {
       const response = await templatesApi.getCategories();
-      setCategories(response.data.data || []);
+      setCategories(response.data.data?.categories || response.data.data || []);
     } catch (error) {
       console.error('Failed to load categories');
     }

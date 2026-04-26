@@ -120,52 +120,65 @@ export const filterNode: NodeType = {
         const operator = context.getNodeParameter('operator', 'eq') as string;
         const value = context.getNodeParameter('value', '') as string;
 
-        const getValue = (obj: any, path: string) => {
-          return path.split('.').reduce((o, k) => o?.[k], obj);
+        const getValue = (obj: any, path: string): any => {
+          const keys = path.split('.');
+
+          function traverse(current: any, keyIndex: number): any {
+            if (current === null || current === undefined) {
+              return undefined;
+            }
+            if (keyIndex >= keys.length) {
+              return current;
+            }
+            if (Array.isArray(current)) {
+              // Collect values from all array elements for the remaining path
+              return current.map((item) => traverse(item, keyIndex));
+            }
+            return traverse(current[keys[keyIndex]], keyIndex + 1);
+          }
+
+          return traverse(obj, 0);
+        };
+
+        const matchesValue = (fieldValue: any, op: string, compareValue: string): boolean => {
+          // If fieldValue is an array, check if ANY element matches
+          if (Array.isArray(fieldValue)) {
+            return fieldValue.some((element) => matchesValue(element, op, compareValue));
+          }
+
+          switch (op) {
+            case 'eq':
+              return fieldValue == compareValue;
+            case 'ne':
+              return fieldValue != compareValue;
+            case 'gt':
+              return Number(fieldValue) > Number(compareValue);
+            case 'gte':
+              return Number(fieldValue) >= Number(compareValue);
+            case 'lt':
+              return Number(fieldValue) < Number(compareValue);
+            case 'lte':
+              return Number(fieldValue) <= Number(compareValue);
+            case 'contains':
+              return String(fieldValue).toLowerCase().includes(String(compareValue).toLowerCase());
+            case 'startsWith':
+              return String(fieldValue).startsWith(String(compareValue));
+            case 'endsWith':
+              return String(fieldValue).endsWith(String(compareValue));
+            case 'regex':
+              return new RegExp(compareValue).test(String(fieldValue));
+            case 'empty':
+              return !fieldValue || (Array.isArray(fieldValue) && fieldValue.length === 0);
+            case 'notEmpty':
+              return !!fieldValue && (!Array.isArray(fieldValue) || fieldValue.length > 0);
+            default:
+              return false;
+          }
         };
 
         for (const item of items) {
           const fieldValue = getValue(item.json, field);
-          let isMatch = false;
-
-          switch (operator) {
-            case 'eq':
-              isMatch = fieldValue == value;
-              break;
-            case 'ne':
-              isMatch = fieldValue != value;
-              break;
-            case 'gt':
-              isMatch = Number(fieldValue) > Number(value);
-              break;
-            case 'gte':
-              isMatch = Number(fieldValue) >= Number(value);
-              break;
-            case 'lt':
-              isMatch = Number(fieldValue) < Number(value);
-              break;
-            case 'lte':
-              isMatch = Number(fieldValue) <= Number(value);
-              break;
-            case 'contains':
-              isMatch = String(fieldValue).toLowerCase().includes(String(value).toLowerCase());
-              break;
-            case 'startsWith':
-              isMatch = String(fieldValue).startsWith(String(value));
-              break;
-            case 'endsWith':
-              isMatch = String(fieldValue).endsWith(String(value));
-              break;
-            case 'regex':
-              isMatch = new RegExp(value).test(String(fieldValue));
-              break;
-            case 'empty':
-              isMatch = !fieldValue || (Array.isArray(fieldValue) && fieldValue.length === 0);
-              break;
-            case 'notEmpty':
-              isMatch = !!fieldValue && (!Array.isArray(fieldValue) || fieldValue.length > 0);
-              break;
-          }
+          const isMatch = matchesValue(fieldValue, operator, value);
 
           if (isMatch) {
             matched.push(item);
@@ -201,10 +214,7 @@ export const filterNode: NodeType = {
 
       return {
         success: true,
-        output: [
-          ...matched,
-          ...unmatched.map(item => ({ ...item, _unmatched: true }))
-        ]
+        output: matched
       };
     } catch (error: unknown) {
       if (context.continueOnFail()) {

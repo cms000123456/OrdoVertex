@@ -307,11 +307,21 @@ router.post('/:id/execute', validateUUID(), handleValidationErrors, asyncHandler
     return errorResponse(res, 'Workflow not found', 404);
   }
 
+  // Create execution record first so the client gets a real UUID
+  const execution = await prisma.workflowExecution.create({
+    data: {
+      workflowId: id,
+      status: 'waiting',
+      data,
+      mode: 'manual'
+    }
+  });
+
   // Queue the execution
-  const job = await queueWorkflowExecution(id, req.user!.id, data, 'manual');
+  await queueWorkflowExecution(id, req.user!.id, data, 'manual', execution.id);
 
   return successResponse(res, { 
-    executionId: job.id,
+    executionId: execution.id,
     message: 'Workflow execution queued'
   }, 202);
 }));

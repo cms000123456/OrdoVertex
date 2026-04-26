@@ -33,7 +33,7 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
     try {
       const response = await executionsApi.getAll();
       // Filter executions for this workflow
-      const workflowExecutions = response.data.data.executions.filter(
+      const workflowExecutions = (response.data.data?.executions || response.data.data || []).filter(
         (e: Execution) => e.workflowId === workflowId
       );
       setExecutions(workflowExecutions);
@@ -97,6 +97,134 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
     return new Date(dateString).toLocaleTimeString();
   };
 
+  // Simple markdown to HTML converter for display
+  const renderMarkdown = (content: string): React.ReactNode => {
+    const lines = content.split('\n');
+    const elements: React.ReactNode[] = [];
+    let listBuffer: { type: 'ul' | 'ol'; items: string[] } | null = null;
+    let codeBlockLang = '';
+    let codeBlockContent: string[] = [];
+    let inCodeBlock = false;
+
+    const flushList = () => {
+      if (!listBuffer) return;
+      const Tag = listBuffer.type === 'ul' ? 'ul' : 'ol';
+      elements.push(
+        <Tag key={`list-${elements.length}`} className="md-list">
+          {listBuffer.items.map((item, i) => (
+            <li key={i} dangerouslySetInnerHTML={{ __html: inlineFormat(item) }} />
+          ))}
+        </Tag>
+      );
+      listBuffer = null;
+    };
+
+    const flushCodeBlock = () => {
+      if (!inCodeBlock) return;
+      elements.push(
+        <pre key={`code-${elements.length}`} className="md-code-block">
+          <code>{codeBlockContent.join('\n')}</code>
+        </pre>
+      );
+      inCodeBlock = false;
+      codeBlockContent = [];
+      codeBlockLang = '';
+    };
+
+    const inlineFormat = (text: string): string => {
+      return text
+        .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/`(.+?)`/g, '<code>$1</code>')
+        .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Code blocks
+      if (line.startsWith('```')) {
+        if (!inCodeBlock) {
+          flushList();
+          inCodeBlock = true;
+          codeBlockLang = line.slice(3).trim();
+          continue;
+        } else {
+          flushCodeBlock();
+          continue;
+        }
+      }
+
+      if (inCodeBlock) {
+        codeBlockContent.push(line);
+        continue;
+      }
+
+      // Horizontal rule
+      if (/^(---|___|\*\*\*)$/.test(line.trim())) {
+        flushList();
+        elements.push(<hr key={`hr-${elements.length}`} className="md-hr" />);
+        continue;
+      }
+
+      // Blockquote
+      if (line.startsWith('> ')) {
+        flushList();
+        elements.push(
+          <blockquote key={`bq-${elements.length}`} className="md-blockquote">
+            <span dangerouslySetInnerHTML={{ __html: inlineFormat(line.slice(2)) }} />
+          </blockquote>
+        );
+        continue;
+      }
+
+      // Headers
+      const hMatch = line.match(/^(#{1,6})\s+(.+)$/);
+      if (hMatch) {
+        flushList();
+        const level = hMatch[1].length;
+        const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+        elements.push(<Tag key={`h-${elements.length}`} className={`md-h${level}`}>{hMatch[2]}</Tag>);
+        continue;
+      }
+
+      // Lists
+      const ulMatch = line.match(/^(\s*)[-*+]\s+(.+)$/);
+      if (ulMatch) {
+        if (!listBuffer || listBuffer.type !== 'ul') flushList();
+        listBuffer = { type: 'ul', items: [...(listBuffer?.items || []), ulMatch[2]] };
+        continue;
+      }
+
+      const olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
+      if (olMatch) {
+        if (!listBuffer || listBuffer.type !== 'ol') flushList();
+        listBuffer = { type: 'ol', items: [...(listBuffer?.items || []), olMatch[2]] };
+        continue;
+      }
+
+      // Empty line
+      if (line.trim() === '') {
+        flushList();
+        continue;
+      }
+
+      // Regular paragraph
+      flushList();
+      elements.push(
+        <p key={`p-${elements.length}`} className="md-paragraph">
+          <span dangerouslySetInnerHTML={{ __html: inlineFormat(line) }} />
+        </p>
+      );
+    }
+
+    flushList();
+    flushCodeBlock();
+
+    return <div className="md-root">{elements}</div>;
+  };
+
   // Check if a string is an image URL
   const isImageUrl = (url: string): boolean => {
     if (typeof url !== 'string') return false;
@@ -143,6 +271,21 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
           {displayData._display.caption && (
             <p className="image-caption">{displayData._display.caption}</p>
           )}
+        </div>
+      );
+    }
+
+    // Check for _display hint (from Markdown node)
+    if (displayData?._display?.type === 'markdown' && displayData._display.content) {
+      return (
+        <div className="markdown-display">
+          <div className="markdown-content">
+            {renderMarkdown(displayData._display.content)}
+          </div>
+          <details>
+            <summary>View raw data</summary>
+            <pre className="json-data">{(() => { const { _display, ...rest } = data; return JSON.stringify(rest, null, 2); })()}</pre>
+          </details>
         </div>
       );
     }

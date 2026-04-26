@@ -261,7 +261,27 @@
 
 .workflow-node.selected {
   border-color: #6366f1;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+  box-shadow:
+    0 0 0 3px rgba(99, 102, 241, 0.15),
+    0 6px 20px rgba(99, 102, 241, 0.25);
+  transform: translateY(-1px);
+}
+
+@keyframes selected-node-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 3px rgba(99, 102, 241, 0.15),
+      0 6px 20px rgba(99, 102, 241, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 0 5px rgba(99, 102, 241, 0.22),
+      0 8px 24px rgba(99, 102, 241, 0.35);
+  }
+}
+
+.workflow-node.selected {
+  animation: selected-node-pulse 2s ease-in-out infinite;
 }
 
 .node-content {
@@ -313,6 +333,66 @@
 
 .node-description:empty {
   display: none;
+}
+
+.node-status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.node-status-indicator.running {
+  color: #3b82f6;
+}
+
+.node-status-indicator.success {
+  color: #22c55e;
+}
+
+.node-status-indicator.failed {
+  color: #ef4444;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.workflow-node.running {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  animation: node-pulse 2s ease-in-out infinite;
+}
+
+@keyframes node-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+  50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.25); }
+}
+
+.workflow-node.success {
+  border-color: #22c55e;
+}
+
+.workflow-node.failed {
+  border-color: #ef4444;
+}
+
+.workflow-node.canceled {
+  border-color: #f59e0b;
+  opacity: 0.8;
+}
+
+.node-status-indicator.canceled {
+  color: #f59e0b;
 }
 
 .node-handle {
@@ -394,6 +474,49 @@
   font-size: 14px;
   font-weight: 600;
   color: #1e293b;
+}
+
+.config-header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inspector-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.inspector-node-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inspector-node-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.8), 0 0 0 3px currentColor;
+}
+
+.inspector-node-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.inspector-node-type {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .close-btn {

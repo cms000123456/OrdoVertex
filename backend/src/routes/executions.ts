@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../utils/auth';
 import { successResponse, errorResponse, validateUUID, handleValidationErrors } from '../utils/response';
-import { getQueueStats } from '../engine/queue';
+import { getQueueStats, workflowQueue } from '../engine/queue';
 import logger from '../utils/logger';
 import { asyncHandler } from '../utils/async-handler';
 
@@ -93,6 +93,66 @@ router.get('/:id', validateUUID(), handleValidationErrors, asyncHandler(async (r
   return successResponse(res, execution);
 }));
 
+// Cancel execution
+router.post('/:id/cancel', validateUUID(), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
+  const { id } = req.params;
+
+  // Verify ownership through workflow
+  const execution = await prisma.workflowExecution.findFirst({
+    where: {
+      id,
+      workflow: {
+        userId: req.user!.id
+      }
+    }
+  });
+
+  if (!execution) {
+    return errorResponse(res, 'Execution not found', 404);
+  }
+
+  if (execution.status !== 'running' && execution.status !== 'waiting') {
+    return errorResponse(res, `Execution cannot be canceled (status: ${execution.status})`, 400);
+  }
+
+  // Try to remove the job from the queue if it's still waiting
+  try {
+    const jobs = await workflowQueue.getJobs(['waiting', 'paused', 'delayed']);
+    const job = jobs.find((j: any) => j.data.executionId === id);
+    if (job) {
+      await job.remove();
+      logger.info(`[Cancel] Removed queued job ${job.id} for execution ${id}`);
+    }
+  } catch (err) {
+    logger.error(`[Cancel] Failed to remove queued job for execution ${id}:`, err);
+  }
+
+  // Mark execution as canceled
+  await prisma.workflowExecution.update({
+    where: { id },
+    data: {
+      status: 'canceled',
+      finishedAt: new Date(),
+      error: 'Cancelled by user'
+    }
+  });
+
+  // Also mark any running node executions as canceled
+  await prisma.nodeExecution.updateMany({
+    where: {
+      executionId: id,
+      status: 'running'
+    },
+    data: {
+      status: 'canceled',
+      finishedAt: new Date(),
+      error: 'Cancelled by user'
+    }
+  });
+
+  return successResponse(res, { canceled: true });
+}));
+
 // Delete execution
 router.delete('/:id', validateUUID(), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
@@ -119,7 +179,7 @@ router.delete('/:id', validateUUID(), handleValidationErrors, asyncHandler(async
 }));
 
 // Get node execution data for a specific node in an execution
-router.get('/:executionId/nodes/:nodeId', validateUUID('executionId'), validateUUID('nodeId'), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
+router.get('/:executionId/nodes/:nodeId', validateUUID('executionId'), handleValidationErrors, asyncHandler(async (req: AuthRequest, res) => {
   const { executionId, nodeId } = req.params;
 
   // Verify execution ownership

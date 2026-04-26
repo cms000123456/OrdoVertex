@@ -1,11 +1,133 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, ExternalLink, Database, PlayCircle, Settings, Lightbulb, XCircle, RefreshCw } from 'lucide-react';
 import { useWorkflowStore } from '../store/workflowStore';
-import { credentialApi, executionsApi } from '../services/api';
+import { credentialApi, executionsApi, ollamaApi } from '../services/api';
 import { Credential } from '../types';
 import { AITips } from './AITips';
 import { CodeEditor } from './CodeEditor';
 import { getErrorMessage } from '../utils/error-helper';
+import { categoryColors } from './nodes/WorkflowNode';
+
+// Simple markdown to HTML converter for display
+const renderMarkdown = (content: string): React.ReactNode => {
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+  let listBuffer: { type: 'ul' | 'ol'; items: string[] } | null = null;
+  let codeBlockLang = '';
+  let codeBlockContent: string[] = [];
+  let inCodeBlock = false;
+
+  const flushList = () => {
+    if (!listBuffer) return;
+    const Tag = listBuffer.type === 'ul' ? 'ul' : 'ol';
+    elements.push(
+      <Tag key={`list-${elements.length}`} className="md-list">
+        {listBuffer.items.map((item, i) => (
+          <li key={i} dangerouslySetInnerHTML={{ __html: inlineFormat(item) }} />
+        ))}
+      </Tag>
+    );
+    listBuffer = null;
+  };
+
+  const flushCodeBlock = () => {
+    if (!inCodeBlock) return;
+    elements.push(
+      <pre key={`code-${elements.length}`} className="md-code-block">
+        <code>{codeBlockContent.join('\n')}</code>
+      </pre>
+    );
+    inCodeBlock = false;
+    codeBlockContent = [];
+    codeBlockLang = '';
+  };
+
+  const inlineFormat = (text: string): string => {
+    return text
+      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code>$1</code>')
+      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.startsWith('```')) {
+      if (!inCodeBlock) {
+        flushList();
+        inCodeBlock = true;
+        codeBlockLang = line.slice(3).trim();
+        continue;
+      } else {
+        flushCodeBlock();
+        continue;
+      }
+    }
+
+    if (inCodeBlock) {
+      codeBlockContent.push(line);
+      continue;
+    }
+
+    if (/^(---|___|\*\*\*)$/.test(line.trim())) {
+      flushList();
+      elements.push(<hr key={`hr-${elements.length}`} className="md-hr" />);
+      continue;
+    }
+
+    if (line.startsWith('> ')) {
+      flushList();
+      elements.push(
+        <blockquote key={`bq-${elements.length}`} className="md-blockquote">
+          <span dangerouslySetInnerHTML={{ __html: inlineFormat(line.slice(2)) }} />
+        </blockquote>
+      );
+      continue;
+    }
+
+    const hMatch = line.match(/^(#{1,6})\s+(.+)$/);
+    if (hMatch) {
+      flushList();
+      const level = hMatch[1].length;
+      const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+      elements.push(<Tag key={`h-${elements.length}`} className={`md-h${level}`}>{hMatch[2]}</Tag>);
+      continue;
+    }
+
+    const ulMatch = line.match(/^(\s*)[-*+]\s+(.+)$/);
+    if (ulMatch) {
+      if (!listBuffer || listBuffer.type !== 'ul') flushList();
+      listBuffer = { type: 'ul', items: [...(listBuffer?.items || []), ulMatch[2]] };
+      continue;
+    }
+
+    const olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
+    if (olMatch) {
+      if (!listBuffer || listBuffer.type !== 'ol') flushList();
+      listBuffer = { type: 'ol', items: [...(listBuffer?.items || []), olMatch[2]] };
+      continue;
+    }
+
+    if (line.trim() === '') {
+      flushList();
+      continue;
+    }
+
+    flushList();
+    elements.push(
+      <p key={`p-${elements.length}`} className="md-paragraph">
+        <span dangerouslySetInnerHTML={{ __html: inlineFormat(line) }} />
+      </p>
+    );
+  }
+
+  flushList();
+  flushCodeBlock();
+
+  return <div className="md-root">{elements}</div>;
+};
 
 // Check if a string is an image URL
 const isImageUrl = (url: string): boolean => {
@@ -38,6 +160,21 @@ const RenderJsonData: React.FC<{ data: any }> = ({ data }) => {
   }
   
   
+  // Check for _display hint (from Markdown node)
+  if (displayData?._display?.type === 'markdown' && displayData._display.content) {
+    return (
+      <div className="markdown-display">
+        <div className="markdown-content">
+          {renderMarkdown(displayData._display.content)}
+        </div>
+        <details>
+          <summary>View raw data</summary>
+          <pre className="data-json">{JSON.stringify(data, null, 2)}</pre>
+        </details>
+      </div>
+    );
+  }
+
   // Check for _display hint (from Image Display node)
   if (displayData?._display?.type === 'image' && displayData._display.url) {
     return (
@@ -55,7 +192,7 @@ const RenderJsonData: React.FC<{ data: any }> = ({ data }) => {
         )}
         <details>
           <summary>View raw data</summary>
-          <pre className="data-json">{JSON.stringify(data, null, 2)}</pre>
+          <pre className="data-json">{(() => { const { _display, ...rest } = data; return JSON.stringify(rest, null, 2); })()}</pre>
         </details>
       </div>
     );
@@ -86,6 +223,150 @@ const RenderJsonData: React.FC<{ data: any }> = ({ data }) => {
   return <pre className="data-json">{JSON.stringify(data, null, 2)}</pre>;
 };
 
+// Simple markdown renderer for node inspector
+const MarkdownContent: React.FC<{ content: string }> = ({ content }) => {
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+  let listBuffer: { type: 'ul' | 'ol'; items: string[] } | null = null;
+  let codeBlockContent: string[] = [];
+  let inCodeBlock = false;
+
+  const flushList = () => {
+    if (!listBuffer) return;
+    const Tag = listBuffer.type === 'ul' ? 'ul' : 'ol';
+    elements.push(
+      <Tag key={`list-${elements.length}`} className="md-list" style={{ margin: '8px 0', paddingLeft: 20 }}>
+        {listBuffer.items.map((item, i) => (
+          <li key={i} style={{ margin: '4px 0' }} dangerouslySetInnerHTML={{ __html: inlineFormat(item) }} />
+        ))}
+      </Tag>
+    );
+    listBuffer = null;
+  };
+
+  const flushCodeBlock = () => {
+    if (!inCodeBlock) return;
+    elements.push(
+      <pre key={`code-${elements.length}`} className="md-code-block" style={{
+        background: '#1e293b',
+        color: '#e2e8f0',
+        padding: 12,
+        borderRadius: 6,
+        fontFamily: 'monospace',
+        fontSize: 12,
+        overflowX: 'auto',
+        margin: '8px 0'
+      }}>
+        <code>{codeBlockContent.join('\n')}</code>
+      </pre>
+    );
+    inCodeBlock = false;
+    codeBlockContent = [];
+  };
+
+  const inlineFormat = (text: string): string => {
+    return text
+      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code style="background:#f1f5f9;padding:2px 5px;border-radius:4px;font-family:monospace;font-size:12px;color:#dc2626">$1</code>')
+      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#6366f1;text-decoration:none">$1</a>');
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.startsWith('```')) {
+      if (!inCodeBlock) {
+        flushList();
+        inCodeBlock = true;
+        continue;
+      } else {
+        flushCodeBlock();
+        continue;
+      }
+    }
+
+    if (inCodeBlock) {
+      codeBlockContent.push(line);
+      continue;
+    }
+
+    if (/^(---|___|\*\*\*)$/.test(line.trim())) {
+      flushList();
+      elements.push(<hr key={`hr-${elements.length}`} style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '12px 0' }} />);
+      continue;
+    }
+
+    if (line.startsWith('> ')) {
+      flushList();
+      elements.push(
+        <blockquote key={`bq-${elements.length}`} style={{
+          borderLeft: '3px solid #cbd5e1',
+          margin: '8px 0',
+          padding: '4px 12px',
+          color: '#475569',
+          background: '#f8fafc',
+          borderRadius: '0 4px 4px 0',
+          fontSize: 13
+        }}>
+          <span dangerouslySetInnerHTML={{ __html: inlineFormat(line.slice(2)) }} />
+        </blockquote>
+      );
+      continue;
+    }
+
+    const hMatch = line.match(/^(#{1,6})\s+(.+)$/);
+    if (hMatch) {
+      flushList();
+      const level = hMatch[1].length;
+      const sizes = ['18px', '16px', '14px', '13px', '12px', '11px'];
+      elements.push(
+        <div key={`h-${elements.length}`} style={{
+          fontSize: sizes[level - 1],
+          fontWeight: 600,
+          margin: '12px 0 8px 0',
+          color: '#1e293b',
+          borderBottom: level <= 2 ? `${3 - level}px solid #e2e8f0` : 'none',
+          paddingBottom: level <= 2 ? '4px' : '0'
+        }}>{hMatch[2]}</div>
+      );
+      continue;
+    }
+
+    const ulMatch = line.match(/^(\s*)[-*+]\s+(.+)$/);
+    if (ulMatch) {
+      if (!listBuffer || listBuffer.type !== 'ul') flushList();
+      listBuffer = { type: 'ul', items: [...(listBuffer?.items || []), ulMatch[2]] };
+      continue;
+    }
+
+    const olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
+    if (olMatch) {
+      if (!listBuffer || listBuffer.type !== 'ol') flushList();
+      listBuffer = { type: 'ol', items: [...(listBuffer?.items || []), olMatch[2]] };
+      continue;
+    }
+
+    if (line.trim() === '') {
+      flushList();
+      continue;
+    }
+
+    flushList();
+    elements.push(
+      <p key={`p-${elements.length}`} style={{ margin: '8px 0', fontSize: 13, lineHeight: 1.6, color: '#1e293b' }}>
+        <span dangerouslySetInnerHTML={{ __html: inlineFormat(line) }} />
+      </p>
+    );
+  }
+
+  flushList();
+  flushCodeBlock();
+
+  return <div style={{ fontSize: 13, lineHeight: 1.6, color: '#1e293b' }}>{elements}</div>;
+};
+
 interface NodeConfigPanelProps {
   nodeId: string;
   onParameterChange: (key: string, value: any) => void;
@@ -111,6 +392,11 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
   const currentWorkflow = useWorkflowStore((state) => state.currentWorkflow);
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [credentialsLoading, setCredentialsLoading] = useState(false);
+  
+  // Ollama models state
+  const [ollamaModels, setOllamaModels] = useState<{ name: string; model: string }[]>([]);
+  const [ollamaLoading, setOllamaLoading] = useState(false);
+  const [ollamaError, setOllamaError] = useState<string | null>(null);
   
   // Execution data state
   const [activeTab, setActiveTab] = useState<'config' | 'input' | 'output'>('config');
@@ -176,11 +462,11 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
       const nodeExecution = nodeExecRes.data?.nodeExecution || nodeExecRes.data?.data?.nodeExecution || nodeExecRes.data;
       setExecutionData(nodeExecution);
     } catch (err: unknown) {
-      console.error('Error loading execution data:', err);
       const status = (err as { response?: { status?: number } }).response?.status;
       if (status === 404) {
         setExecutionData(null);
       } else {
+        console.error('Error loading execution data:', err);
         setExecutionError('Failed to load execution data: ' + getErrorMessage(err));
       }
     } finally {
@@ -204,6 +490,33 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
       loadCredentials();
     }
   }, [nodeType, loadCredentials]);
+
+  // Load Ollama models when URL changes or panel opens
+  const loadOllamaModels = useCallback(async (url: string) => {
+    try {
+      setOllamaLoading(true);
+      setOllamaError(null);
+      const response = await ollamaApi.listModels(url);
+      const models = response.data?.models || [];
+      setOllamaModels(models);
+    } catch (err: any) {
+      setOllamaError(err.response?.data?.error?.message || err.message || 'Failed to load models');
+      setOllamaModels([]);
+    } finally {
+      setOllamaLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const isOllamaVisible = nodeType?.properties?.some(
+      (p: any) => p.name === 'ollamaModel' && shouldShowProperty(p)
+    );
+    if (isOllamaVisible && node) {
+      const url = (node.parameters.ollamaUrl as string) || 'http://localhost:11434';
+      loadOllamaModels(url);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [node?.parameters?.ollamaUrl, node?.parameters?.provider, nodeType]);
 
   if (!node || !nodeType) return null;
 
@@ -292,6 +605,48 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
             ))}
           </select>
         );
+
+      case 'ollamaModel': {
+        const ollamaUrl = (node.parameters.ollamaUrl as string) || 'http://localhost:11434';
+        return (
+          <div>
+            <div className="credential-selector">
+              <select
+                value={value || ''}
+                onChange={(e) => onParameterChange(property.name, e.target.value)}
+                className="form-select"
+                disabled={ollamaLoading}
+              >
+                <option value="">
+                  {ollamaLoading ? 'Loading models...' : 'Select a model...'}
+                </option>
+                {ollamaModels.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn btn-sm btn-secondary"
+                onClick={() => loadOllamaModels(ollamaUrl)}
+                disabled={ollamaLoading}
+                title="Refresh models from Ollama"
+              >
+                <RefreshCw size={14} className={ollamaLoading ? 'spinning' : ''} />
+              </button>
+            </div>
+            {ollamaError && (
+              <p style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{ollamaError}</p>
+            )}
+            {!ollamaLoading && ollamaModels.length === 0 && !ollamaError && (
+              <p style={{ fontSize: 12, marginTop: 4, color: 'var(--text-secondary, #64748b)' }}>
+                No models found. Make sure Ollama is running and accessible at {ollamaUrl}.
+              </p>
+            )}
+          </div>
+        );
+      }
 
       case 'multiselect': {
         const selected: string[] = Array.isArray(value) ? value : (property.default || []);
@@ -478,7 +833,17 @@ export function NodeConfigPanel({ nodeId, onParameterChange }: NodeConfigPanelPr
   return (
     <div className="config-panel">
       <div className="config-header">
-        <h3>Node Inspector</h3>
+        <div className="config-header-title">
+          <span className="inspector-label">Node Inspector</span>
+          <div className="inspector-node-name">
+            <span
+              className="inspector-node-dot"
+              style={{ backgroundColor: categoryColors[nodeType?.category || 'default'] }}
+            />
+            <span className="inspector-node-text">{node?.name}</span>
+            <span className="inspector-node-type">{node?.type}</span>
+          </div>
+        </div>
         <button
           className="close-btn"
           onClick={() => setSelectedNode(null)}

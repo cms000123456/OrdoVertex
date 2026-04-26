@@ -18,6 +18,7 @@ export interface WorkflowJob {
   userId: string;
   data: any;
   mode: 'manual' | 'webhook' | 'schedule';
+  executionId?: string;
   webhookResponseQueue?: string;
 }
 
@@ -66,7 +67,7 @@ export function createWorker() {
       logger.info(`🚀 Processing workflow job ${job.id}: ${workflowId} (${mode})`);
       
       try {
-        const result = await executeWorkflow(workflowId, userId, data, mode);
+        const result = await executeWorkflow(workflowId, userId, data, mode, job.data.executionId);
         
         // If this is a webhook job with response queue, send response
         if (job.data.webhookResponseQueue) {
@@ -110,6 +111,7 @@ export async function queueWorkflowExecution(
   userId: string,
   data: any = {},
   mode: 'manual' | 'webhook' | 'schedule' = 'manual',
+  executionId?: string,
   webhookResponseQueueId?: string
 ): Promise<Job<WorkflowJob>> {
   return workflowQueue.add('execute', {
@@ -117,6 +119,7 @@ export async function queueWorkflowExecution(
     userId,
     data,
     mode,
+    executionId,
     webhookResponseQueue: webhookResponseQueueId
   }) as Promise<Job<WorkflowJob>>;
 }

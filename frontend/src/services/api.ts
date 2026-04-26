@@ -107,8 +107,8 @@ export const workflowsApi = {
 
 // Node API
 export const nodesApi = {
-  getAll: () => api.get('/api/nodes'),
-  getCategories: () => api.get('/api/nodes/categories')
+  getAll: () => api.get('/api/nodes', { params: { _t: Date.now() } }),
+  getCategories: () => api.get('/api/nodes/categories', { params: { _t: Date.now() } })
 };
 
 // Execution API
@@ -243,6 +243,11 @@ export const templatesApi = {
   getById: (id: string) => api.get(`/api/templates/${id}`),
   getCategories: () => api.get('/api/templates/categories/list'),
   createFromTemplate: (id: string, data: any) => api.post(`/api/templates/${id}/create`, data)
+};
+
+// Ollama API
+export const ollamaApi = {
+  listModels: (url: string) => api.get('/api/ollama/models', { params: { url } })
 };
 
 // Scheduler API

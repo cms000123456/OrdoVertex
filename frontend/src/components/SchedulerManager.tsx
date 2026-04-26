@@ -41,7 +41,7 @@ export function SchedulerManager() {
         schedulerApi.getTriggers()
       ]);
       setStatus(statusRes.data.data);
-      setTriggers(triggersRes.data.data || []);
+      setTriggers(triggersRes.data.data?.triggers || triggersRes.data.data || []);
     } catch (err: unknown) {
       toast.error('Failed to load scheduler data');
     } finally {

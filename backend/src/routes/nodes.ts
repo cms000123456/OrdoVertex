@@ -24,7 +24,7 @@ router.get('/', asyncHandler((req: AuthRequest, res) => {
     credentials: node.credentials
   }));
 
-  res.set('Cache-Control', 'public, max-age=3600');
+  res.set('Cache-Control', 'no-store');
   return successResponse(res, nodes);
 }));
 
@@ -44,7 +44,7 @@ router.get('/categories', asyncHandler((req: AuthRequest, res) => {
     }))
   }));
 
-  res.set('Cache-Control', 'public, max-age=3600');
+  res.set('Cache-Control', 'no-store');
   return successResponse(res, categories);
 }));
 

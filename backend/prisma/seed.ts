@@ -1,5 +1,5 @@
 import { PrismaClient, UserRole } from '@prisma/client';
-import { hashPassword } from '../src/utils/auth';
+import { hashPassword, verifyPassword } from '../src/utils/auth';
 
 const prisma = new PrismaClient();
 
@@ -98,18 +98,21 @@ return [{ json: result }];`
   ],
   connections: [
     {
+      id: 'conn-1',
       source: 'trigger-1',
       sourceHandle: 'default',
       target: 'code-1',
       targetHandle: 'input'
     },
     {
+      id: 'conn-2',
       source: 'code-1',
       sourceHandle: 'default',
       target: 'code-2',
       targetHandle: 'input'
     },
     {
+      id: 'conn-3',
       source: 'code-2',
       sourceHandle: 'default',
       target: 'set-1',
@@ -135,8 +138,21 @@ async function main() {
   let admin;
 
   if (existingAdmin) {
-    console.log('ℹ️  Admin user already exists, skipping user seed');
-    admin = existingAdmin;
+    // If admin exists but password env changed, update the password
+    const passwordMatches = existingAdmin.password
+      ? await verifyPassword(adminPassword, existingAdmin.password)
+      : false;
+    if (!passwordMatches) {
+      const hashedPassword = await hashPassword(adminPassword);
+      admin = await prisma.user.update({
+        where: { id: existingAdmin.id },
+        data: { password: hashedPassword }
+      });
+      console.log(`🔑 Admin password updated from environment variable`);
+    } else {
+      console.log('ℹ️  Admin user already exists, skipping user seed');
+    }
+    admin = admin || existingAdmin;
   } else {
     // Check if user with this email exists
     const existingUser = await prisma.user.findUnique({

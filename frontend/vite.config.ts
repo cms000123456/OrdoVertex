@@ -9,10 +9,11 @@ export default defineConfig({
     sourcemap: true,
   },
   server: {
+    host: '0.0.0.0',
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: process.env.VITE_PROXY_API_URL || 'http://localhost:3001',
         changeOrigin: true,
       },
     },

@@ -25,7 +25,10 @@ import {
   Cloud,
   Contact,
   StickyNote,
-  GripVertical
+  GripVertical,
+  Loader2,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { useWorkflowStore } from '../../store/workflowStore';
 
@@ -59,7 +62,7 @@ const iconMap: Record<string, React.ReactNode> = {
   'default': <Activity size={16} />
 };
 
-const categoryColors: Record<string, string> = {
+export const categoryColors: Record<string, string> = {
   'Triggers': '#10b981',
   'Actions': '#6366f1',
   'Transform': '#f59e0b',
@@ -266,8 +269,19 @@ export function WorkflowNode({ data, selected, id }: NodeProps) {
   const icon = iconMap[data.type] || iconMap['default'];
   const color = categoryColors[data.category] || categoryColors['default'];
 
+  const status = data.executionStatus;
+
+  const selectedStyle = selected ? {
+    borderColor: color,
+    boxShadow: `0 0 0 3px ${color}26, 0 6px 20px ${color}40`,
+    transform: 'translateY(-1px)'
+  } : {};
+
   return (
-    <div className={`workflow-node ${selected ? 'selected' : ''}`}>
+    <div
+      className={`workflow-node ${selected ? 'selected' : ''} ${status || ''}`}
+      style={selectedStyle}
+    >
       <Handle
         type="target"
         position={Position.Left}
@@ -287,6 +301,26 @@ export function WorkflowNode({ data, selected, id }: NodeProps) {
             </div>
           )}
         </div>
+        {status === 'running' && (
+          <div className="node-status-indicator running" title="Running...">
+            <Loader2 size={16} className="spinning" />
+          </div>
+        )}
+        {status === 'success' && (
+          <div className="node-status-indicator success" title="Success">
+            <CheckCircle2 size={16} />
+          </div>
+        )}
+        {status === 'failed' && (
+          <div className="node-status-indicator failed" title="Failed">
+            <XCircle size={16} />
+          </div>
+        )}
+        {status === 'canceled' && (
+          <div className="node-status-indicator canceled" title="Cancelled">
+            <XCircle size={16} />
+          </div>
+        )}
       </div>
 
       <Handle

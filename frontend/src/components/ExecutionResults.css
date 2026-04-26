@@ -379,3 +379,116 @@
   min-height: 80px;
   height: auto;
 }
+
+/* Markdown Display Styles */
+.markdown-display {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.markdown-content {
+  padding: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.md-root {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1e293b;
+}
+
+.md-root h1, .md-root h2, .md-root h3, .md-root h4, .md-root h5, .md-root h6 {
+  margin: 12px 0 8px 0;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.md-root h1 { font-size: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; }
+.md-root h2 { font-size: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; }
+.md-root h3 { font-size: 14px; }
+.md-root h4 { font-size: 13px; }
+.md-root h5 { font-size: 12px; }
+.md-root h6 { font-size: 11px; color: #64748b; }
+
+.md-paragraph {
+  margin: 8px 0;
+}
+
+.md-list {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.md-list li {
+  margin: 4px 0;
+}
+
+.md-code-block {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 12px;
+  border-radius: 6px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.md-code-block code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+.md-root code {
+  background: #f1f5f9;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  color: #dc2626;
+}
+
+.md-blockquote {
+  border-left: 3px solid #cbd5e1;
+  margin: 8px 0;
+  padding: 4px 12px;
+  color: #475569;
+  background: #f8fafc;
+  border-radius: 0 4px 4px 0;
+}
+
+.md-hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 12px 0;
+}
+
+.md-root a {
+  color: #6366f1;
+  text-decoration: none;
+}
+
+.md-root a:hover {
+  text-decoration: underline;
+}
+
+.markdown-display details {
+  padding: 12px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.markdown-display summary {
+  font-size: 12px;
+  color: #6366f1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.markdown-display summary:hover {
+  color: #4f46e5;
+}

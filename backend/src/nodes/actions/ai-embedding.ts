@@ -2,6 +2,7 @@ import { NodeType } from '../../types';
 import { getErrorMessage } from '../../utils/error-helper';
 import { prisma } from '../../prisma';
 import { decryptJSON } from '../../utils/encryption';
+import { resolveOllamaUrl } from '../../utils/ollama-url';
 import OpenAI from 'openai';
 
 
@@ -44,7 +45,12 @@ export const aiEmbeddingNode: NodeType = {
       displayName: 'Use Credential',
       type: 'boolean',
       default: true,
-      description: 'Use saved API credentials'
+      description: 'Use saved API credentials',
+      displayOptions: {
+        show: {
+          provider: ['openai', 'kimi']
+        }
+      }
     },
     {
       name: 'credentialId',
@@ -137,7 +143,7 @@ export const aiEmbeddingNode: NodeType = {
     {
       name: 'ollamaModel',
       displayName: 'Ollama Model',
-      type: 'string',
+      type: 'ollamaModel',
       default: 'nomic-embed-text',
       displayOptions: {
         show: {
@@ -228,13 +234,17 @@ export const aiEmbeddingNode: NodeType = {
 
       } else {
         // Ollama
-        const ollamaUrl = context.getNodeParameter('ollamaUrl', 'http://localhost:11434') as string;
+        const ollamaUrl = resolveOllamaUrl(
+          context.getNodeParameter('ollamaUrl', 'http://localhost:11434') as string
+        );
         const model = context.getNodeParameter('ollamaModel', 'nomic-embed-text') as string;
 
         const axios = (await import('axios')).default;
         const response = await axios.post(`${ollamaUrl}/api/embeddings`, {
           model,
           prompt: inputText
+        }, {
+          timeout: 300000 // 5 minutes for local embeddings
         });
 
         embedding = response.data.embedding;

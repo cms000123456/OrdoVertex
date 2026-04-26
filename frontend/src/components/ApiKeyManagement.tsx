@@ -35,7 +35,7 @@ export function ApiKeyManagement() {
     setIsLoading(true);
     try {
       const response = await api.get('/api-keys');
-      setApiKeys(response.data.data.apiKeys || []);
+      setApiKeys(response.data.data?.apiKeys || response.data.data || []);
     } catch (error: unknown) {
       toast.error((getAxiosErrorData(error)?.message || getErrorMessage(error)) || 'Failed to load API keys');
     } finally {

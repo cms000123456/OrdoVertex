@@ -3,6 +3,7 @@ import { getErrorMessage } from '../../utils/error-helper';
 import { prisma } from '../../prisma';
 import { validateExpression } from '../../utils/safe-eval';
 import { decryptJSON } from '../../utils/encryption';
+import { resolveOllamaUrl } from '../../utils/ollama-url';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -185,7 +186,12 @@ export const aiAgentNode: NodeType = {
       displayName: 'Use Credential',
       type: 'boolean',
       default: true,
-      description: 'Use saved API credentials'
+      description: 'Use saved API credentials',
+      displayOptions: {
+        show: {
+          provider: ['openai', 'anthropic', 'gemini', 'kimi', 'custom']
+        }
+      }
     },
     {
       name: 'credentialId',
@@ -196,7 +202,8 @@ export const aiAgentNode: NodeType = {
       description: 'Select API credentials',
       displayOptions: {
         show: {
-          useCredential: [true]
+          useCredential: [true],
+          provider: ['openai', 'anthropic', 'gemini', 'kimi', 'custom']
         }
       }
     },
@@ -208,7 +215,8 @@ export const aiAgentNode: NodeType = {
       description: 'API key for the provider',
       displayOptions: {
         show: {
-          useCredential: [false]
+          useCredential: [false],
+          provider: ['openai', 'anthropic', 'gemini', 'kimi', 'custom']
         }
       }
     },
@@ -304,7 +312,7 @@ export const aiAgentNode: NodeType = {
     {
       name: 'ollamaModel',
       displayName: 'Ollama Model',
-      type: 'string',
+      type: 'ollamaModel',
       required: true,
       description: 'Ollama model name (e.g., llama3.1, mistral)',
       default: 'llama3.1',
@@ -352,6 +360,20 @@ export const aiAgentNode: NodeType = {
       type: 'number',
       default: 2000,
       description: 'Maximum tokens to generate'
+    },
+    {
+      name: 'inputField',
+      displayName: 'Input Field',
+      type: 'string',
+      default: 'message',
+      description: 'Name of the input field containing the user prompt (e.g., message, text, query)'
+    },
+    {
+      name: 'prompt',
+      displayName: 'User Prompt',
+      type: 'multiline',
+      default: '',
+      description: 'Static prompt to send to the AI. If empty, the prompt is read from the input field above.'
     },
     {
       name: 'systemPrompt',
@@ -419,32 +441,37 @@ export const aiAgentNode: NodeType = {
 
       // Get input
       const items = context.getInputData();
-      const userMessage = items[0]?.json?.message || items[0]?.json?.input || JSON.stringify(items[0]?.json);
+      const inputField = context.getNodeParameter('inputField', 'message') as string;
+      const staticPrompt = context.getNodeParameter('prompt', '') as string;
+      const inputData = items[0]?.json || {};
+      const userMessage = inputData[inputField] || inputData.message || inputData.input || inputData.text || staticPrompt || JSON.stringify(inputData);
 
       // Resolve memory key
       const memoryKey = memoryKeyTemplate.replace('{{ $executionId }}', context.executionId ?? '');
 
-      // Get API key
-      let apiKey: string;
-      if (useCredential) {
-        const credentialId = context.getNodeParameter('credentialId', '') as string;
-        if (!credentialId) {
-          throw new Error('No credential selected');
+      // Get API key (only for providers that need it)
+      let apiKey = '';
+      if (provider !== 'ollama') {
+        if (useCredential) {
+          const credentialId = context.getNodeParameter('credentialId', '') as string;
+          if (!credentialId) {
+            throw new Error('No credential selected');
+          }
+          const credential = await prisma.credential.findFirst({
+            where: { deletedAt: null, id: credentialId, userId: context.userId }
+          });
+          if (!credential) {
+            throw new Error('Credential not found');
+          }
+          const credData = decryptJSON(credential.data, credential.iv);
+          apiKey = credData.apiKey || credData.key;
+        } else {
+          apiKey = context.getNodeParameter('apiKey', '') as string;
         }
-        const credential = await prisma.credential.findFirst({
-          where: { deletedAt: null, id: credentialId, userId: context.userId }
-        });
-        if (!credential) {
-          throw new Error('Credential not found');
-        }
-        const credData = decryptJSON(credential.data, credential.iv);
-        apiKey = credData.apiKey || credData.key;
-      } else {
-        apiKey = context.getNodeParameter('apiKey', '') as string;
-      }
 
-      if (!apiKey) {
-        throw new Error('API key is required');
+        if (!apiKey) {
+          throw new Error('API key is required');
+        }
       }
 
       // Get or initialize memory
@@ -712,7 +739,9 @@ export const aiAgentNode: NodeType = {
 
       } else if (provider === 'ollama') {
         const model = context.getNodeParameter('ollamaModel', 'llama3.1') as string;
-        const ollamaUrl = context.getNodeParameter('ollamaUrl', 'http://localhost:11434') as string;
+        const ollamaUrl = resolveOllamaUrl(
+          context.getNodeParameter('ollamaUrl', 'http://localhost:11434') as string
+        );
 
         const axios = (await import('axios')).default;
         const result = await axios.post(`${ollamaUrl}/api/chat`, {
@@ -723,6 +752,8 @@ export const aiAgentNode: NodeType = {
             temperature,
             num_predict: maxTokens
           }
+        }, {
+          timeout: 600000 // 10 minutes for local LLMs
         });
 
         response = result.data.message?.content || '';

@@ -39,7 +39,7 @@ export function WorkflowsList() {
   const loadWorkflows = async () => {
     try {
       const response = await workflowsApi.getAll();
-      setWorkflows(response.data.data || []);
+      setWorkflows(response.data.data?.workflows || response.data.data || []);
     } catch (error: unknown) {
       console.error('Load workflows error:', error);
       toast.error('Failed to load workflows: ' + (getErrorMessage(error) || 'Unknown error'));
@@ -54,7 +54,7 @@ export function WorkflowsList() {
     const loadWorkspaces = async () => {
       try {
         const response = await workspacesApi.getAll();
-        setUserWorkspaces(response.data.data || []);
+        setUserWorkspaces(response.data.data?.workspaces || response.data.data || []);
       } catch (error) {
         console.error('Failed to load workspaces:', error);
       }
@@ -173,7 +173,8 @@ export function WorkflowsList() {
     try {
       const response = await workspacesApi.getAll();
       // Filter workspaces where user has editor/admin/owner permissions
-      const accessibleWorkspaces = response.data.data?.filter((w: Workspace) => {
+      const workspaceList = response.data.data?.workspaces || response.data.data || [];
+      const accessibleWorkspaces = workspaceList.filter((w: Workspace) => {
         const isOwner = w.owner.id === workflow.userId;
         const member = w.members.find(m => m.user.id === workflow.userId);
         const hasEditPermission = member && ['admin', 'editor'].includes(member.role);

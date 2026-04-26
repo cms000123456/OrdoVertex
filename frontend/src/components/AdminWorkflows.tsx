@@ -108,7 +108,7 @@ export function AdminWorkflows() {
     // Load workspaces
     try {
       const response = await workspacesApi.getAll();
-      setWorkspaces(response.data.data || []);
+      setWorkspaces(response.data.data?.workspaces || response.data.data || []);
     } catch (err) {
       toast.error('Failed to load workspaces');
     }
