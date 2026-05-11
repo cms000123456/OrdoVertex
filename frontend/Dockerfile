@@ -1,7 +1,7 @@
 # ==========================================
 # Stage 1: Builder
 # ==========================================
-FROM node:25-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
@@ -44,7 +44,7 @@ CMD ["nginx", "-g", "daemon off;"]
 # ==========================================
 # Stage 3: Development (default target)
 # ==========================================
-FROM node:25-alpine AS development
+FROM node:26-alpine AS development
 
 WORKDIR /app
 
