@@ -23,6 +23,25 @@ async function verifyUserExists(userId: string) {
   return user !== null;
 }
 
+// Unified credential access helpers
+async function canAccessCredential(userId: string, credential: { userId: string; workspaceId: string | null }) {
+  if (credential.userId === userId) return true;
+  if (!credential.workspaceId) return false;
+  const membership = await prisma.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId: credential.workspaceId, userId } }
+  });
+  return !!membership;
+}
+
+async function canManageCredential(userId: string, credential: { userId: string; workspaceId: string | null }) {
+  if (credential.userId === userId) return true;
+  if (!credential.workspaceId) return false;
+  const membership = await prisma.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId: credential.workspaceId, userId } }
+  });
+  return membership?.role === 'admin' || membership?.role === 'editor';
+}
+
 // Success response helper
 const successResponse = (res: Response, data: unknown, status = 200) => {
   res.status(status).json({ success: true, data });
@@ -42,8 +61,24 @@ router.post('/bulk-delete', authenticateToken, asyncHandler(async (req: AuthRequ
   if (!Array.isArray(ids) || ids.length === 0) {
     return errorResponse(res, 'ids array is required', 400);
   }
+
+  const userId = req.user!.id;
+  const credentials = await prisma.credential.findMany({
+    where: { id: { in: ids }, deletedAt: null }
+  });
+
+  if (credentials.length !== ids.length) {
+    return errorResponse(res, 'One or more credentials not found', 404);
+  }
+
+  for (const credential of credentials) {
+    if (!(await canManageCredential(userId, credential))) {
+      return errorResponse(res, 'Invalid workspace or insufficient permissions', 403);
+    }
+  }
+
   const result = await prisma.credential.updateMany({
-    where: { id: { in: ids }, userId: req.user!.id, deletedAt: null },
+    where: { id: { in: ids }, deletedAt: null },
     data: { deletedAt: new Date() }
   });
   await logAudit({ actorId: req.user!.id, action: 'credential.bulk_delete', details: { ids, count: result.count }, req });
@@ -55,6 +90,22 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res) =>
   const userId = req.user!.id;
   const { type, workspaceId, includeShared } = req.query;
   const { limit, offset } = parsePagination(req.query);
+
+  // Verify access when filtering by a specific workspace
+  if (workspaceId) {
+    const workspace = await prisma.workspace.findFirst({
+      where: {
+        id: workspaceId as string,
+        OR: [
+          { ownerId: userId },
+          { members: { some: { userId } } }
+        ]
+      }
+    });
+    if (!workspace) {
+      return errorResponse(res, 'Invalid workspace or insufficient permissions', 403);
+    }
+  }
 
   const where: Record<string, unknown> = {
     deletedAt: null,
@@ -436,10 +487,10 @@ router.put('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res)
     const { name, data } = req.body;
 
     const existing = await prisma.credential.findFirst({
-      where: { id, userId, deletedAt: null }
+      where: { id, deletedAt: null }
     });
 
-    if (!existing) {
+    if (!existing || !(await canManageCredential(userId, existing))) {
       return errorResponse(res, 'Credential not found', 404);
     }
 
@@ -486,10 +537,10 @@ router.delete('/:id', validateUUID(), handleValidationErrors, authenticateToken,
   const { id } = req.params;
 
   const existing = await prisma.credential.findFirst({
-    where: { id, userId, deletedAt: null }
+    where: { id, deletedAt: null }
   });
 
-  if (!existing) {
+  if (!existing || !(await canManageCredential(userId, existing))) {
     return errorResponse(res, 'Credential not found', 404);
   }
 
@@ -513,10 +564,10 @@ router.post('/:id/decrypt', validateUUID(), handleValidationErrors, authenticate
   const { id } = req.params;
 
   const credential = await prisma.credential.findFirst({
-    where: { id, userId, deletedAt: null }
+    where: { id, deletedAt: null }
   });
 
-  if (!credential) {
+  if (!credential || !(await canAccessCredential(userId, credential))) {
     return errorResponse(res, 'Credential not found', 404);
   }
 

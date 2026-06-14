@@ -15,6 +15,31 @@ import { asyncHandler } from '../utils/async-handler';
 
 const router = Router();
 
+// Backup codes are low-entropy (8 hex chars), so hash them before storage.
+const BACKUP_CODE_SALT_ROUNDS = 10;
+
+async function hashBackupCodes(codes: string[]): Promise<string> {
+  const hashes = await Promise.all(
+    codes.map((code) => bcrypt.hash(code.toUpperCase(), BACKUP_CODE_SALT_ROUNDS))
+  );
+  return hashes.join(',');
+}
+
+async function verifyBackupCode(
+  input: string,
+  storedHashes: string
+): Promise<{ index: number; remaining: string[] } | null> {
+  const codes = storedHashes.split(',').filter(Boolean);
+  for (let i = 0; i < codes.length; i++) {
+    if (await bcrypt.compare(input.toUpperCase(), codes[i])) {
+      const remaining = [...codes];
+      remaining.splice(i, 1);
+      return { index: i, remaining };
+    }
+  }
+  return null;
+}
+
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required');
@@ -93,13 +118,16 @@ router.post('/mfa/verify', authMiddleware, asyncHandler(async (req: AuthRequest,
     crypto.randomBytes(4).toString('hex').toUpperCase()
   );
 
+  // Hash backup codes before storing
+  const hashedBackupCodes = await hashBackupCodes(backupCodes);
+
   // Enable MFA
   await prisma.mFASettings.update({
     where: { userId },
     data: {
       totpEnabled: true,
       totpVerified: true,
-      backupCodes: backupCodes.join(','),
+      backupCodes: hashedBackupCodes,
       lastVerifiedAt: new Date()
     }
   });
@@ -205,20 +233,17 @@ router.post('/mfa/backup', authRateLimit(), asyncHandler(async (req, res) => {
     return errorResponse(res, 'No backup codes available', 400);
   }
 
-  const codes = mfaSettings.backupCodes.split(',');
-  const codeIndex = codes.findIndex(c => c === backupCode.toUpperCase());
+  const match = await verifyBackupCode(backupCode, mfaSettings.backupCodes);
 
-  if (codeIndex === -1) {
+  if (!match) {
     return errorResponse(res, 'Invalid backup code', 400);
   }
 
   // Remove used code
-  codes.splice(codeIndex, 1);
-    
   await prisma.mFASettings.update({
     where: { userId: user.id },
     data: {
-      backupCodes: codes.join(','),
+      backupCodes: match.remaining.join(','),
       backupCodesUsed: { increment: 1 }
     }
   });
@@ -238,7 +263,7 @@ router.post('/mfa/backup', authRateLimit(), asyncHandler(async (req, res) => {
       name: user.name,
       role: user.role
     },
-    backupCodesRemaining: codes.length
+    backupCodesRemaining: match.remaining.length
   });
 }));
 

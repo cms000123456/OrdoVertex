@@ -13,7 +13,7 @@ import { scheduler } from './engine/scheduler';
 import { rateLimit } from './utils/rate-limit';
 import logger, { logStream } from './utils/logger';
 
-import { errorSanitizerMiddleware, sanitizedErrorHandler } from './utils/security';
+import { sanitizedErrorHandler } from './utils/security';
 
 import authRoutes from './routes/auth';
 import authExtendedRoutes from './routes/auth-extended';
@@ -40,7 +40,8 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Trust proxy when behind nginx (needed for accurate req.ip in rate limiting)
-app.set('trust proxy', 1);
+// In production, set TRUST_PROXY to a specific value (e.g., 'loopback, 10.0.0.1')
+app.set('trust proxy', process.env.TRUST_PROXY || (process.env.NODE_ENV === 'production' ? false : 'loopback'));
 
 // Middleware
 // Configure CORS - in production, restrict to specific origins
@@ -80,9 +81,6 @@ app.use(helmet({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Sanitize error messages in production
-app.use(errorSanitizerMiddleware);
 
 // Apply rate limiting to all API routes
 app.use('/api/', rateLimit({

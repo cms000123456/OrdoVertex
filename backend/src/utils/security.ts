@@ -62,31 +62,6 @@ export function isInternalUrl(urlString: string): boolean {
 }
 
 /**
- * Middleware to sanitize error messages in production
- * Prevents information leakage about internal system details
- */
-export function errorSanitizerMiddleware(
-  err: Error,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  // If not in production, pass through
-  if (process.env.NODE_ENV !== 'production') {
-    return next(err);
-  }
-
-  // Sanitize the error message
-  const sanitizedError = new Error('An internal error occurred');
-  sanitizedError.stack = undefined;
-  
-  // Log the original error for debugging
-  logger.error('[Security] Original error:', err.message, err.stack);
-
-  return next(sanitizedError);
-}
-
-/**
  * Express error handler that sanitizes responses in production
  * Place this at the end of your middleware chain
  */
@@ -177,10 +152,10 @@ export function validateSecurityEnv(): string[] {
       issues.push('ENCRYPTION_KEY should be at least 32 characters in production');
     }
 
-    // Check for default passwords
-    const defaultPasswords = ['password', 'admin', '123456', 'secret', 'changeme'];
-    if (process.env.ADMIN_PASSWORD && 
-        defaultPasswords.some(dp => process.env.ADMIN_PASSWORD?.toLowerCase().includes(dp))) {
+    // Check for default/weak passwords (exact matches only to avoid false positives)
+    const defaultPasswords = ['password', 'admin', '123456', 'secret', 'changeme', 'default', 'qwerty', 'letmein', 'admin123', 'password123'];
+    const adminPassword = process.env.ADMIN_PASSWORD?.toLowerCase();
+    if (adminPassword && defaultPasswords.includes(adminPassword)) {
       issues.push('ADMIN_PASSWORD appears to be a default/weak password');
     }
 

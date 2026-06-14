@@ -6,6 +6,7 @@ import { Credential } from '../types';
 import { AITips } from './AITips';
 import { CodeEditor } from './CodeEditor';
 import { getErrorMessage } from '../utils/error-helper';
+import { sanitizeInlineHtml } from '../utils/sanitize';
 import { categoryColors } from './nodes/WorkflowNode';
 
 // Simple markdown to HTML converter for display
@@ -43,12 +44,13 @@ const renderMarkdown = (content: string): React.ReactNode => {
   };
 
   const inlineFormat = (text: string): string => {
-    return text
+    const raw = text
       .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
       .replace(/`(.+?)`/g, '<code>$1</code>')
       .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    return sanitizeInlineHtml(raw);
   };
 
   for (let i = 0; i < lines.length; i++) {
@@ -267,12 +269,13 @@ const MarkdownContent: React.FC<{ content: string }> = ({ content }) => {
   };
 
   const inlineFormat = (text: string): string => {
-    return text
+    const raw = text
       .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
       .replace(/`(.+?)`/g, '<code style="background:#f1f5f9;padding:2px 5px;border-radius:4px;font-family:monospace;font-size:12px;color:#dc2626">$1</code>')
       .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#6366f1;text-decoration:none">$1</a>');
+    return sanitizeInlineHtml(raw);
   };
 
   for (let i = 0; i < lines.length; i++) {

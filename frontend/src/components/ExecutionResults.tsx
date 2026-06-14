@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Play, CheckCircle, XCircle, Clock, ChevronDown, ChevronRight, Database, X } from 'lucide-react';
 import { executionsApi } from '../services/api';
 import { Execution } from '../types';
+import { sanitizeInlineHtml } from '../utils/sanitize';
 import './ExecutionResults.css';
 
 interface ExecutionResultsProps {
@@ -132,12 +133,13 @@ export function ExecutionResults({ workflowId, onClose }: ExecutionResultsProps)
     };
 
     const inlineFormat = (text: string): string => {
-      return text
+      const raw = text
         .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.+?)\*/g, '<em>$1</em>')
         .replace(/`(.+?)`/g, '<code>$1</code>')
         .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+      return sanitizeInlineHtml(raw);
     };
 
     for (let i = 0; i < lines.length; i++) {

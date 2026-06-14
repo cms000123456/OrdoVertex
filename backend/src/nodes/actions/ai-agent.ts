@@ -4,6 +4,7 @@ import { prisma } from '../../prisma';
 import { validateExpression } from '../../utils/safe-eval';
 import { decryptJSON } from '../../utils/encryption';
 import { resolveOllamaUrl } from '../../utils/ollama-url';
+import { isInternalUrl } from '../../utils/security';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -98,11 +99,18 @@ const builtInTools: Record<string, Tool> = {
       body: { type: 'object', description: 'Request body' }
     },
     execute: async (params: any) => {
+      const url = params.url;
+      if (typeof url !== 'string' || isInternalUrl(url)) {
+        return { error: 'Access to internal or invalid URLs is not allowed' };
+      }
       const axios = (await import('axios')).default;
       const response = await axios({
-        url: params.url,
+        url,
         method: params.method || 'GET',
-        data: params.body
+        data: params.body,
+        maxRedirects: 0,
+        timeout: 30000,
+        validateStatus: () => true
       });
       return response.data;
     }
@@ -766,6 +774,12 @@ export const aiAgentNode: NodeType = {
       } else {
         // Custom provider
         const customUrl = context.getNodeParameter('customUrl', '') as string;
+        if (isInternalUrl(customUrl)) {
+          return {
+            success: false,
+            error: 'Access to internal or invalid URLs is not allowed'
+          };
+        }
         const axios = (await import('axios')).default;
         
         const result = await axios.post(customUrl, {
@@ -773,7 +787,9 @@ export const aiAgentNode: NodeType = {
           temperature,
           max_tokens: maxTokens
         }, {
-          headers: { 'Authorization': `Bearer ${apiKey}` }
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+          maxRedirects: 0,
+          timeout: 60000
         });
 
         response = result.data.choices?.[0]?.message?.content || result.data.response || '';

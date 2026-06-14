@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { body } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../prisma';
@@ -37,6 +38,13 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
+export const passwordValidator = body('password')
+  .isLength({ min: 12 }).withMessage('Password must be at least 12 characters long')
+  .matches(/[a-z]/).withMessage('Password must contain a lowercase letter')
+  .matches(/[A-Z]/).withMessage('Password must contain an uppercase letter')
+  .matches(/[0-9]/).withMessage('Password must contain a number')
+  .matches(/[^a-zA-Z0-9]/).withMessage('Password must contain a special character');
+
 export function generateToken(userId: string, email: string, role?: string): string {
   const payload: Record<string, unknown> = { id: userId, email };
   if (role) payload.role = role;
@@ -74,20 +82,55 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
   return res.status(401).json({ error: 'Authentication required' });
 }
 
+const API_KEY_PREFIX_LENGTH = 8;
+const API_KEY_SALT_ROUNDS = 12;
+
+export async function hashApiKey(apiKey: string): Promise<string> {
+  return bcrypt.hash(apiKey, API_KEY_SALT_ROUNDS);
+}
+
+export function getApiKeyPrefix(apiKey: string): string {
+  return apiKey.slice(0, API_KEY_PREFIX_LENGTH);
+}
+
 export async function apiKeyMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     const apiKey = req.headers['x-api-key'] as string;
     
-    if (!apiKey) {
+    if (!apiKey || apiKey.length < API_KEY_PREFIX_LENGTH) {
       return res.status(401).json({ error: 'No API key provided' });
     }
 
-    const keyRecord = await prisma.apiKey.findUnique({
-      where: { key: apiKey },
+    const prefix = getApiKeyPrefix(apiKey);
+
+    // Look up candidate keys by prefix (new hashed keys)
+    const candidateKeys = await prisma.apiKey.findMany({
+      where: { keyPrefix: prefix },
       include: { user: true }
     });
 
-    if (!keyRecord || keyRecord.user.deletedAt) {
+    let keyRecord = null;
+
+    for (const candidate of candidateKeys) {
+      if (candidate.user.deletedAt) continue;
+      if (candidate.keyHash && await bcrypt.compare(apiKey, candidate.keyHash)) {
+        keyRecord = candidate;
+        break;
+      }
+    }
+
+    // Fallback to legacy plaintext keys (remove after all keys are migrated)
+    if (!keyRecord) {
+      const legacyRecord = await prisma.apiKey.findFirst({
+        where: { key: apiKey },
+        include: { user: true }
+      });
+      if (legacyRecord && !legacyRecord.user.deletedAt) {
+        keyRecord = legacyRecord;
+      }
+    }
+
+    if (!keyRecord) {
       return res.status(401).json({ error: 'Invalid API key' });
     }
 

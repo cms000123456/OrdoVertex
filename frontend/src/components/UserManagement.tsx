@@ -5,6 +5,7 @@ import { usersApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import './UserManagement.css';
 import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
+import { validatePassword } from '../utils/password-policy';
 
 interface User {
   id: string;
@@ -90,8 +91,9 @@ export function UserManagement() {
       return;
     }
 
-    if (newUser.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    const passwordCheck = validatePassword(newUser.password);
+    if (!passwordCheck.valid) {
+      toast.error(passwordCheck.message);
       return;
     }
 

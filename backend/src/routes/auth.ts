@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { prisma } from '../prisma';
 import crypto from 'crypto';
-import { hashPassword, verifyPassword, generateToken, authMiddleware, AuthRequest } from '../utils/auth';
+import { hashPassword, verifyPassword, generateToken, authMiddleware, AuthRequest, passwordValidator } from '../utils/auth';
 import { successResponse, errorResponse } from '../utils/response';
 import { authRateLimit } from '../utils/rate-limit';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email';
@@ -21,7 +21,7 @@ router.post(
   authRateLimit(),
   [
     body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 6 }),
+    passwordValidator,
     body('name').optional().trim()
   ],
   asyncHandler(async (req: Request, res: Response) => {
@@ -204,7 +204,7 @@ router.post(
   authMiddleware,
   [
     body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 6 })
+    passwordValidator
   ],
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);

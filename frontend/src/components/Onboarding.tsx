@@ -5,6 +5,7 @@ import { authApi } from '../services/api';
 import toast from 'react-hot-toast';
 import './Onboarding.css';
 import { getErrorMessage, getAxiosErrorData } from '../utils/error-helper';
+import { validatePassword } from '../utils/password-policy';
 
 export function Onboarding() {
   const navigate = useNavigate();
@@ -30,8 +31,9 @@ export function Onboarding() {
       return;
     }
     
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.valid) {
+      toast.error(passwordCheck.message);
       return;
     }
     

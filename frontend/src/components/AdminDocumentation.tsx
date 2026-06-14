@@ -79,7 +79,7 @@ export function AdminDocumentation() {
               <ul>
                 <li>Email (required, must be unique)</li>
                 <li>Name (optional)</li>
-                <li>Password (minimum 6 characters)</li>
+                <li>Password (minimum 12 characters, with uppercase, lowercase, number, and special character)</li>
                 <li>Role (User or Admin)</li>
               </ul>
             </li>

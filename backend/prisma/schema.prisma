@@ -226,11 +226,15 @@ model GroupWorkspaceAccess {
 model ApiKey {
   id        String   @id @default(uuid())
   name      String
-  key       String   @unique
+  key       String?  // Deprecated: plaintext key, only used during migration
+  keyHash   String?  // bcrypt hash of the key
+  keyPrefix String?  // First 8 characters for lookup/display
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   lastUsed  DateTime?
+
+  @@index([keyPrefix])
 }
 
 model Workflow {
