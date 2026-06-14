@@ -85,8 +85,8 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       # Rate limiting (production values - strict)
-      # AUTH_RATE_LIMIT_MAX: 5
-      # AUTH_RATE_LIMIT_WINDOW_MS: 900000
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-5}
+      AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:-900000}
       
       # Proxy trust (required for accurate client IP behind nginx)
       TRUST_PROXY: ${TRUST_PROXY:-1}
