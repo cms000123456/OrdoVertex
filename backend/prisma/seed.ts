@@ -1,5 +1,13 @@
 import { PrismaClient, UserRole } from '@prisma/client';
-import { hashPassword, verifyPassword } from '../src/utils/auth';
+import bcrypt from 'bcryptjs';
+
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12);
+}
+
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
 
 const prisma = new PrismaClient();
 
