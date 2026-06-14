@@ -40,8 +40,17 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Trust proxy when behind nginx (needed for accurate req.ip in rate limiting)
-// In production, set TRUST_PROXY to a specific value (e.g., 'loopback, 10.0.0.1')
-app.set('trust proxy', process.env.TRUST_PROXY || (process.env.NODE_ENV === 'production' ? false : 'loopback'));
+// In production, set TRUST_PROXY to a specific value (e.g., 'loopback, 10.0.0.1' or '1')
+function parseTrustProxy(value: string | undefined): string | number | boolean {
+  if (!value) {
+    return process.env.NODE_ENV === 'production' ? false : 'loopback';
+  }
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  if (/^\d+$/.test(value)) return parseInt(value, 10);
+  return value;
+}
+app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY));
 
 // Middleware
 // Configure CORS - in production, restrict to specific origins

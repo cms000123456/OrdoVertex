@@ -88,6 +88,9 @@ services:
       # AUTH_RATE_LIMIT_MAX: 5
       # AUTH_RATE_LIMIT_WINDOW_MS: 900000
       
+      # Proxy trust (required for accurate client IP behind nginx)
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      
       PORT: 3001
     # Remove volume mount in production (use built image)
     # volumes:
