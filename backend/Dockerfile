@@ -1,7 +1,7 @@
 # ==========================================
 # Stage 1: Builder
 # ==========================================
-FROM node:25-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ RUN npm run build
 # ==========================================
 # Stage 2: Production
 # ==========================================
-FROM node:25-alpine AS production
+FROM node:26-alpine AS production
 
 # Install runtime dependencies only
 RUN apk add --no-cache openssl python3 py3-pip samba-client krb5
@@ -49,7 +49,7 @@ CMD ["node", "dist/index.js"]
 # ==========================================
 # Stage 3: Development (default target)
 # ==========================================
-FROM node:25-alpine AS development
+FROM node:26-alpine AS development
 
 RUN apk add --no-cache openssl python3 py3-pip samba-client krb5
 
